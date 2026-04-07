@@ -26,6 +26,8 @@ pub fn isFunctionalUtility(name: []const u8) bool {
     return functional_utility_set.has(name);
 }
 
+const COMPOSABLE_FONT_VARIANT_NUMERIC = "var(--tw-ordinal,) var(--tw-slashed-zero,) var(--tw-numeric-figure,) var(--tw-numeric-spacing,) var(--tw-numeric-fraction,)";
+
 const StaticEntry = struct { []const u8, []const Declaration };
 
 pub const static_utilities = std.StaticStringMap([]const Declaration).initComptime(.{
@@ -369,9 +371,18 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "wrap-normal", &[_]Declaration{.{ .property = "overflow-wrap", .value = "normal" }} },
 
     // ─── Hyphens ───
-    .{ "hyphens-none", &[_]Declaration{.{ .property = "hyphens", .value = "none" }} },
-    .{ "hyphens-manual", &[_]Declaration{.{ .property = "hyphens", .value = "manual" }} },
-    .{ "hyphens-auto", &[_]Declaration{.{ .property = "hyphens", .value = "auto" }} },
+    .{ "hyphens-none", &[_]Declaration{
+        .{ .property = "-webkit-hyphens", .value = "none" },
+        .{ .property = "hyphens", .value = "none" },
+    } },
+    .{ "hyphens-manual", &[_]Declaration{
+        .{ .property = "-webkit-hyphens", .value = "manual" },
+        .{ .property = "hyphens", .value = "manual" },
+    } },
+    .{ "hyphens-auto", &[_]Declaration{
+        .{ .property = "-webkit-hyphens", .value = "auto" },
+        .{ .property = "hyphens", .value = "auto" },
+    } },
 
     // ─── Font Style ───
     .{ "italic", &[_]Declaration{.{ .property = "font-style", .value = "italic" }} },
@@ -379,14 +390,14 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
 
     // ─── Font Variant Numeric ───
     .{ "normal-nums", &[_]Declaration{.{ .property = "font-variant-numeric", .value = "normal" }} },
-    .{ "ordinal", &[_]Declaration{.{ .property = "font-variant-numeric", .value = "ordinal" }} },
-    .{ "slashed-zero", &[_]Declaration{.{ .property = "font-variant-numeric", .value = "slashed-zero" }} },
-    .{ "lining-nums", &[_]Declaration{.{ .property = "font-variant-numeric", .value = "lining-nums" }} },
-    .{ "oldstyle-nums", &[_]Declaration{.{ .property = "font-variant-numeric", .value = "oldstyle-nums" }} },
-    .{ "proportional-nums", &[_]Declaration{.{ .property = "font-variant-numeric", .value = "proportional-nums" }} },
-    .{ "tabular-nums", &[_]Declaration{.{ .property = "font-variant-numeric", .value = "tabular-nums" }} },
-    .{ "diagonal-fractions", &[_]Declaration{.{ .property = "font-variant-numeric", .value = "diagonal-fractions" }} },
-    .{ "stacked-fractions", &[_]Declaration{.{ .property = "font-variant-numeric", .value = "stacked-fractions" }} },
+    .{ "ordinal", &[_]Declaration{ .{ .property = "--tw-ordinal", .value = "ordinal" }, .{ .property = "font-variant-numeric", .value = COMPOSABLE_FONT_VARIANT_NUMERIC } } },
+    .{ "slashed-zero", &[_]Declaration{ .{ .property = "--tw-slashed-zero", .value = "slashed-zero" }, .{ .property = "font-variant-numeric", .value = COMPOSABLE_FONT_VARIANT_NUMERIC } } },
+    .{ "lining-nums", &[_]Declaration{ .{ .property = "--tw-numeric-figure", .value = "lining-nums" }, .{ .property = "font-variant-numeric", .value = COMPOSABLE_FONT_VARIANT_NUMERIC } } },
+    .{ "oldstyle-nums", &[_]Declaration{ .{ .property = "--tw-numeric-figure", .value = "oldstyle-nums" }, .{ .property = "font-variant-numeric", .value = COMPOSABLE_FONT_VARIANT_NUMERIC } } },
+    .{ "proportional-nums", &[_]Declaration{ .{ .property = "--tw-numeric-spacing", .value = "proportional-nums" }, .{ .property = "font-variant-numeric", .value = COMPOSABLE_FONT_VARIANT_NUMERIC } } },
+    .{ "tabular-nums", &[_]Declaration{ .{ .property = "--tw-numeric-spacing", .value = "tabular-nums" }, .{ .property = "font-variant-numeric", .value = COMPOSABLE_FONT_VARIANT_NUMERIC } } },
+    .{ "diagonal-fractions", &[_]Declaration{ .{ .property = "--tw-numeric-fraction", .value = "diagonal-fractions" }, .{ .property = "font-variant-numeric", .value = COMPOSABLE_FONT_VARIANT_NUMERIC } } },
+    .{ "stacked-fractions", &[_]Declaration{ .{ .property = "--tw-numeric-fraction", .value = "stacked-fractions" }, .{ .property = "font-variant-numeric", .value = COMPOSABLE_FONT_VARIANT_NUMERIC } } },
 
     // ─── Font Smoothing ───
     .{ "antialiased", &[_]Declaration{ .{ .property = "-webkit-font-smoothing", .value = "antialiased" }, .{ .property = "-moz-osx-font-smoothing", .value = "grayscale" } } },
@@ -447,12 +458,30 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "bg-left-top", &[_]Declaration{.{ .property = "background-position", .value = "left top" }} },
 
     // ─── Border Style ───
-    .{ "border-solid", &[_]Declaration{.{ .property = "border-style", .value = "solid" }} },
-    .{ "border-dashed", &[_]Declaration{.{ .property = "border-style", .value = "dashed" }} },
-    .{ "border-dotted", &[_]Declaration{.{ .property = "border-style", .value = "dotted" }} },
-    .{ "border-double", &[_]Declaration{.{ .property = "border-style", .value = "double" }} },
-    .{ "border-hidden", &[_]Declaration{.{ .property = "border-style", .value = "hidden" }} },
-    .{ "border-none", &[_]Declaration{.{ .property = "border-style", .value = "none" }} },
+    .{ "border-solid", &[_]Declaration{
+        .{ .property = "--tw-border-style", .value = "solid" },
+        .{ .property = "border-style", .value = "solid" },
+    } },
+    .{ "border-dashed", &[_]Declaration{
+        .{ .property = "--tw-border-style", .value = "dashed" },
+        .{ .property = "border-style", .value = "dashed" },
+    } },
+    .{ "border-dotted", &[_]Declaration{
+        .{ .property = "--tw-border-style", .value = "dotted" },
+        .{ .property = "border-style", .value = "dotted" },
+    } },
+    .{ "border-double", &[_]Declaration{
+        .{ .property = "--tw-border-style", .value = "double" },
+        .{ .property = "border-style", .value = "double" },
+    } },
+    .{ "border-hidden", &[_]Declaration{
+        .{ .property = "--tw-border-style", .value = "hidden" },
+        .{ .property = "border-style", .value = "hidden" },
+    } },
+    .{ "border-none", &[_]Declaration{
+        .{ .property = "--tw-border-style", .value = "none" },
+        .{ .property = "border-style", .value = "none" },
+    } },
 
     // ─── Outline Style ───
     .{ "outline-none", &[_]Declaration{ .{ .property = "outline", .value = "2px solid #0000" }, .{ .property = "outline-offset", .value = "2px" } } },
@@ -519,12 +548,12 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
         .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
     } },
     .{ "transition", &[_]Declaration{
-        .{ .property = "transition-property", .value = "color, background-color, border-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter" },
+        .{ .property = "transition-property", .value = "color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,translate,scale,rotate,filter,-webkit-backdrop-filter,backdrop-filter" },
         .{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" },
         .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
     } },
     .{ "transition-colors", &[_]Declaration{
-        .{ .property = "transition-property", .value = "color, background-color, border-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to" },
+        .{ .property = "transition-property", .value = "color,background-color,border-color,outline-color,text-decoration-color,fill,stroke" },
         .{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" },
         .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
     } },
@@ -1074,7 +1103,10 @@ pub fn getRequiredProperties(root: []const u8) []const AtProperty {
     // drop-shadow
     if (std.mem.eql(u8, root, "drop-shadow")) {
         return &[_]AtProperty{
-            .{ .name = "--tw-drop-shadow", .syntax = "*", .inherits = false, .initial_value = "0 0 #0000" },
+            .{ .name = "--tw-drop-shadow", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-drop-shadow-color", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-drop-shadow-alpha", .syntax = "<percentage>", .inherits = false, .initial_value = "100%" },
+            .{ .name = "--tw-drop-shadow-size", .syntax = "*", .inherits = false, .initial_value = null },
         };
     }
     // gradient
@@ -1083,10 +1115,55 @@ pub fn getRequiredProperties(root: []const u8) []const AtProperty {
         std.mem.eql(u8, root, "bg-gradient"))
     {
         return &[_]AtProperty{
-            .{ .name = "--tw-gradient-from", .syntax = "*", .inherits = false, .initial_value = null },
-            .{ .name = "--tw-gradient-via", .syntax = "*", .inherits = false, .initial_value = null },
-            .{ .name = "--tw-gradient-to", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-gradient-from", .syntax = "<color>", .inherits = false, .initial_value = "#0000" },
+            .{ .name = "--tw-gradient-via", .syntax = "<color>", .inherits = false, .initial_value = "#0000" },
+            .{ .name = "--tw-gradient-to", .syntax = "<color>", .inherits = false, .initial_value = "#0000" },
             .{ .name = "--tw-gradient-stops", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-gradient-position", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-gradient-via-stops", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-gradient-from-position", .syntax = "<length-percentage>", .inherits = false, .initial_value = "0%" },
+            .{ .name = "--tw-gradient-via-position", .syntax = "<length-percentage>", .inherits = false, .initial_value = "50%" },
+            .{ .name = "--tw-gradient-to-position", .syntax = "<length-percentage>", .inherits = false, .initial_value = "100%" },
+        };
+    }
+    // leading (line-height)
+    if (std.mem.eql(u8, root, "leading")) {
+        return &[_]AtProperty{
+            .{ .name = "--tw-leading", .syntax = "*", .inherits = false, .initial_value = null },
+        };
+    }
+    // tracking (letter-spacing)
+    if (std.mem.eql(u8, root, "tracking")) {
+        return &[_]AtProperty{
+            .{ .name = "--tw-tracking", .syntax = "*", .inherits = false, .initial_value = null },
+        };
+    }
+    // border-spacing
+    if (std.mem.eql(u8, root, "border-spacing") or
+        std.mem.eql(u8, root, "border-spacing-x") or
+        std.mem.eql(u8, root, "border-spacing-y"))
+    {
+        return &[_]AtProperty{
+            .{ .name = "--tw-border-spacing-x", .syntax = "<length>", .inherits = false, .initial_value = "0" },
+            .{ .name = "--tw-border-spacing-y", .syntax = "<length>", .inherits = false, .initial_value = "0" },
+        };
+    }
+    // font-variant-numeric composable properties
+    if (std.mem.eql(u8, root, "ordinal") or
+        std.mem.eql(u8, root, "slashed-zero") or
+        std.mem.eql(u8, root, "lining-nums") or
+        std.mem.eql(u8, root, "oldstyle-nums") or
+        std.mem.eql(u8, root, "proportional-nums") or
+        std.mem.eql(u8, root, "tabular-nums") or
+        std.mem.eql(u8, root, "diagonal-fractions") or
+        std.mem.eql(u8, root, "stacked-fractions"))
+    {
+        return &[_]AtProperty{
+            .{ .name = "--tw-ordinal", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-slashed-zero", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-numeric-figure", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-numeric-spacing", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-numeric-fraction", .syntax = "*", .inherits = false, .initial_value = null },
         };
     }
     return &[_]AtProperty{};
@@ -1124,13 +1201,17 @@ pub fn resolveFunctional(
         return resolveSpacing(alloc, root, value, theme, negative);
     }
 
-    // Decoration: dual behavior (thickness when numeric, color otherwise)
+    // Decoration: dual behavior (thickness when numeric/length, color otherwise)
     if (std.mem.eql(u8, root, "decoration")) {
         if (value) |val| {
             if (val.kind == .named and isPositiveInteger(val.value)) {
                 return resolveDecorationThickness(alloc, value);
             }
             if (val.kind == .named and (std.mem.eql(u8, val.value, "auto") or std.mem.eql(u8, val.value, "from-font"))) {
+                return resolveDecorationThickness(alloc, value);
+            }
+            // Arbitrary values that look like lengths -> thickness
+            if (val.kind == .arbitrary and looksLikeLength(val.value)) {
                 return resolveDecorationThickness(alloc, value);
             }
         }
@@ -1767,7 +1848,13 @@ fn resolveSpacing(
                     .{ "screen-2xl", {} },
                 });
                 if (max_w_names.has(val.value)) {
-                    css_value = try std.fmt.allocPrint(alloc, "var(--container-{s})", .{val.value});
+                    if (std.mem.startsWith(u8, val.value, "screen-")) {
+                        // screen-sm -> var(--breakpoint-sm)
+                        const bp_name = val.value["screen-".len..];
+                        css_value = try std.fmt.allocPrint(alloc, "var(--breakpoint-{s})", .{bp_name});
+                    } else {
+                        css_value = try std.fmt.allocPrint(alloc, "var(--container-{s})", .{val.value});
+                    }
                 } else {
                     return null;
                 }
@@ -1889,7 +1976,12 @@ fn resolveOpacity(alloc: Allocator, value: ?Value) !?[]const Declaration {
 
     switch (val.kind) {
         .arbitrary => {
-            css_value = val.value;
+            // Strip leading zero: 0.1 -> .1
+            if (std.mem.startsWith(u8, val.value, "0.")) {
+                css_value = val.value[1..];
+            } else {
+                css_value = val.value;
+            }
         },
         .named => {
             if (isPositiveInteger(val.value)) {
@@ -2059,6 +2151,8 @@ fn resolveDelay(alloc: Allocator, value: ?Value) !?[]const Declaration {
 fn formatMsToSeconds(alloc: Allocator, ms: u32) ![]const u8 {
     if (ms == 0) {
         return "0s";
+    } else if (ms < 100) {
+        return std.fmt.allocPrint(alloc, "{d}ms", .{ms});
     } else if (ms % 1000 == 0) {
         return std.fmt.allocPrint(alloc, "{d}s", .{ms / 1000});
     } else {
@@ -2227,8 +2321,9 @@ fn resolveLeading(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decl
         },
     }
 
-    const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = "line-height", .value = css_value };
+    const decls = try alloc.alloc(Declaration, 2);
+    decls[0] = Declaration{ .property = "--tw-leading", .value = css_value };
+    decls[1] = Declaration{ .property = "line-height", .value = css_value };
     return decls;
 }
 
@@ -2241,7 +2336,12 @@ fn resolveTracking(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Dec
 
     switch (val.kind) {
         .arbitrary => {
-            css_value = val.value;
+            // Strip leading zero: 0.01em -> .01em
+            if (std.mem.startsWith(u8, val.value, "0.")) {
+                css_value = val.value[1..];
+            } else {
+                css_value = val.value;
+            }
         },
         .named => {
             if (theme.resolve(val.value, "--tracking") != null) {
@@ -2253,8 +2353,9 @@ fn resolveTracking(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Dec
         },
     }
 
-    const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = "letter-spacing", .value = css_value };
+    const decls = try alloc.alloc(Declaration, 2);
+    decls[0] = Declaration{ .property = "--tw-tracking", .value = css_value };
+    decls[1] = Declaration{ .property = "letter-spacing", .value = css_value };
     return decls;
 }
 
@@ -2584,7 +2685,16 @@ fn resolveScale(alloc: Allocator, value: ?Value, root: []const u8) !?[]const Dec
 
     switch (val.kind) {
         .arbitrary => {
-            css_value = val.value;
+            // Strip leading zero: 0.95 -> .95
+            if (std.mem.startsWith(u8, val.value, "0.")) {
+                css_value = val.value[1..];
+            } else {
+                css_value = val.value;
+            }
+            // Arbitrary values output directly without composable custom properties
+            const decls = try alloc.alloc(Declaration, 1);
+            decls[0] = Declaration{ .property = "scale", .value = css_value };
+            return decls;
         },
         .named => {
             if (isPositiveInteger(val.value)) {
@@ -2669,6 +2779,8 @@ fn resolveTranslate(alloc: Allocator, value: ?Value, comptime axis: []const u8, 
 
 // ─── Transform: skew ───────────────────────────────────────────────────────
 
+const COMPOSABLE_TRANSFORM = "var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,)";
+
 fn resolveSkew(alloc: Allocator, value: ?Value, comptime axis: []const u8, negative: bool) !?[]const Declaration {
     const val = value orelse return null;
 
@@ -2695,10 +2807,12 @@ fn resolveSkew(alloc: Allocator, value: ?Value, comptime axis: []const u8, negat
         },
     }
 
-    const css_value = try std.fmt.allocPrint(alloc, "skew{s}({s})", .{ axis, deg_value });
+    const skew_fn = try std.fmt.allocPrint(alloc, "skew{s}({s})", .{ axis, deg_value });
+    const prop = if (std.mem.eql(u8, axis, "X")) "--tw-skew-x" else "--tw-skew-y";
 
-    const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = "transform", .value = css_value };
+    const decls = try alloc.alloc(Declaration, 2);
+    decls[0] = Declaration{ .property = prop, .value = skew_fn };
+    decls[1] = Declaration{ .property = "transform", .value = COMPOSABLE_TRANSFORM };
     return decls;
 }
 
@@ -2810,7 +2924,7 @@ fn resolveRing(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
 
 // ─── Filter utilities ──────────────────────────────────────────────────────
 
-const COMPOSABLE_FILTER = "var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,)";
+const COMPOSABLE_FILTER = "var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,)";
 const COMPOSABLE_BACKDROP_FILTER = "var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,)";
 
 fn buildFilterDecls(alloc: Allocator, fn_value: []const u8, comptime is_backdrop: bool, comptime fn_name: []const u8) !?[]const Declaration {
@@ -3081,6 +3195,23 @@ fn replaceUnderscores(alloc: Allocator, s: []const u8) ![]const u8 {
     return result;
 }
 
+/// Check if a value looks like a CSS length (ends with px, rem, em, etc.)
+fn looksLikeLength(s: []const u8) bool {
+    return std.mem.endsWith(u8, s, "px") or
+        std.mem.endsWith(u8, s, "rem") or
+        std.mem.endsWith(u8, s, "em") or
+        std.mem.endsWith(u8, s, "vh") or
+        std.mem.endsWith(u8, s, "vw") or
+        std.mem.endsWith(u8, s, "ch") or
+        std.mem.endsWith(u8, s, "ex") or
+        std.mem.endsWith(u8, s, "cm") or
+        std.mem.endsWith(u8, s, "mm") or
+        std.mem.endsWith(u8, s, "in") or
+        std.mem.endsWith(u8, s, "pt") or
+        std.mem.endsWith(u8, s, "pc") or
+        std.mem.endsWith(u8, s, "%");
+}
+
 fn isPositiveInteger(s: []const u8) bool {
     if (s.len == 0) return false;
     for (s) |c| {
@@ -3258,6 +3389,7 @@ fn resolveGradient(alloc: Allocator, root: []const u8, value: ?Value) !?[]const 
 fn resolveLinearGradient(alloc: Allocator, value: ?Value) !?[]const Declaration {
     const val = value orelse return null;
     var direction: []const u8 = undefined;
+    var is_named = false;
 
     switch (val.kind) {
         .arbitrary => {
@@ -3276,18 +3408,24 @@ fn resolveLinearGradient(alloc: Allocator, value: ?Value) !?[]const Declaration 
             });
             if (dir_map.get(val.value)) |dir| {
                 direction = dir;
+                is_named = true;
             } else if (isValidSpacingMultiplier(val.value)) {
                 // Bare number -> degrees
                 direction = try std.fmt.allocPrint(alloc, "{s}deg", .{val.value});
+                is_named = true;
             } else {
                 return null;
             }
         },
     }
 
-    const css_value = try std.fmt.allocPrint(alloc, "linear-gradient({s},var(--tw-gradient-stops,))", .{direction});
-    const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = "background-image", .value = css_value };
+    const decls = try alloc.alloc(Declaration, 2);
+    if (is_named) {
+        decls[0] = Declaration{ .property = "--tw-gradient-position", .value = try std.fmt.allocPrint(alloc, "{s} in oklab", .{direction}) };
+    } else {
+        decls[0] = Declaration{ .property = "--tw-gradient-position", .value = direction };
+    }
+    decls[1] = Declaration{ .property = "background-image", .value = "linear-gradient(var(--tw-gradient-stops))" };
     return decls;
 }
 
@@ -3296,9 +3434,9 @@ fn resolveRadialGradient(alloc: Allocator, value: ?Value) !?[]const Declaration 
         switch (val.kind) {
             .arbitrary => {
                 const inner = try replaceUnderscores(alloc, val.value);
-                const css_value = try std.fmt.allocPrint(alloc, "radial-gradient({s} in oklab,var(--tw-gradient-stops,))", .{inner});
-                const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "background-image", .value = css_value };
+                const decls = try alloc.alloc(Declaration, 2);
+                decls[0] = Declaration{ .property = "--tw-gradient-position", .value = inner };
+                decls[1] = Declaration{ .property = "background-image", .value = "radial-gradient(var(--tw-gradient-stops))" };
                 return decls;
             },
             .named => {
@@ -3307,8 +3445,9 @@ fn resolveRadialGradient(alloc: Allocator, value: ?Value) !?[]const Declaration 
         }
     } else {
         // bare bg-radial
-        const decls = try alloc.alloc(Declaration, 1);
-        decls[0] = Declaration{ .property = "background-image", .value = "radial-gradient(in oklab,var(--tw-gradient-stops,))" };
+        const decls = try alloc.alloc(Declaration, 2);
+        decls[0] = Declaration{ .property = "--tw-gradient-position", .value = "in oklab" };
+        decls[1] = Declaration{ .property = "background-image", .value = "radial-gradient(var(--tw-gradient-stops))" };
         return decls;
     }
 }
@@ -3318,17 +3457,17 @@ fn resolveConicGradient(alloc: Allocator, value: ?Value) !?[]const Declaration {
         switch (val.kind) {
             .arbitrary => {
                 const inner = try replaceUnderscores(alloc, val.value);
-                const css_value = try std.fmt.allocPrint(alloc, "conic-gradient({s} in oklab,var(--tw-gradient-stops,))", .{inner});
-                const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "background-image", .value = css_value };
+                const decls = try alloc.alloc(Declaration, 2);
+                decls[0] = Declaration{ .property = "--tw-gradient-position", .value = inner };
+                decls[1] = Declaration{ .property = "background-image", .value = "conic-gradient(var(--tw-gradient-stops))" };
                 return decls;
             },
             .named => {
                 // Bare number -> from Ndeg
                 if (isValidSpacingMultiplier(val.value)) {
-                    const css_value = try std.fmt.allocPrint(alloc, "conic-gradient(from {s}deg in oklab,var(--tw-gradient-stops,))", .{val.value});
-                    const decls = try alloc.alloc(Declaration, 1);
-                    decls[0] = Declaration{ .property = "background-image", .value = css_value };
+                    const decls = try alloc.alloc(Declaration, 2);
+                    decls[0] = Declaration{ .property = "--tw-gradient-position", .value = try std.fmt.allocPrint(alloc, "from {s}deg in oklab", .{val.value}) };
+                    decls[1] = Declaration{ .property = "background-image", .value = "conic-gradient(var(--tw-gradient-stops))" };
                     return decls;
                 }
                 return null;
@@ -3336,22 +3475,30 @@ fn resolveConicGradient(alloc: Allocator, value: ?Value) !?[]const Declaration {
         }
     } else {
         // bare bg-conic
-        const decls = try alloc.alloc(Declaration, 1);
-        decls[0] = Declaration{ .property = "background-image", .value = "conic-gradient(in oklab,var(--tw-gradient-stops,))" };
+        const decls = try alloc.alloc(Declaration, 2);
+        decls[0] = Declaration{ .property = "--tw-gradient-position", .value = "in oklab" };
+        decls[1] = Declaration{ .property = "background-image", .value = "conic-gradient(var(--tw-gradient-stops))" };
         return decls;
     }
 }
 
 // ─── Gradient Color Stops ──────────────────────────────────────────────────
 
+const GRADIENT_STOPS_COMPOSITION = "var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))";
+const GRADIENT_VIA_STOPS_COMPOSITION = "var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-via) var(--tw-gradient-via-position), var(--tw-gradient-to) var(--tw-gradient-to-position)";
+
 fn resolveGradientStop(alloc: Allocator, root: []const u8, value: ?Value, modifier: ?Modifier, theme: *Theme) !?[]const Declaration {
     const val = value orelse return null;
 
-    const property: []const u8 = if (std.mem.eql(u8, root, "from"))
+    const is_from = std.mem.eql(u8, root, "from");
+    const is_via = std.mem.eql(u8, root, "via");
+    const is_to = std.mem.eql(u8, root, "to");
+
+    const property: []const u8 = if (is_from)
         "--tw-gradient-from"
-    else if (std.mem.eql(u8, root, "via"))
+    else if (is_via)
         "--tw-gradient-via"
-    else if (std.mem.eql(u8, root, "to"))
+    else if (is_to)
         "--tw-gradient-to"
     else
         return null;
@@ -3374,9 +3521,9 @@ fn resolveGradientStop(alloc: Allocator, root: []const u8, value: ?Value, modifi
                 css_value = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
             } else if (std.mem.endsWith(u8, val.value, "%")) {
                 // Gradient position: from-0%, via-50%, to-100%
-                const pos_prop: []const u8 = if (std.mem.eql(u8, root, "from"))
+                const pos_prop: []const u8 = if (is_from)
                     "--tw-gradient-from-position"
-                else if (std.mem.eql(u8, root, "via"))
+                else if (is_via)
                     "--tw-gradient-via-position"
                 else
                     "--tw-gradient-to-position";
@@ -3394,9 +3541,20 @@ fn resolveGradientStop(alloc: Allocator, root: []const u8, value: ?Value, modifi
         css_value = try applyColorOpacity(alloc, css_value, mod);
     }
 
-    const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = property, .value = css_value };
-    return decls;
+    if (is_via) {
+        // via sets --tw-gradient-via + --tw-gradient-via-stops + --tw-gradient-stops
+        const decls = try alloc.alloc(Declaration, 3);
+        decls[0] = Declaration{ .property = property, .value = css_value };
+        decls[1] = Declaration{ .property = "--tw-gradient-via-stops", .value = GRADIENT_VIA_STOPS_COMPOSITION };
+        decls[2] = Declaration{ .property = "--tw-gradient-stops", .value = "var(--tw-gradient-via-stops)" };
+        return decls;
+    } else {
+        // from and to set their color + --tw-gradient-stops
+        const decls = try alloc.alloc(Declaration, 2);
+        decls[0] = Declaration{ .property = property, .value = css_value };
+        decls[1] = Declaration{ .property = "--tw-gradient-stops", .value = GRADIENT_STOPS_COMPOSITION };
+        return decls;
+    }
 }
 
 // ─── Perspective ───────────────────────────────────────────────────────────
@@ -3482,24 +3640,24 @@ fn resolveColumns(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decl
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--container-{s}", .{val.value}));
                 css_value = try std.fmt.allocPrint(alloc, "var(--container-{s})", .{val.value});
             } else {
-                // Named size values (fallback)
-                const size_map = std.StaticStringMap([]const u8).initComptime(.{
-                    .{ "3xs", "16rem" },
-                    .{ "2xs", "18rem" },
-                    .{ "xs", "20rem" },
-                    .{ "sm", "24rem" },
-                    .{ "md", "28rem" },
-                    .{ "lg", "32rem" },
-                    .{ "xl", "36rem" },
-                    .{ "2xl", "42rem" },
-                    .{ "3xl", "48rem" },
-                    .{ "4xl", "56rem" },
-                    .{ "5xl", "64rem" },
-                    .{ "6xl", "72rem" },
-                    .{ "7xl", "80rem" },
+                // Named size values (fallback) -> var(--container-*)
+                const size_names = std.StaticStringMap(void).initComptime(.{
+                    .{ "3xs", {} },
+                    .{ "2xs", {} },
+                    .{ "xs", {} },
+                    .{ "sm", {} },
+                    .{ "md", {} },
+                    .{ "lg", {} },
+                    .{ "xl", {} },
+                    .{ "2xl", {} },
+                    .{ "3xl", {} },
+                    .{ "4xl", {} },
+                    .{ "5xl", {} },
+                    .{ "6xl", {} },
+                    .{ "7xl", {} },
                 });
-                if (size_map.get(val.value)) |sz| {
-                    css_value = sz;
+                if (size_names.has(val.value)) {
+                    css_value = try std.fmt.allocPrint(alloc, "var(--container-{s})", .{val.value});
                 } else {
                     return null;
                 }
@@ -3787,33 +3945,39 @@ fn resolveFontWeight(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const D
 
 fn resolveDropShadow(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Declaration {
     const val = value orelse {
-        // bare drop-shadow = default
-        const decls = try alloc.alloc(Declaration, 1);
-        decls[0] = Declaration{ .property = "filter", .value = "drop-shadow(0 1px 2px rgb(0 0 0 / 0.1)) drop-shadow(0 1px 1px rgb(0 0 0 / 0.06))" };
+        // bare drop-shadow = default: uses theme var
+        const decls = try alloc.alloc(Declaration, 2);
+        decls[0] = Declaration{ .property = "--tw-drop-shadow", .value = "drop-shadow(var(--drop-shadow))" };
+        decls[1] = Declaration{ .property = "filter", .value = COMPOSABLE_FILTER };
         return decls;
     };
-    var css_value: []const u8 = undefined;
     switch (val.kind) {
         .arbitrary => {
-            css_value = try std.fmt.allocPrint(alloc, "drop-shadow({s})", .{val.value});
+            const decls = try alloc.alloc(Declaration, 2);
+            decls[0] = Declaration{ .property = "--tw-drop-shadow", .value = try std.fmt.allocPrint(alloc, "drop-shadow({s})", .{val.value}) };
+            decls[1] = Declaration{ .property = "filter", .value = COMPOSABLE_FILTER };
+            return decls;
         },
         .named => {
             if (std.mem.eql(u8, val.value, "none")) {
-                css_value = "drop-shadow(0 0 #0000)";
+                const decls = try alloc.alloc(Declaration, 2);
+                decls[0] = Declaration{ .property = "--tw-drop-shadow", .value = " " };
+                decls[1] = Declaration{ .property = "filter", .value = COMPOSABLE_FILTER };
+                return decls;
             } else {
                 const var_name = try std.fmt.allocPrint(alloc, "--drop-shadow-{s}", .{val.value});
                 if (theme.get(var_name) != null) {
                     theme.markUsed(var_name);
-                    css_value = try std.fmt.allocPrint(alloc, "drop-shadow(var({s}))", .{var_name});
+                    const decls = try alloc.alloc(Declaration, 2);
+                    decls[0] = Declaration{ .property = "--tw-drop-shadow", .value = try std.fmt.allocPrint(alloc, "drop-shadow(var({s}))", .{var_name}) };
+                    decls[1] = Declaration{ .property = "filter", .value = COMPOSABLE_FILTER };
+                    return decls;
                 } else {
                     return null;
                 }
             }
         },
     }
-    const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = "filter", .value = css_value };
-    return decls;
 }
 
 // ─── Border Spacing ────────────────────────────────────────────────────────
@@ -3840,17 +4004,22 @@ fn resolveBorderSpacing(alloc: Allocator, root: []const u8, value: ?Value, theme
     }
 
     if (std.mem.eql(u8, root, "border-spacing-x")) {
-        const decls = try alloc.alloc(Declaration, 1);
-        decls[0] = Declaration{ .property = "border-spacing", .value = try std.fmt.allocPrint(alloc, "{s} 0", .{css_value}) };
+        const decls = try alloc.alloc(Declaration, 2);
+        decls[0] = Declaration{ .property = "--tw-border-spacing-x", .value = css_value };
+        decls[1] = Declaration{ .property = "border-spacing", .value = "var(--tw-border-spacing-x) var(--tw-border-spacing-y)" };
         return decls;
     }
     if (std.mem.eql(u8, root, "border-spacing-y")) {
-        const decls = try alloc.alloc(Declaration, 1);
-        decls[0] = Declaration{ .property = "border-spacing", .value = try std.fmt.allocPrint(alloc, "0 {s}", .{css_value}) };
+        const decls = try alloc.alloc(Declaration, 2);
+        decls[0] = Declaration{ .property = "--tw-border-spacing-y", .value = css_value };
+        decls[1] = Declaration{ .property = "border-spacing", .value = "var(--tw-border-spacing-x) var(--tw-border-spacing-y)" };
         return decls;
     }
-    const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = "border-spacing", .value = try std.fmt.allocPrint(alloc, "{s} {s}", .{ css_value, css_value }) };
+    // bare border-spacing sets both x and y
+    const decls = try alloc.alloc(Declaration, 3);
+    decls[0] = Declaration{ .property = "--tw-border-spacing-x", .value = css_value };
+    decls[1] = Declaration{ .property = "--tw-border-spacing-y", .value = css_value };
+    decls[2] = Declaration{ .property = "border-spacing", .value = "var(--tw-border-spacing-x) var(--tw-border-spacing-y)" };
     return decls;
 }
 

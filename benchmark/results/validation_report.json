@@ -2,8 +2,8 @@
   "summary": {
     "total": 2980,
     "both_skip": 52,
-    "match": 2284,
-    "different": 644,
+    "match": 2495,
+    "different": 433,
     "zig_only": 0,
     "tw_only": 0
   },
@@ -75,30 +75,6 @@
       }
     },
     {
-      "candidate": "after:bg-gradient-to-b",
-      "zig": {
-        "content": "var(--tw-content)",
-        "background-image": "linear-gradient(to bottom,var(--tw-gradient-stops,))"
-      },
-      "tw": {
-        "content": "var(--tw-content)",
-        "--tw-gradient-position": "to bottom in oklab",
-        "background-image": "linear-gradient(var(--tw-gradient-stops))"
-      }
-    },
-    {
-      "candidate": "after:bg-gradient-to-l",
-      "zig": {
-        "content": "var(--tw-content)",
-        "background-image": "linear-gradient(to left,var(--tw-gradient-stops,))"
-      },
-      "tw": {
-        "content": "var(--tw-content)",
-        "--tw-gradient-position": "to left in oklab",
-        "background-image": "linear-gradient(var(--tw-gradient-stops))"
-      }
-    },
-    {
       "candidate": "after:shadow-sm",
       "zig": {
         "content": "var(--tw-content)",
@@ -129,42 +105,6 @@
       },
       "tw": {
         "aspect-ratio": "1"
-      }
-    },
-    {
-      "candidate": "before:bg-gradient-to-b",
-      "zig": {
-        "content": "var(--tw-content)",
-        "background-image": "linear-gradient(to bottom,var(--tw-gradient-stops,))"
-      },
-      "tw": {
-        "content": "var(--tw-content)",
-        "--tw-gradient-position": "to bottom in oklab",
-        "background-image": "linear-gradient(var(--tw-gradient-stops))"
-      }
-    },
-    {
-      "candidate": "before:bg-gradient-to-l",
-      "zig": {
-        "content": "var(--tw-content)",
-        "background-image": "linear-gradient(to left,var(--tw-gradient-stops,))"
-      },
-      "tw": {
-        "content": "var(--tw-content)",
-        "--tw-gradient-position": "to left in oklab",
-        "background-image": "linear-gradient(var(--tw-gradient-stops))"
-      }
-    },
-    {
-      "candidate": "before:bg-gradient-to-r",
-      "zig": {
-        "content": "var(--tw-content)",
-        "background-image": "linear-gradient(to right,var(--tw-gradient-stops,))"
-      },
-      "tw": {
-        "content": "var(--tw-content)",
-        "--tw-gradient-position": "to right in oklab",
-        "background-image": "linear-gradient(var(--tw-gradient-stops))"
       }
     },
     {
@@ -389,76 +329,6 @@
       }
     },
     {
-      "candidate": "bg-gradient-to-b",
-      "zig": {
-        "background-image": "linear-gradient(to bottom left,var(--tw-gradient-stops,))"
-      },
-      "tw": {
-        "--tw-gradient-position": "to bottom left in oklab",
-        "background-image": "linear-gradient(var(--tw-gradient-stops))"
-      }
-    },
-    {
-      "candidate": "bg-gradient-to-bl",
-      "zig": {
-        "background-image": "linear-gradient(to bottom left,var(--tw-gradient-stops,))"
-      },
-      "tw": {
-        "--tw-gradient-position": "to bottom left in oklab",
-        "background-image": "linear-gradient(var(--tw-gradient-stops))"
-      }
-    },
-    {
-      "candidate": "bg-gradient-to-l",
-      "zig": {
-        "background-image": "linear-gradient(to left,var(--tw-gradient-stops,))"
-      },
-      "tw": {
-        "--tw-gradient-position": "to left in oklab",
-        "background-image": "linear-gradient(var(--tw-gradient-stops))"
-      }
-    },
-    {
-      "candidate": "bg-gradient-to-r",
-      "zig": {
-        "background-image": "linear-gradient(to right,var(--tw-gradient-stops,))"
-      },
-      "tw": {
-        "--tw-gradient-position": "to right in oklab",
-        "background-image": "linear-gradient(var(--tw-gradient-stops))"
-      }
-    },
-    {
-      "candidate": "bg-gradient-to-t",
-      "zig": {
-        "background-image": "linear-gradient(to top right,var(--tw-gradient-stops,))"
-      },
-      "tw": {
-        "--tw-gradient-position": "to top right in oklab",
-        "background-image": "linear-gradient(var(--tw-gradient-stops))"
-      }
-    },
-    {
-      "candidate": "bg-gradient-to-tl",
-      "zig": {
-        "background-image": "linear-gradient(to top left,var(--tw-gradient-stops,))"
-      },
-      "tw": {
-        "--tw-gradient-position": "to top left in oklab",
-        "background-image": "linear-gradient(var(--tw-gradient-stops))"
-      }
-    },
-    {
-      "candidate": "bg-gradient-to-tr",
-      "zig": {
-        "background-image": "linear-gradient(to top right,var(--tw-gradient-stops,))"
-      },
-      "tw": {
-        "--tw-gradient-position": "to top right in oklab",
-        "background-image": "linear-gradient(var(--tw-gradient-stops))"
-      }
-    },
-    {
       "candidate": "bg-gray-400",
       "zig": {
         "background-color": "color-mix(in oklab,var(--color-gray-400) 75%,transparent)"
@@ -501,6 +371,114 @@
       },
       "tw": {
         "background-color": "color-mix(in oklab, var(--color-gray-400) 50%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-gray-400/75",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-gray-400) 75%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-gray-400) 75%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-gray-50",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-gray-500) 75%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-gray-500) 75%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-gray-500",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-gray-500) 75%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-gray-500) 75%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-gray-500/10",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-gray-500) 10%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-gray-500) 10%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-gray-500/20",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-gray-500) 20%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-gray-500) 20%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-gray-500/30",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-gray-500) 30%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-gray-500) 30%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-gray-500/50",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-gray-500) 50%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-gray-500) 50%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-gray-500/75",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-gray-500) 75%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-gray-500) 75%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-gray-600",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-gray-600) 75%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-gray-600) 75%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-gray-600/10",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-gray-600) 10%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-gray-600) 10%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-gray-600/20",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-gray-600) 20%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-gray-600) 20%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-gray-600/30",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-gray-600) 30%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-gray-600) 30%, transparent)"
       }
     }
   ]

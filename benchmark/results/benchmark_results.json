@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "date": "2026-04-07T20:21:05Z",
+    "date": "2026-04-07T20:38:07Z",
     "platform": "Darwin arm64",
     "iterations": 10,
     "html_pages": 120,
@@ -10,21 +10,21 @@
     "cpu": "Apple M4"
   },
   "zig_compiler": {
-    "times_seconds": [0.003221,0.002278,0.002058,0.001826,0.001659,0.001597,0.001577,0.001619,0.001573,0.001638],
-    "avg_seconds": 0.001905,
-    "min_seconds": 0.001573,
-    "max_seconds": 0.003221,
-    "median_seconds": 0.001638,
-    "avg_ms": 1.905,
-    "min_ms": 1.573,
-    "max_ms": 3.221,
-    "median_ms": 1.638,
-    "peak_rss_bytes": 4734976,
-    "peak_rss_mb": 4.51,
-    "output_size_bytes": 216855
+    "times_seconds": [0.003406,0.002555,0.002010,0.001745,0.001629,0.001602,0.001599,0.001671,0.001615,0.001605],
+    "avg_seconds": 0.001944,
+    "min_seconds": 0.001599,
+    "max_seconds": 0.003406,
+    "median_seconds": 0.001629,
+    "avg_ms": 1.944,
+    "min_ms": 1.599,
+    "max_ms": 3.406,
+    "median_ms": 1.629,
+    "peak_rss_bytes": 4751360,
+    "peak_rss_mb": 4.53,
+    "output_size_bytes": 241814
   },
   "tailwind_cli": {
-    "times_seconds": [0.160000,0.160000,0.160000,0.160000,0.160000,0.160000,0.160000,0.170000,0.160000,0.160000],
+    "times_seconds": [0.160000,0.160000,0.160000,0.160000,0.160000,0.160000,0.160000,0.160000,0.160000,0.170000],
     "avg_seconds": 0.161000,
     "min_seconds": 0.160000,
     "max_seconds": 0.170000,
@@ -33,13 +33,13 @@
     "min_ms": 160,
     "max_ms": 170,
     "median_ms": 160,
-    "peak_rss_bytes": 137740288,
-    "peak_rss_mb": 131.35,
+    "peak_rss_bytes": 138674176,
+    "peak_rss_mb": 132.25,
     "output_size_bytes": 262984
   },
   "comparison": {
-    "speedup_factor": 84.5,
-    "memory_ratio": 29.0,
-    "zig_output_smaller_by_bytes": 46129
+    "speedup_factor": 82.8,
+    "memory_ratio": 29.1,
+    "zig_output_smaller_by_bytes": 21170
   }
 }
