@@ -101,7 +101,7 @@ fn applyStaticVariant(
         const pseudo = if (std.mem.eql(u8, name, "before")) "::before" else "::after";
 
         // Inject content declaration + original declarations
-        const content_decl = Declaration{ .property = "content", .value = "var(--tw-content, \"\")" };
+        const content_decl = Declaration{ .property = "content", .value = "var(--tw-content)" };
         var new_decls = try alloc.alloc(Declaration, inner.declarations.len + 1);
         new_decls[0] = content_decl;
         for (inner.declarations, 0..) |d, idx| {

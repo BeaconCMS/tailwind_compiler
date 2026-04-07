@@ -1,0 +1,507 @@
+{
+  "summary": {
+    "total": 2980,
+    "both_skip": 52,
+    "match": 2284,
+    "different": 644,
+    "zig_only": 0,
+    "tw_only": 0
+  },
+  "tw_only": [],
+  "different": [
+    {
+      "candidate": "-translate-x-1",
+      "zig": {
+        "--tw-translate-x": "-50%",
+        "translate": "var(--tw-translate-x) var(--tw-translate-y)"
+      },
+      "tw": {
+        "--tw-translate-x": "calc(calc(1 / 2 * 100%) * -1)",
+        "translate": "var(--tw-translate-x) var(--tw-translate-y)"
+      }
+    },
+    {
+      "candidate": "-translate-x-1/2",
+      "zig": {
+        "--tw-translate-x": "-50%",
+        "translate": "var(--tw-translate-x) var(--tw-translate-y)"
+      },
+      "tw": {
+        "--tw-translate-x": "calc(calc(1 / 2 * 100%) * -1)",
+        "translate": "var(--tw-translate-x) var(--tw-translate-y)"
+      }
+    },
+    {
+      "candidate": "-translate-y-1/2",
+      "zig": {
+        "--tw-translate-y": "-50%",
+        "translate": "var(--tw-translate-x) var(--tw-translate-y)"
+      },
+      "tw": {
+        "--tw-translate-y": "calc(calc(1 / 2 * 100%) * -1)",
+        "translate": "var(--tw-translate-x) var(--tw-translate-y)"
+      }
+    },
+    {
+      "candidate": "active:shadow-inner",
+      "zig": {
+        "box-shadow": "inset 0 2px 4px 0 rgb(0 0 0 / 0.05)"
+      },
+      "tw": {
+        "--tw-shadow": "inset 0 2px 4px 0 var(--tw-shadow-color,#0000000d)",
+        "box-shadow": "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)"
+      }
+    },
+    {
+      "candidate": "active:shadow-sm",
+      "zig": {
+        "--tw-shadow": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+        "box-shadow": "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)"
+      },
+      "tw": {
+        "--tw-shadow": "0 1px 3px 0 var(--tw-shadow-color,#0000001a), 0 1px 2px -1px var(--tw-shadow-color,#0000001a)",
+        "box-shadow": "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)"
+      }
+    },
+    {
+      "candidate": "active:translate-y-0.5",
+      "zig": {
+        "--tw-translate-y": "calc(var(--spacing) * 0.5)",
+        "translate": "var(--tw-translate-x) var(--tw-translate-y)"
+      },
+      "tw": {
+        "--tw-translate-y": "calc(var(--spacing) * .5)",
+        "translate": "var(--tw-translate-x) var(--tw-translate-y)"
+      }
+    },
+    {
+      "candidate": "after:bg-gradient-to-b",
+      "zig": {
+        "content": "var(--tw-content)",
+        "background-image": "linear-gradient(to bottom,var(--tw-gradient-stops,))"
+      },
+      "tw": {
+        "content": "var(--tw-content)",
+        "--tw-gradient-position": "to bottom in oklab",
+        "background-image": "linear-gradient(var(--tw-gradient-stops))"
+      }
+    },
+    {
+      "candidate": "after:bg-gradient-to-l",
+      "zig": {
+        "content": "var(--tw-content)",
+        "background-image": "linear-gradient(to left,var(--tw-gradient-stops,))"
+      },
+      "tw": {
+        "content": "var(--tw-content)",
+        "--tw-gradient-position": "to left in oklab",
+        "background-image": "linear-gradient(var(--tw-gradient-stops))"
+      }
+    },
+    {
+      "candidate": "after:shadow-sm",
+      "zig": {
+        "content": "var(--tw-content)",
+        "--tw-shadow": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+        "box-shadow": "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)"
+      },
+      "tw": {
+        "content": "var(--tw-content)",
+        "--tw-shadow": "0 1px 3px 0 var(--tw-shadow-color,#0000001a), 0 1px 2px -1px var(--tw-shadow-color,#0000001a)",
+        "box-shadow": "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)"
+      }
+    },
+    {
+      "candidate": "aria-expanded:shadow-md",
+      "zig": {
+        "--tw-shadow": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+        "box-shadow": "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)"
+      },
+      "tw": {
+        "--tw-shadow": "0 4px 6px -1px var(--tw-shadow-color,#0000001a), 0 2px 4px -2px var(--tw-shadow-color,#0000001a)",
+        "box-shadow": "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)"
+      }
+    },
+    {
+      "candidate": "aspect-[1/1]",
+      "zig": {
+        "aspect-ratio": "1/1"
+      },
+      "tw": {
+        "aspect-ratio": "1"
+      }
+    },
+    {
+      "candidate": "before:bg-gradient-to-b",
+      "zig": {
+        "content": "var(--tw-content)",
+        "background-image": "linear-gradient(to bottom,var(--tw-gradient-stops,))"
+      },
+      "tw": {
+        "content": "var(--tw-content)",
+        "--tw-gradient-position": "to bottom in oklab",
+        "background-image": "linear-gradient(var(--tw-gradient-stops))"
+      }
+    },
+    {
+      "candidate": "before:bg-gradient-to-l",
+      "zig": {
+        "content": "var(--tw-content)",
+        "background-image": "linear-gradient(to left,var(--tw-gradient-stops,))"
+      },
+      "tw": {
+        "content": "var(--tw-content)",
+        "--tw-gradient-position": "to left in oklab",
+        "background-image": "linear-gradient(var(--tw-gradient-stops))"
+      }
+    },
+    {
+      "candidate": "before:bg-gradient-to-r",
+      "zig": {
+        "content": "var(--tw-content)",
+        "background-image": "linear-gradient(to right,var(--tw-gradient-stops,))"
+      },
+      "tw": {
+        "content": "var(--tw-content)",
+        "--tw-gradient-position": "to right in oklab",
+        "background-image": "linear-gradient(var(--tw-gradient-stops))"
+      }
+    },
+    {
+      "candidate": "before:shadow-sm",
+      "zig": {
+        "content": "var(--tw-content)",
+        "--tw-shadow": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+        "box-shadow": "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)"
+      },
+      "tw": {
+        "content": "var(--tw-content)",
+        "--tw-shadow": "0 1px 3px 0 var(--tw-shadow-color,#0000001a), 0 1px 2px -1px var(--tw-shadow-color,#0000001a)",
+        "box-shadow": "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)"
+      }
+    },
+    {
+      "candidate": "bg-black",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-black) 90%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-black) 90%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-black/10",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-black) 10%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-black) 10%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-black/5",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-black) 50%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-black) 50%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-black/50",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-black) 50%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-black) 50%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-black/90",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-black) 90%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-black) 90%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-blue-400",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-blue-400) 75%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-blue-400) 75%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-blue-400/10",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-blue-400) 10%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-blue-400) 10%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-blue-400/20",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-blue-400) 20%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-blue-400) 20%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-blue-400/30",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-blue-400) 30%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-blue-400) 30%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-blue-400/50",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-blue-400) 50%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-blue-400) 50%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-blue-400/75",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-blue-400) 75%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-blue-400) 75%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-blue-50",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-blue-500) 75%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-blue-500) 75%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-blue-500",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-blue-500) 75%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-blue-500) 75%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-blue-500/30",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-blue-500) 30%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-blue-500) 30%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-blue-500/50",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-blue-500) 50%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-blue-500) 50%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-blue-500/75",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-blue-500) 75%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-blue-500) 75%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-blue-600",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-blue-600) 75%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-blue-600) 75%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-blue-600/10",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-blue-600) 10%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-blue-600) 10%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-blue-600/20",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-blue-600) 20%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-blue-600) 20%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-blue-600/30",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-blue-600) 30%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-blue-600) 30%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-blue-600/50",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-blue-600) 50%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-blue-600) 50%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-blue-600/75",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-blue-600) 75%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-blue-600) 75%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-clip-text",
+      "zig": {
+        "background-clip": "text"
+      },
+      "tw": {
+        "-webkit-background-clip": "text",
+        "background-clip": "text"
+      }
+    },
+    {
+      "candidate": "bg-gradient-to-b",
+      "zig": {
+        "background-image": "linear-gradient(to bottom left,var(--tw-gradient-stops,))"
+      },
+      "tw": {
+        "--tw-gradient-position": "to bottom left in oklab",
+        "background-image": "linear-gradient(var(--tw-gradient-stops))"
+      }
+    },
+    {
+      "candidate": "bg-gradient-to-bl",
+      "zig": {
+        "background-image": "linear-gradient(to bottom left,var(--tw-gradient-stops,))"
+      },
+      "tw": {
+        "--tw-gradient-position": "to bottom left in oklab",
+        "background-image": "linear-gradient(var(--tw-gradient-stops))"
+      }
+    },
+    {
+      "candidate": "bg-gradient-to-l",
+      "zig": {
+        "background-image": "linear-gradient(to left,var(--tw-gradient-stops,))"
+      },
+      "tw": {
+        "--tw-gradient-position": "to left in oklab",
+        "background-image": "linear-gradient(var(--tw-gradient-stops))"
+      }
+    },
+    {
+      "candidate": "bg-gradient-to-r",
+      "zig": {
+        "background-image": "linear-gradient(to right,var(--tw-gradient-stops,))"
+      },
+      "tw": {
+        "--tw-gradient-position": "to right in oklab",
+        "background-image": "linear-gradient(var(--tw-gradient-stops))"
+      }
+    },
+    {
+      "candidate": "bg-gradient-to-t",
+      "zig": {
+        "background-image": "linear-gradient(to top right,var(--tw-gradient-stops,))"
+      },
+      "tw": {
+        "--tw-gradient-position": "to top right in oklab",
+        "background-image": "linear-gradient(var(--tw-gradient-stops))"
+      }
+    },
+    {
+      "candidate": "bg-gradient-to-tl",
+      "zig": {
+        "background-image": "linear-gradient(to top left,var(--tw-gradient-stops,))"
+      },
+      "tw": {
+        "--tw-gradient-position": "to top left in oklab",
+        "background-image": "linear-gradient(var(--tw-gradient-stops))"
+      }
+    },
+    {
+      "candidate": "bg-gradient-to-tr",
+      "zig": {
+        "background-image": "linear-gradient(to top right,var(--tw-gradient-stops,))"
+      },
+      "tw": {
+        "--tw-gradient-position": "to top right in oklab",
+        "background-image": "linear-gradient(var(--tw-gradient-stops))"
+      }
+    },
+    {
+      "candidate": "bg-gray-400",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-gray-400) 75%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-gray-400) 75%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-gray-400/10",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-gray-400) 10%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-gray-400) 10%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-gray-400/20",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-gray-400) 20%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-gray-400) 20%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-gray-400/30",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-gray-400) 30%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-gray-400) 30%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-gray-400/50",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-gray-400) 50%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-gray-400) 50%, transparent)"
+      }
+    }
+  ]
+}

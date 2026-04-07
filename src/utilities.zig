@@ -209,8 +209,8 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "grow-0", &[_]Declaration{.{ .property = "flex-grow", .value = "0" }} },
     .{ "shrink", &[_]Declaration{.{ .property = "flex-shrink", .value = "1" }} },
     .{ "shrink-0", &[_]Declaration{.{ .property = "flex-shrink", .value = "0" }} },
-    .{ "flex-1", &[_]Declaration{.{ .property = "flex", .value = "1 1 0%" }} },
-    .{ "flex-auto", &[_]Declaration{.{ .property = "flex", .value = "1 1 auto" }} },
+    .{ "flex-1", &[_]Declaration{.{ .property = "flex", .value = "1" }} },
+    .{ "flex-auto", &[_]Declaration{.{ .property = "flex", .value = "auto" }} },
     .{ "flex-initial", &[_]Declaration{.{ .property = "flex", .value = "0 1 auto" }} },
     .{ "flex-none", &[_]Declaration{.{ .property = "flex", .value = "none" }} },
 
@@ -455,7 +455,7 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "border-none", &[_]Declaration{.{ .property = "border-style", .value = "none" }} },
 
     // ─── Outline Style ───
-    .{ "outline-none", &[_]Declaration{ .{ .property = "outline", .value = "2px solid transparent" }, .{ .property = "outline-offset", .value = "2px" } } },
+    .{ "outline-none", &[_]Declaration{ .{ .property = "outline", .value = "2px solid #0000" }, .{ .property = "outline-offset", .value = "2px" } } },
     .{ "outline", &[_]Declaration{.{ .property = "outline-style", .value = "solid" }} },
     .{ "outline-dashed", &[_]Declaration{.{ .property = "outline-style", .value = "dashed" }} },
     .{ "outline-dotted", &[_]Declaration{.{ .property = "outline-style", .value = "dotted" }} },
@@ -515,33 +515,33 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "transition-none", &[_]Declaration{.{ .property = "transition-property", .value = "none" }} },
     .{ "transition-all", &[_]Declaration{
         .{ .property = "transition-property", .value = "all" },
-        .{ .property = "transition-timing-function", .value = "var(--default-transition-timing-function)" },
-        .{ .property = "transition-duration", .value = "var(--default-transition-duration)" },
+        .{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" },
+        .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
     } },
     .{ "transition", &[_]Declaration{
         .{ .property = "transition-property", .value = "color, background-color, border-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter" },
-        .{ .property = "transition-timing-function", .value = "var(--default-transition-timing-function)" },
-        .{ .property = "transition-duration", .value = "var(--default-transition-duration)" },
+        .{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" },
+        .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
     } },
     .{ "transition-colors", &[_]Declaration{
         .{ .property = "transition-property", .value = "color, background-color, border-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to" },
-        .{ .property = "transition-timing-function", .value = "var(--default-transition-timing-function)" },
-        .{ .property = "transition-duration", .value = "var(--default-transition-duration)" },
+        .{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" },
+        .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
     } },
     .{ "transition-opacity", &[_]Declaration{
         .{ .property = "transition-property", .value = "opacity" },
-        .{ .property = "transition-timing-function", .value = "var(--default-transition-timing-function)" },
-        .{ .property = "transition-duration", .value = "var(--default-transition-duration)" },
+        .{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" },
+        .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
     } },
     .{ "transition-shadow", &[_]Declaration{
         .{ .property = "transition-property", .value = "box-shadow" },
-        .{ .property = "transition-timing-function", .value = "var(--default-transition-timing-function)" },
-        .{ .property = "transition-duration", .value = "var(--default-transition-duration)" },
+        .{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" },
+        .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
     } },
     .{ "transition-transform", &[_]Declaration{
         .{ .property = "transition-property", .value = "transform, translate, scale, rotate" },
-        .{ .property = "transition-timing-function", .value = "var(--default-transition-timing-function)" },
-        .{ .property = "transition-duration", .value = "var(--default-transition-duration)" },
+        .{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" },
+        .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
     } },
     .{ "transition-discrete", &[_]Declaration{.{ .property = "transition-behavior", .value = "allow-discrete" }} },
     .{ "transition-normal", &[_]Declaration{.{ .property = "transition-behavior", .value = "normal" }} },
@@ -699,7 +699,7 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "ring-inset", &[_]Declaration{.{ .property = "--tw-ring-inset", .value = "inset" }} },
 
     // ─── Outline ───
-    .{ "outline-hidden", &[_]Declaration{.{ .property = "outline-color", .value = "transparent" }} },
+    .{ "outline-hidden", &[_]Declaration{.{ .property = "outline-color", .value = "#0000" }} },
 
     // ─── Divide Style ───
     .{ "divide-solid", &[_]Declaration{.{ .property = "border-style", .value = "solid" }} },
@@ -1265,7 +1265,7 @@ pub fn resolveFunctional(
 
     // Transform: scale
     if (std.mem.eql(u8, root, "scale") or std.mem.eql(u8, root, "scale-x") or std.mem.eql(u8, root, "scale-y")) {
-        return resolveScale(alloc, value);
+        return resolveScale(alloc, value, root);
     }
 
     // Transform: translate
@@ -1304,57 +1304,57 @@ pub fn resolveFunctional(
 
     // Filter utilities
     if (std.mem.eql(u8, root, "blur")) {
-        return resolveFilter(alloc, value, "filter", "blur", "--blur", theme);
+        return resolveFilterBlur(alloc, value, false, "--blur", theme);
     }
     if (std.mem.eql(u8, root, "brightness")) {
-        return resolveFilterPercent(alloc, value, "filter", "brightness");
+        return resolveFilterPercent(alloc, value, false, "brightness");
     }
     if (std.mem.eql(u8, root, "contrast")) {
-        return resolveFilterPercent(alloc, value, "filter", "contrast");
+        return resolveFilterPercent(alloc, value, false, "contrast");
     }
     if (std.mem.eql(u8, root, "grayscale")) {
-        return resolveFilterToggle(alloc, value, "filter", "grayscale");
+        return resolveFilterToggle(alloc, value, false, "grayscale");
     }
     if (std.mem.eql(u8, root, "invert")) {
-        return resolveFilterToggle(alloc, value, "filter", "invert");
+        return resolveFilterToggle(alloc, value, false, "invert");
     }
     if (std.mem.eql(u8, root, "sepia")) {
-        return resolveFilterToggle(alloc, value, "filter", "sepia");
+        return resolveFilterToggle(alloc, value, false, "sepia");
     }
     if (std.mem.eql(u8, root, "saturate")) {
-        return resolveFilterPercent(alloc, value, "filter", "saturate");
+        return resolveFilterPercent(alloc, value, false, "saturate");
     }
     if (std.mem.eql(u8, root, "hue-rotate")) {
-        return resolveFilterDeg(alloc, value, "filter", "hue-rotate");
+        return resolveFilterDeg(alloc, value, false, "hue-rotate");
     }
 
     // Backdrop filter utilities
     if (std.mem.eql(u8, root, "backdrop-blur")) {
-        return resolveFilter(alloc, value, "backdrop-filter", "blur", "--blur", theme);
+        return resolveFilterBlur(alloc, value, true, "--blur", theme);
     }
     if (std.mem.eql(u8, root, "backdrop-brightness")) {
-        return resolveFilterPercent(alloc, value, "backdrop-filter", "brightness");
+        return resolveFilterPercent(alloc, value, true, "brightness");
     }
     if (std.mem.eql(u8, root, "backdrop-contrast")) {
-        return resolveFilterPercent(alloc, value, "backdrop-filter", "contrast");
+        return resolveFilterPercent(alloc, value, true, "contrast");
     }
     if (std.mem.eql(u8, root, "backdrop-grayscale")) {
-        return resolveFilterToggle(alloc, value, "backdrop-filter", "grayscale");
+        return resolveFilterToggle(alloc, value, true, "grayscale");
     }
     if (std.mem.eql(u8, root, "backdrop-invert")) {
-        return resolveFilterToggle(alloc, value, "backdrop-filter", "invert");
+        return resolveFilterToggle(alloc, value, true, "invert");
     }
     if (std.mem.eql(u8, root, "backdrop-sepia")) {
-        return resolveFilterToggle(alloc, value, "backdrop-filter", "sepia");
+        return resolveFilterToggle(alloc, value, true, "sepia");
     }
     if (std.mem.eql(u8, root, "backdrop-saturate")) {
-        return resolveFilterPercent(alloc, value, "backdrop-filter", "saturate");
+        return resolveFilterPercent(alloc, value, true, "saturate");
     }
     if (std.mem.eql(u8, root, "backdrop-hue-rotate")) {
-        return resolveFilterDeg(alloc, value, "backdrop-filter", "hue-rotate");
+        return resolveFilterDeg(alloc, value, true, "hue-rotate");
     }
     if (std.mem.eql(u8, root, "backdrop-opacity")) {
-        return resolveFilterPercent(alloc, value, "backdrop-filter", "opacity");
+        return resolveFilterPercent(alloc, value, true, "opacity");
     }
 
     // Ease (transition-timing-function)
@@ -1747,27 +1747,27 @@ fn resolveSpacing(
                     css_value = var_name;
                 }
             } else if ((std.mem.eql(u8, root, "max-w") or std.mem.eql(u8, root, "max-h")) and !is_neg) {
-                // Named max-width values (container sizes)
-                const max_w_map = std.StaticStringMap([]const u8).initComptime(.{
-                    .{ "xs", "20rem" },
-                    .{ "sm", "24rem" },
-                    .{ "md", "28rem" },
-                    .{ "lg", "32rem" },
-                    .{ "xl", "36rem" },
-                    .{ "2xl", "42rem" },
-                    .{ "3xl", "48rem" },
-                    .{ "4xl", "56rem" },
-                    .{ "5xl", "64rem" },
-                    .{ "6xl", "72rem" },
-                    .{ "7xl", "80rem" },
-                    .{ "screen-sm", "40rem" },
-                    .{ "screen-md", "48rem" },
-                    .{ "screen-lg", "64rem" },
-                    .{ "screen-xl", "80rem" },
-                    .{ "screen-2xl", "96rem" },
+                // Named max-width values (container sizes) -> var(--container-*)
+                const max_w_names = std.StaticStringMap(void).initComptime(.{
+                    .{ "xs", {} },
+                    .{ "sm", {} },
+                    .{ "md", {} },
+                    .{ "lg", {} },
+                    .{ "xl", {} },
+                    .{ "2xl", {} },
+                    .{ "3xl", {} },
+                    .{ "4xl", {} },
+                    .{ "5xl", {} },
+                    .{ "6xl", {} },
+                    .{ "7xl", {} },
+                    .{ "screen-sm", {} },
+                    .{ "screen-md", {} },
+                    .{ "screen-lg", {} },
+                    .{ "screen-xl", {} },
+                    .{ "screen-2xl", {} },
                 });
-                if (max_w_map.get(val.value)) |mw_val| {
-                    css_value = mw_val;
+                if (max_w_names.has(val.value)) {
+                    css_value = try std.fmt.allocPrint(alloc, "var(--container-{s})", .{val.value});
                 } else {
                     return null;
                 }
@@ -1808,7 +1808,7 @@ fn resolveColor(
             if (std.mem.eql(u8, val.value, "inherit")) {
                 css_value = "inherit";
             } else if (std.mem.eql(u8, val.value, "transparent")) {
-                css_value = "transparent";
+                css_value = "#0000";
             } else if (std.mem.eql(u8, val.value, "current")) {
                 css_value = "currentColor";
             } else if (theme.resolve(val.value, "--color") != null) {
@@ -1893,10 +1893,24 @@ fn resolveOpacity(alloc: Allocator, value: ?Value) !?[]const Declaration {
         },
         .named => {
             if (isPositiveInteger(val.value)) {
-                // Convert percentage to decimal: opacity-50 -> 0.5
+                // Convert percentage to decimal: opacity-50 -> 0.5, opacity-80 -> 0.8
                 const num = std.fmt.parseInt(u32, val.value, 10) catch return null;
                 if (num > 100) return null;
-                css_value = try std.fmt.allocPrint(alloc, "{d}%", .{num});
+                if (num == 0) {
+                    css_value = "0";
+                } else if (num == 100) {
+                    css_value = "1";
+                } else if (num % 10 == 0) {
+                    // 80 -> .8, 50 -> .5, 10 -> .1
+                    css_value = try std.fmt.allocPrint(alloc, ".{d}", .{num / 10});
+                } else {
+                    // 75 -> .75, 25 -> .25, 5 -> .05
+                    if (num < 10) {
+                        css_value = try std.fmt.allocPrint(alloc, ".0{d}", .{num});
+                    } else {
+                        css_value = try std.fmt.allocPrint(alloc, ".{d}", .{num});
+                    }
+                }
             } else {
                 return null;
             }
@@ -1977,7 +1991,7 @@ fn resolveRounded(alloc: Allocator, root: []const u8, value: ?Value, theme: *The
             if (std.mem.eql(u8, val.value, "none")) {
                 css_value = "0";
             } else if (std.mem.eql(u8, val.value, "full")) {
-                css_value = "9999px";
+                css_value = "3.40282e38px";
             } else {
                 // Look up in theme --radius-{value}
                 css_value = try std.fmt.allocPrint(alloc, "var(--radius-{s})", .{val.value});
@@ -2004,21 +2018,16 @@ fn resolveDuration(alloc: Allocator, value: ?Value) !?[]const Declaration {
             if (isPositiveInteger(val.value)) {
                 // Convert ms to seconds: duration-200 -> 0.2s
                 const ms = std.fmt.parseInt(u32, val.value, 10) catch return null;
-                if (ms == 0) {
-                    css_value = "0s";
-                } else if (ms % 1000 == 0) {
-                    css_value = try std.fmt.allocPrint(alloc, "{d}s", .{ms / 1000});
-                } else {
-                    css_value = try std.fmt.allocPrint(alloc, ".{d}s", .{ms});
-                }
+                css_value = try formatMsToSeconds(alloc, ms);
             } else {
                 return null;
             }
         },
     }
 
-    const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = "transition-duration", .value = css_value };
+    const decls = try alloc.alloc(Declaration, 2);
+    decls[0] = Declaration{ .property = "--tw-duration", .value = css_value };
+    decls[1] = Declaration{ .property = "transition-duration", .value = css_value };
     return decls;
 }
 
@@ -2033,13 +2042,7 @@ fn resolveDelay(alloc: Allocator, value: ?Value) !?[]const Declaration {
         .named => {
             if (isPositiveInteger(val.value)) {
                 const ms = std.fmt.parseInt(u32, val.value, 10) catch return null;
-                if (ms == 0) {
-                    css_value = "0s";
-                } else if (ms % 1000 == 0) {
-                    css_value = try std.fmt.allocPrint(alloc, "{d}s", .{ms / 1000});
-                } else {
-                    css_value = try std.fmt.allocPrint(alloc, ".{d}s", .{ms});
-                }
+                css_value = try formatMsToSeconds(alloc, ms);
             } else {
                 return null;
             }
@@ -2049,6 +2052,35 @@ fn resolveDelay(alloc: Allocator, value: ?Value) !?[]const Declaration {
     const decls = try alloc.alloc(Declaration, 1);
     decls[0] = Declaration{ .property = "transition-delay", .value = css_value };
     return decls;
+}
+
+// ─── Duration/Delay Formatting Helper ──────────────────────────────────────
+
+fn formatMsToSeconds(alloc: Allocator, ms: u32) ![]const u8 {
+    if (ms == 0) {
+        return "0s";
+    } else if (ms % 1000 == 0) {
+        return std.fmt.allocPrint(alloc, "{d}s", .{ms / 1000});
+    } else {
+        // Convert to seconds as a decimal, stripping trailing zeros
+        // e.g., 300 -> ".3s", 150 -> ".15s", 1500 -> "1.5s"
+        // TW omits leading zero: .3s not 0.3s
+        const whole = ms / 1000;
+        var frac = ms % 1000;
+        var digits: u32 = 3;
+        while (digits > 0 and frac % 10 == 0) {
+            frac /= 10;
+            digits -= 1;
+        }
+        if (whole == 0) {
+            if (digits == 1) return std.fmt.allocPrint(alloc, ".{d}s", .{frac});
+            if (digits == 2) return std.fmt.allocPrint(alloc, ".{d:0>2}s", .{frac});
+            return std.fmt.allocPrint(alloc, ".{d:0>3}s", .{frac});
+        }
+        if (digits == 1) return std.fmt.allocPrint(alloc, "{d}.{d}s", .{ whole, frac });
+        if (digits == 2) return std.fmt.allocPrint(alloc, "{d}.{d:0>2}s", .{ whole, frac });
+        return std.fmt.allocPrint(alloc, "{d}.{d:0>3}s", .{ whole, frac });
+    }
 }
 
 // ─── Color Opacity Helper ──────────────────────────────────────────────────
@@ -2098,7 +2130,7 @@ fn resolveText(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
                 if (std.mem.eql(u8, val.value, "inherit")) {
                     css_value = "inherit";
                 } else if (std.mem.eql(u8, val.value, "transparent")) {
-                    css_value = "transparent";
+                    css_value = "#0000";
                 } else if (std.mem.eql(u8, val.value, "current")) {
                     css_value = "currentColor";
                 } else {
@@ -2137,8 +2169,9 @@ fn resolveFont(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Declara
     switch (val.kind) {
         .arbitrary => {
             // Arbitrary: assume font-weight
-            const decls = try alloc.alloc(Declaration, 1);
-            decls[0] = Declaration{ .property = "font-weight", .value = val.value };
+            const decls = try alloc.alloc(Declaration, 2);
+            decls[0] = Declaration{ .property = "--tw-font-weight", .value = val.value };
+            decls[1] = Declaration{ .property = "font-weight", .value = val.value };
             return decls;
         },
         .named => {
@@ -2155,8 +2188,9 @@ fn resolveFont(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Declara
             if (theme.resolve(val.value, "--font-weight") != null) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--font-weight-{s}", .{val.value}));
                 const css_value = try std.fmt.allocPrint(alloc, "var(--font-weight-{s})", .{val.value});
-                const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "font-weight", .value = css_value };
+                const decls = try alloc.alloc(Declaration, 2);
+                decls[0] = Declaration{ .property = "--tw-font-weight", .value = css_value };
+                decls[1] = Declaration{ .property = "font-weight", .value = css_value };
                 return decls;
             }
 
@@ -2229,8 +2263,9 @@ fn resolveTracking(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Dec
 fn resolveBorder(alloc: Allocator, root: []const u8, value: ?Value, modifier: ?Modifier, theme: *Theme) !?[]const Declaration {
     const val = value orelse {
         // bare `border`, `border-t`, `border-l`, etc. with no value -> width: 1px
-        const decls = try alloc.alloc(Declaration, 1);
-        decls[0] = Declaration{ .property = borderWidthProperty(root), .value = "1px" };
+        const decls = try alloc.alloc(Declaration, 2);
+        decls[0] = Declaration{ .property = borderStyleProperty(root), .value = "var(--tw-border-style)" };
+        decls[1] = Declaration{ .property = borderWidthProperty(root), .value = "1px" };
         return decls;
     };
 
@@ -2240,8 +2275,9 @@ fn resolveBorder(alloc: Allocator, root: []const u8, value: ?Value, modifier: ?M
         .arbitrary => {
             // Check if it looks like a width value (has px, number, etc.)
             if (looksLikeBorderWidth(val.value)) {
-                const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = width_property, .value = val.value };
+                const decls = try alloc.alloc(Declaration, 2);
+                decls[0] = Declaration{ .property = borderStyleProperty(root), .value = "var(--tw-border-style)" };
+                decls[1] = Declaration{ .property = width_property, .value = val.value };
                 return decls;
             }
             // Otherwise treat as color
@@ -2256,9 +2292,13 @@ fn resolveBorder(alloc: Allocator, root: []const u8, value: ?Value, modifier: ?M
         .named => {
             // Check if it's a bare number (border width)
             if (isPositiveInteger(val.value)) {
-                const css_value = try std.fmt.allocPrint(alloc, "{s}px", .{val.value});
-                const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = width_property, .value = css_value };
+                const css_value = if (std.mem.eql(u8, val.value, "0"))
+                    @as([]const u8, "0")
+                else
+                    try std.fmt.allocPrint(alloc, "{s}px", .{val.value});
+                const decls = try alloc.alloc(Declaration, 2);
+                decls[0] = Declaration{ .property = borderStyleProperty(root), .value = "var(--tw-border-style)" };
+                decls[1] = Declaration{ .property = width_property, .value = css_value };
                 return decls;
             }
 
@@ -2269,7 +2309,7 @@ fn resolveBorder(alloc: Allocator, root: []const u8, value: ?Value, modifier: ?M
                 return decls;
             } else if (std.mem.eql(u8, val.value, "transparent")) {
                 const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "border-color", .value = "transparent" };
+                decls[0] = Declaration{ .property = "border-color", .value = "#0000" };
                 return decls;
             } else if (std.mem.eql(u8, val.value, "current")) {
                 const decls = try alloc.alloc(Declaration, 1);
@@ -2306,6 +2346,21 @@ fn borderWidthProperty(root: []const u8) []const u8 {
     return map.get(root) orelse "border-width";
 }
 
+fn borderStyleProperty(root: []const u8) []const u8 {
+    const map = std.StaticStringMap([]const u8).initComptime(.{
+        .{ "border", "border-style" },
+        .{ "border-x", "border-inline-style" },
+        .{ "border-y", "border-block-style" },
+        .{ "border-s", "border-inline-start-style" },
+        .{ "border-e", "border-inline-end-style" },
+        .{ "border-t", "border-top-style" },
+        .{ "border-r", "border-right-style" },
+        .{ "border-b", "border-bottom-style" },
+        .{ "border-l", "border-left-style" },
+    });
+    return map.get(root) orelse "border-style";
+}
+
 fn looksLikeBorderWidth(s: []const u8) bool {
     // If it ends with px, em, rem, etc. or is a pure number, it's a width
     if (s.len == 0) return false;
@@ -2337,7 +2392,7 @@ fn resolveAspect(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decla
             if (std.mem.eql(u8, val.value, "auto")) {
                 css_value = "auto";
             } else if (std.mem.eql(u8, val.value, "square")) {
-                css_value = "1/1";
+                css_value = "1";
             } else if (val.fraction != null) {
                 // Fraction like 4/3
                 css_value = val.fraction.?;
@@ -2497,7 +2552,7 @@ fn resolveRotate(alloc: Allocator, value: ?Value, negative: bool) !?[]const Decl
     switch (val.kind) {
         .arbitrary => {
             if (negative) {
-                css_value = try std.fmt.allocPrint(alloc, "calc({s} * -1)", .{val.value});
+                css_value = try std.fmt.allocPrint(alloc, "-{s}", .{val.value});
             } else {
                 css_value = val.value;
             }
@@ -2505,7 +2560,7 @@ fn resolveRotate(alloc: Allocator, value: ?Value, negative: bool) !?[]const Decl
         .named => {
             if (isValidSpacingMultiplier(val.value)) {
                 if (negative) {
-                    css_value = try std.fmt.allocPrint(alloc, "calc({s}deg * -1)", .{val.value});
+                    css_value = try std.fmt.allocPrint(alloc, "-{s}deg", .{val.value});
                 } else {
                     css_value = try std.fmt.allocPrint(alloc, "{s}deg", .{val.value});
                 }
@@ -2522,7 +2577,7 @@ fn resolveRotate(alloc: Allocator, value: ?Value, negative: bool) !?[]const Decl
 
 // ─── Transform: scale ──────────────────────────────────────────────────────
 
-fn resolveScale(alloc: Allocator, value: ?Value) !?[]const Declaration {
+fn resolveScale(alloc: Allocator, value: ?Value, root: []const u8) !?[]const Declaration {
     const val = value orelse return null;
 
     var css_value: []const u8 = undefined;
@@ -2540,9 +2595,28 @@ fn resolveScale(alloc: Allocator, value: ?Value) !?[]const Declaration {
         },
     }
 
-    const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = "scale", .value = css_value };
-    return decls;
+    const is_x_only = std.mem.eql(u8, root, "scale-x");
+    const is_y_only = std.mem.eql(u8, root, "scale-y");
+
+    if (is_x_only) {
+        const decls = try alloc.alloc(Declaration, 2);
+        decls[0] = Declaration{ .property = "--tw-scale-x", .value = css_value };
+        decls[1] = Declaration{ .property = "scale", .value = "var(--tw-scale-x) var(--tw-scale-y)" };
+        return decls;
+    } else if (is_y_only) {
+        const decls = try alloc.alloc(Declaration, 2);
+        decls[0] = Declaration{ .property = "--tw-scale-y", .value = css_value };
+        decls[1] = Declaration{ .property = "scale", .value = "var(--tw-scale-x) var(--tw-scale-y)" };
+        return decls;
+    } else {
+        // scale (both axes)
+        const decls = try alloc.alloc(Declaration, 4);
+        decls[0] = Declaration{ .property = "--tw-scale-x", .value = css_value };
+        decls[1] = Declaration{ .property = "--tw-scale-y", .value = css_value };
+        decls[2] = Declaration{ .property = "--tw-scale-z", .value = css_value };
+        decls[3] = Declaration{ .property = "scale", .value = "var(--tw-scale-x) var(--tw-scale-y)" };
+        return decls;
+    }
 }
 
 // ─── Transform: translate ──────────────────────────────────────────────────
@@ -2584,10 +2658,12 @@ fn resolveTranslate(alloc: Allocator, value: ?Value, comptime axis: []const u8, 
         },
     }
 
-    const css_value = try std.fmt.allocPrint(alloc, "translate{s}({s})", .{ axis, inner });
+    // Use custom property + translate shorthand
+    const custom_prop = if (std.mem.eql(u8, axis, "X")) "--tw-translate-x" else "--tw-translate-y";
 
-    const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = "transform", .value = css_value };
+    const decls = try alloc.alloc(Declaration, 2);
+    decls[0] = Declaration{ .property = custom_prop, .value = inner };
+    decls[1] = Declaration{ .property = "translate", .value = "var(--tw-translate-x) var(--tw-translate-y)" };
     return decls;
 }
 
@@ -2630,38 +2706,50 @@ fn resolveSkew(alloc: Allocator, value: ?Value, comptime axis: []const u8, negat
 
 fn resolveShadow(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Declaration {
     const val = value orelse return null;
+    const COMPOSABLE_BOX_SHADOW = "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)";
 
-    var css_value: []const u8 = undefined;
+    var shadow_value: []const u8 = undefined;
 
     switch (val.kind) {
         .arbitrary => {
             // Replace underscores with spaces
-            css_value = try replaceUnderscores(alloc, val.value);
+            shadow_value = try replaceUnderscores(alloc, val.value);
         },
         .named => {
             if (std.mem.eql(u8, val.value, "none")) {
-                css_value = "0 0 #0000";
+                shadow_value = "0 0 #0000";
             } else if (theme.resolve(val.value, "--shadow") != null) {
-                theme.markUsed(try std.fmt.allocPrint(alloc, "--shadow-{s}", .{val.value}));
-                css_value = try std.fmt.allocPrint(alloc, "var(--shadow-{s})", .{val.value});
+                const var_name = try std.fmt.allocPrint(alloc, "--shadow-{s}", .{val.value});
+                theme.markUsed(var_name);
+                if (theme.get(var_name)) |raw_val| {
+                    // Use raw theme value directly
+                    shadow_value = raw_val;
+                } else {
+                    shadow_value = try std.fmt.allocPrint(alloc, "var({s})", .{var_name});
+                }
             } else {
                 return null;
             }
         },
     }
 
-    const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = "box-shadow", .value = css_value };
+    const decls = try alloc.alloc(Declaration, 2);
+    decls[0] = Declaration{ .property = "--tw-shadow", .value = shadow_value };
+    decls[1] = Declaration{ .property = "box-shadow", .value = COMPOSABLE_BOX_SHADOW };
     return decls;
 }
 
 // ─── Ring ──────────────────────────────────────────────────────────────────
 
 fn resolveRing(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *Theme) !?[]const Declaration {
+    const COMPOSABLE_BOX_SHADOW = "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)";
+
     const val = value orelse {
         // ring with no value = 1px ring
-        const decls = try alloc.alloc(Declaration, 1);
-        decls[0] = Declaration{ .property = "box-shadow", .value = "0 0 0 1px currentColor" };
+        const ring_val = "var(--tw-ring-inset,) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color,currentcolor)";
+        const decls = try alloc.alloc(Declaration, 2);
+        decls[0] = Declaration{ .property = "--tw-ring-shadow", .value = ring_val };
+        decls[1] = Declaration{ .property = "box-shadow", .value = COMPOSABLE_BOX_SHADOW };
         return decls;
     };
 
@@ -2669,8 +2757,10 @@ fn resolveRing(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
         .arbitrary => {
             // Could be color or width - check for numeric
             if (isPositiveInteger(val.value) or std.mem.endsWith(u8, val.value, "px") or std.mem.endsWith(u8, val.value, "rem")) {
-                const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "box-shadow", .value = try std.fmt.allocPrint(alloc, "0 0 0 {s} currentColor", .{val.value}) };
+                const ring_val = try std.fmt.allocPrint(alloc, "var(--tw-ring-inset,) 0 0 0 calc({s} + var(--tw-ring-offset-width)) var(--tw-ring-color,currentcolor)", .{val.value});
+                const decls = try alloc.alloc(Declaration, 2);
+                decls[0] = Declaration{ .property = "--tw-ring-shadow", .value = ring_val };
+                decls[1] = Declaration{ .property = "box-shadow", .value = COMPOSABLE_BOX_SHADOW };
                 return decls;
             }
             // Treat as color
@@ -2684,7 +2774,7 @@ fn resolveRing(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
                 std.mem.eql(u8, val.value, "transparent") or
                 std.mem.eql(u8, val.value, "current"))
             {
-                const color_val = if (std.mem.eql(u8, val.value, "current")) "currentColor" else val.value;
+                const color_val = if (std.mem.eql(u8, val.value, "current")) "currentColor" else if (std.mem.eql(u8, val.value, "transparent")) "#0000" else val.value;
                 const decls = try alloc.alloc(Declaration, 1);
                 decls[0] = Declaration{ .property = "--tw-ring-color", .value = color_val };
                 return decls;
@@ -2706,8 +2796,10 @@ fn resolveRing(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
 
             // Try as width
             if (isPositiveInteger(val.value)) {
-                const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "box-shadow", .value = try std.fmt.allocPrint(alloc, "0 0 0 {s}px currentColor", .{val.value}) };
+                const ring_val = try std.fmt.allocPrint(alloc, "var(--tw-ring-inset,) 0 0 0 calc({s}px + var(--tw-ring-offset-width)) var(--tw-ring-color,currentcolor)", .{val.value});
+                const decls = try alloc.alloc(Declaration, 2);
+                decls[0] = Declaration{ .property = "--tw-ring-shadow", .value = ring_val };
+                decls[1] = Declaration{ .property = "box-shadow", .value = COMPOSABLE_BOX_SHADOW };
                 return decls;
             }
 
@@ -2718,31 +2810,48 @@ fn resolveRing(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
 
 // ─── Filter utilities ──────────────────────────────────────────────────────
 
-fn resolveFilter(alloc: Allocator, value: ?Value, property: []const u8, comptime fn_name: []const u8, comptime theme_ns: []const u8, theme: *Theme) !?[]const Declaration {
+const COMPOSABLE_FILTER = "var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,)";
+const COMPOSABLE_BACKDROP_FILTER = "var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,)";
+
+fn buildFilterDecls(alloc: Allocator, fn_value: []const u8, comptime is_backdrop: bool, comptime fn_name: []const u8) !?[]const Declaration {
+    const custom_prop = if (is_backdrop) "--tw-backdrop-" ++ fn_name else "--tw-" ++ fn_name;
+    if (is_backdrop) {
+        const decls = try alloc.alloc(Declaration, 3);
+        decls[0] = Declaration{ .property = custom_prop, .value = fn_value };
+        decls[1] = Declaration{ .property = "-webkit-backdrop-filter", .value = COMPOSABLE_BACKDROP_FILTER };
+        decls[2] = Declaration{ .property = "backdrop-filter", .value = COMPOSABLE_BACKDROP_FILTER };
+        return decls;
+    } else {
+        const decls = try alloc.alloc(Declaration, 2);
+        decls[0] = Declaration{ .property = custom_prop, .value = fn_value };
+        decls[1] = Declaration{ .property = "filter", .value = COMPOSABLE_FILTER };
+        return decls;
+    }
+}
+
+fn resolveFilterBlur(alloc: Allocator, value: ?Value, comptime is_backdrop: bool, comptime theme_ns: []const u8, theme: *Theme) !?[]const Declaration {
     const val = value orelse return null;
 
     var css_value: []const u8 = undefined;
 
     switch (val.kind) {
         .arbitrary => {
-            css_value = try std.fmt.allocPrint(alloc, "{s}({s})", .{ fn_name, val.value });
+            css_value = try std.fmt.allocPrint(alloc, "blur({s})", .{val.value});
         },
         .named => {
             if (theme.resolve(val.value, theme_ns) != null) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "{s}-{s}", .{ theme_ns, val.value }));
-                css_value = try std.fmt.allocPrint(alloc, "{s}(var({s}-{s}))", .{ fn_name, theme_ns, val.value });
+                css_value = try std.fmt.allocPrint(alloc, "blur(var({s}-{s}))", .{ theme_ns, val.value });
             } else {
                 return null;
             }
         },
     }
 
-    const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = property, .value = css_value };
-    return decls;
+    return buildFilterDecls(alloc, css_value, is_backdrop, "blur");
 }
 
-fn resolveFilterPercent(alloc: Allocator, value: ?Value, property: []const u8, comptime fn_name: []const u8) !?[]const Declaration {
+fn resolveFilterPercent(alloc: Allocator, value: ?Value, comptime is_backdrop: bool, comptime fn_name: []const u8) !?[]const Declaration {
     const val = value orelse return null;
 
     var css_value: []const u8 = undefined;
@@ -2760,12 +2869,10 @@ fn resolveFilterPercent(alloc: Allocator, value: ?Value, property: []const u8, c
         },
     }
 
-    const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = property, .value = css_value };
-    return decls;
+    return buildFilterDecls(alloc, css_value, is_backdrop, fn_name);
 }
 
-fn resolveFilterToggle(alloc: Allocator, value: ?Value, property: []const u8, comptime fn_name: []const u8) !?[]const Declaration {
+fn resolveFilterToggle(alloc: Allocator, value: ?Value, comptime is_backdrop: bool, comptime fn_name: []const u8) !?[]const Declaration {
     // grayscale, invert, sepia - default to 100%, accept 0
     var css_value: []const u8 = undefined;
 
@@ -2787,12 +2894,10 @@ fn resolveFilterToggle(alloc: Allocator, value: ?Value, property: []const u8, co
         css_value = try std.fmt.allocPrint(alloc, "{s}(100%)", .{fn_name});
     }
 
-    const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = property, .value = css_value };
-    return decls;
+    return buildFilterDecls(alloc, css_value, is_backdrop, fn_name);
 }
 
-fn resolveFilterDeg(alloc: Allocator, value: ?Value, property: []const u8, comptime fn_name: []const u8) !?[]const Declaration {
+fn resolveFilterDeg(alloc: Allocator, value: ?Value, comptime is_backdrop: bool, comptime fn_name: []const u8) !?[]const Declaration {
     const val = value orelse return null;
 
     var css_value: []const u8 = undefined;
@@ -2810,9 +2915,7 @@ fn resolveFilterDeg(alloc: Allocator, value: ?Value, property: []const u8, compt
         },
     }
 
-    const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = property, .value = css_value };
-    return decls;
+    return buildFilterDecls(alloc, css_value, is_backdrop, fn_name);
 }
 
 // ─── Ease (transition-timing-function) ─────────────────────────────────────
@@ -2838,8 +2941,9 @@ fn resolveEase(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Declara
         },
     }
 
-    const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = "transition-timing-function", .value = css_value };
+    const decls = try alloc.alloc(Declaration, 2);
+    decls[0] = Declaration{ .property = "--tw-ease", .value = css_value };
+    decls[1] = Declaration{ .property = "transition-timing-function", .value = css_value };
     return decls;
 }
 
@@ -3023,7 +3127,29 @@ fn resolveFraction(alloc: Allocator, fraction: []const u8, negative: bool) ![]co
         return std.fmt.allocPrint(alloc, "{d}%", .{int_pct});
     }
 
-    return std.fmt.allocPrint(alloc, "{d}%", .{percentage});
+    // Round to 4 decimal places
+    const factor: f64 = 10000.0;
+    const rounded = @round(percentage * factor) / factor;
+
+    // Format with 4 decimal places, then strip trailing zeros
+    const full = try std.fmt.allocPrint(alloc, "{d:.4}%", .{rounded});
+
+    // Find the '%' and work backwards to strip trailing zeros
+    const pct_pos = std.mem.indexOfScalar(u8, full, '%') orelse return full;
+    var end = pct_pos;
+    while (end > 0 and full[end - 1] == '0') {
+        end -= 1;
+    }
+    // Don't strip the decimal point itself if all decimals are zero
+    if (end > 0 and full[end - 1] == '.') {
+        end -= 1;
+    }
+
+    // Build the final string: digits + '%'
+    const result = try alloc.alloc(u8, end + 1);
+    @memcpy(result[0..end], full[0..end]);
+    result[end] = '%';
+    return result;
 }
 
 // ─── Space Between (gap-based) ─────────────────────────────────────────────
@@ -3240,7 +3366,7 @@ fn resolveGradientStop(alloc: Allocator, root: []const u8, value: ?Value, modifi
             if (std.mem.eql(u8, val.value, "inherit")) {
                 css_value = "inherit";
             } else if (std.mem.eql(u8, val.value, "transparent")) {
-                css_value = "transparent";
+                css_value = "#0000";
             } else if (std.mem.eql(u8, val.value, "current")) {
                 css_value = "currentColor";
             } else if (theme.resolve(val.value, "--color") != null) {
@@ -3447,7 +3573,7 @@ fn resolveOutline(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *
                 return decls;
             } else if (std.mem.eql(u8, val.value, "transparent")) {
                 const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "outline-color", .value = "transparent" };
+                decls[0] = Declaration{ .property = "outline-color", .value = "#0000" };
                 return decls;
             } else if (std.mem.eql(u8, val.value, "current")) {
                 const decls = try alloc.alloc(Declaration, 1);
@@ -3631,24 +3757,29 @@ fn resolveTextShadow(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const D
 fn resolveFontWeight(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Declaration {
     const val = value orelse return null;
     var css_value: []const u8 = undefined;
+    var custom_prop_value: []const u8 = undefined;
     switch (val.kind) {
         .arbitrary => {
             css_value = val.value;
+            custom_prop_value = val.value;
         },
         .named => {
             const var_name = try std.fmt.allocPrint(alloc, "--font-weight-{s}", .{val.value});
             if (theme.get(var_name) != null) {
                 theme.markUsed(var_name);
                 css_value = try std.fmt.allocPrint(alloc, "var({s})", .{var_name});
+                custom_prop_value = css_value;
             } else if (isPositiveInteger(val.value)) {
                 css_value = val.value;
+                custom_prop_value = val.value;
             } else {
                 return null;
             }
         },
     }
-    const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = "font-weight", .value = css_value };
+    const decls = try alloc.alloc(Declaration, 2);
+    decls[0] = Declaration{ .property = "--tw-font-weight", .value = custom_prop_value };
+    decls[1] = Declaration{ .property = "font-weight", .value = css_value };
     return decls;
 }
 
@@ -3788,7 +3919,7 @@ fn resolveShadowColor(alloc: Allocator, value: ?Value, modifier: ?Modifier, them
             if (std.mem.eql(u8, val.value, "inherit")) {
                 css_value = "inherit";
             } else if (std.mem.eql(u8, val.value, "transparent")) {
-                css_value = "transparent";
+                css_value = "#0000";
             } else if (std.mem.eql(u8, val.value, "current")) {
                 css_value = "currentColor";
             } else if (theme.resolve(val.value, "--color") != null) {
