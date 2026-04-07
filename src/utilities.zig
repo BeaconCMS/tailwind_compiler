@@ -4081,12 +4081,14 @@ fn resolveDropShadow(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const D
                 const var_name = try std.fmt.allocPrint(alloc, "--drop-shadow-{s}", .{val.value});
                 if (theme.get(var_name)) |raw_val| {
                     theme.markUsed(var_name);
-                    // Convert rgb colors and wrap in var(--tw-drop-shadow-color,...)
-                    const converted = try convertDropShadowColors(alloc, raw_val);
-                    const drop_shadow_size = try std.fmt.allocPrint(alloc, "drop-shadow({s})", .{converted});
+                    // --tw-drop-shadow-size: color-wrapped in var(--tw-drop-shadow-color,...)
+                    const color_wrapped = try convertDropShadowColors(alloc, raw_val);
+                    const drop_shadow_size = try wrapDropShadowParts(alloc, color_wrapped);
+                    // --tw-drop-shadow: uses var() reference (not pre-resolved)
+                    const drop_shadow_value = try std.fmt.allocPrint(alloc, "drop-shadow(var({s}))", .{var_name});
                     const decls = try alloc.alloc(Declaration, 3);
-                    decls[0] = Declaration{ .property = "--tw-drop-shadow", .value = try std.fmt.allocPrint(alloc, "drop-shadow(var({s}))", .{var_name}) };
-                    decls[1] = Declaration{ .property = "--tw-drop-shadow-size", .value = drop_shadow_size };
+                    decls[0] = Declaration{ .property = "--tw-drop-shadow-size", .value = drop_shadow_size };
+                    decls[1] = Declaration{ .property = "--tw-drop-shadow", .value = drop_shadow_value };
                     decls[2] = Declaration{ .property = "filter", .value = COMPOSABLE_FILTER };
                     return decls;
                 } else {
