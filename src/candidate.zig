@@ -737,10 +737,20 @@ fn parseVariantSegment(
             return Variant{
                 .kind = .compound,
                 .root = prefix[0 .. prefix.len - 1], // strip trailing dash
-                .value = if (inner_variant.kind == .static) Value{
-                    .kind = .named,
-                    .value = inner_variant.root,
-                } else null,
+                .value = switch (inner_variant.kind) {
+                    .static => Value{
+                        .kind = .named,
+                        .value = inner_variant.root,
+                    },
+                    .functional => Value{
+                        // For functional inner variants (e.g., data-[state=active], aria-checked),
+                        // store the full inner variant string as the value so that
+                        // applyCompoundVariant can reconstruct the correct selector.
+                        .kind = .named,
+                        .value = inner_variant_str,
+                    },
+                    else => null,
+                },
                 .selector = inner_variant.selector,
             };
         }

@@ -363,6 +363,7 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "break-normal", &[_]Declaration{ .{ .property = "overflow-wrap", .value = "normal" }, .{ .property = "word-break", .value = "normal" } } },
     .{ "break-all", &[_]Declaration{.{ .property = "word-break", .value = "break-all" }} },
     .{ "break-keep", &[_]Declaration{.{ .property = "word-break", .value = "keep-all" }} },
+    .{ "break-words", &[_]Declaration{.{ .property = "overflow-wrap", .value = "break-word" }} },
     .{ "wrap-break-word", &[_]Declaration{.{ .property = "overflow-wrap", .value = "break-word" }} },
     .{ "wrap-anywhere", &[_]Declaration{.{ .property = "overflow-wrap", .value = "anywhere" }} },
     .{ "wrap-normal", &[_]Declaration{.{ .property = "overflow-wrap", .value = "normal" }} },
@@ -690,6 +691,7 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
 
     // ─── Shadow ───
     .{ "shadow-initial", &[_]Declaration{.{ .property = "box-shadow", .value = "var(--tw-shadow)" }} },
+    .{ "shadow-inner", &[_]Declaration{.{ .property = "box-shadow", .value = "inset 0 2px 4px 0 rgb(0 0 0 / 0.05)" }} },
     .{ "inset-shadow-none", &[_]Declaration{.{ .property = "box-shadow", .value = "0 0 #0000" }} },
     .{ "inset-shadow-initial", &[_]Declaration{.{ .property = "box-shadow", .value = "var(--tw-inset-shadow)" }} },
     .{ "text-shadow-none", &[_]Declaration{.{ .property = "text-shadow", .value = "none" }} },
@@ -889,6 +891,8 @@ pub const functional_utility_set = std.StaticStringMap(void).initComptime(.{
     // Grid
     .{ "cols", {} },
     .{ "rows", {} },
+    .{ "grid-cols", {} },
+    .{ "grid-rows", {} },
     .{ "col", {} },
     .{ "col-start", {} },
     .{ "col-end", {} },
@@ -963,6 +967,7 @@ pub const functional_utility_set = std.StaticStringMap(void).initComptime(.{
     .{ "bg-linear", {} },
     .{ "bg-radial", {} },
     .{ "bg-conic", {} },
+    .{ "bg-gradient", {} },
     // Grid span
     .{ "col-span", {} },
     .{ "row-span", {} },
@@ -990,6 +995,13 @@ pub const functional_utility_set = std.StaticStringMap(void).initComptime(.{
     .{ "bg-position", {} },
     // Font stretch (functional)
     .{ "font-stretch", {} },
+    // Border spacing
+    .{ "border-spacing", {} },
+    .{ "border-spacing-x", {} },
+    .{ "border-spacing-y", {} },
+    // Text indent
+    .{ "indent", {} },
+    .{ "-indent", {} },
 });
 
 // ─── @property Registration ────────────────────────────────────────────────
@@ -1059,9 +1071,16 @@ pub fn getRequiredProperties(root: []const u8) []const AtProperty {
             .{ .name = "--tw-text-shadow", .syntax = "*", .inherits = false, .initial_value = "0 0 #0000" },
         };
     }
+    // drop-shadow
+    if (std.mem.eql(u8, root, "drop-shadow")) {
+        return &[_]AtProperty{
+            .{ .name = "--tw-drop-shadow", .syntax = "*", .inherits = false, .initial_value = "0 0 #0000" },
+        };
+    }
     // gradient
     if (std.mem.eql(u8, root, "from") or std.mem.eql(u8, root, "via") or std.mem.eql(u8, root, "to") or
-        std.mem.eql(u8, root, "bg-linear") or std.mem.eql(u8, root, "bg-radial") or std.mem.eql(u8, root, "bg-conic"))
+        std.mem.eql(u8, root, "bg-linear") or std.mem.eql(u8, root, "bg-radial") or std.mem.eql(u8, root, "bg-conic") or
+        std.mem.eql(u8, root, "bg-gradient"))
     {
         return &[_]AtProperty{
             .{ .name = "--tw-gradient-from", .syntax = "*", .inherits = false, .initial_value = null },
@@ -1103,6 +1122,19 @@ pub fn resolveFunctional(
     // Spacing utilities
     if (isSpacingUtility(root)) {
         return resolveSpacing(alloc, root, value, theme, negative);
+    }
+
+    // Decoration: dual behavior (thickness when numeric, color otherwise)
+    if (std.mem.eql(u8, root, "decoration")) {
+        if (value) |val| {
+            if (val.kind == .named and isPositiveInteger(val.value)) {
+                return resolveDecorationThickness(alloc, value);
+            }
+            if (val.kind == .named and (std.mem.eql(u8, val.value, "auto") or std.mem.eql(u8, val.value, "from-font"))) {
+                return resolveDecorationThickness(alloc, value);
+            }
+        }
+        // Fall through to color handling
     }
 
     // Color utilities (pure color roots)
@@ -1185,10 +1217,10 @@ pub fn resolveFunctional(
     }
 
     // Grid template columns/rows
-    if (std.mem.eql(u8, root, "cols")) {
+    if (std.mem.eql(u8, root, "cols") or std.mem.eql(u8, root, "grid-cols")) {
         return resolveGridTemplate(alloc, value, "grid-template-columns");
     }
-    if (std.mem.eql(u8, root, "rows")) {
+    if (std.mem.eql(u8, root, "rows") or std.mem.eql(u8, root, "grid-rows")) {
         return resolveGridTemplate(alloc, value, "grid-template-rows");
     }
 
@@ -1252,8 +1284,21 @@ pub fn resolveFunctional(
         return resolveSkew(alloc, value, "Y", negative or std.mem.eql(u8, root, "-skew-y"));
     }
 
-    // Shadow
+    // Shadow (size or color)
     if (std.mem.eql(u8, root, "shadow")) {
+        // Try as shadow size first, then as shadow color
+        if (value) |val| {
+            if (val.kind == .named) {
+                // Check if it's a color
+                if (std.mem.eql(u8, val.value, "inherit") or
+                    std.mem.eql(u8, val.value, "transparent") or
+                    std.mem.eql(u8, val.value, "current") or
+                    theme.resolve(val.value, "--color") != null)
+                {
+                    return resolveShadowColor(alloc, value, modifier, theme);
+                }
+            }
+        }
         return resolveShadow(alloc, value, theme);
     }
 
@@ -1364,6 +1409,11 @@ pub fn resolveFunctional(
         std.mem.eql(u8, root, "bg-conic"))
     {
         return resolveGradient(alloc, root, value);
+    }
+
+    // bg-gradient-to-* (v3 compat alias for bg-linear-to-*)
+    if (std.mem.eql(u8, root, "bg-gradient")) {
+        return resolveGradient(alloc, "bg-linear", value);
     }
 
     // Gradient color stop utilities
@@ -1487,6 +1537,29 @@ pub fn resolveFunctional(
     }
     if (std.mem.eql(u8, root, "font-stretch")) {
         return resolveSingleProp(alloc, value, "font-stretch");
+    }
+
+    // Drop shadow
+    if (std.mem.eql(u8, root, "drop-shadow")) {
+        return resolveDropShadow(alloc, value, theme);
+    }
+
+    // Border spacing
+    if (std.mem.eql(u8, root, "border-spacing") or
+        std.mem.eql(u8, root, "border-spacing-x") or
+        std.mem.eql(u8, root, "border-spacing-y"))
+    {
+        return resolveBorderSpacing(alloc, root, value, theme);
+    }
+
+    // Text indent
+    if (std.mem.eql(u8, root, "indent") or std.mem.eql(u8, root, "-indent")) {
+        return resolveIndent(alloc, value, theme);
+    }
+
+    // Shadow as color (shadow-color-*)
+    if (std.mem.eql(u8, root, "shadow-color")) {
+        return resolveShadowColor(alloc, value, modifier, theme);
     }
 
     return null;
@@ -1672,6 +1745,31 @@ fn resolveSpacing(
                     css_value = try std.fmt.allocPrint(alloc, "calc({s} * -1)", .{var_name});
                 } else {
                     css_value = var_name;
+                }
+            } else if ((std.mem.eql(u8, root, "max-w") or std.mem.eql(u8, root, "max-h")) and !is_neg) {
+                // Named max-width values (container sizes)
+                const max_w_map = std.StaticStringMap([]const u8).initComptime(.{
+                    .{ "xs", "20rem" },
+                    .{ "sm", "24rem" },
+                    .{ "md", "28rem" },
+                    .{ "lg", "32rem" },
+                    .{ "xl", "36rem" },
+                    .{ "2xl", "42rem" },
+                    .{ "3xl", "48rem" },
+                    .{ "4xl", "56rem" },
+                    .{ "5xl", "64rem" },
+                    .{ "6xl", "72rem" },
+                    .{ "7xl", "80rem" },
+                    .{ "screen-sm", "40rem" },
+                    .{ "screen-md", "48rem" },
+                    .{ "screen-lg", "64rem" },
+                    .{ "screen-xl", "80rem" },
+                    .{ "screen-2xl", "96rem" },
+                });
+                if (max_w_map.get(val.value)) |mw_val| {
+                    css_value = mw_val;
+                } else {
+                    return null;
                 }
             } else {
                 return null;
@@ -2130,13 +2228,10 @@ fn resolveTracking(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Dec
 
 fn resolveBorder(alloc: Allocator, root: []const u8, value: ?Value, modifier: ?Modifier, theme: *Theme) !?[]const Declaration {
     const val = value orelse {
-        // bare `border` with no value -> border-width: 1px
-        if (std.mem.eql(u8, root, "border")) {
-            const decls = try alloc.alloc(Declaration, 1);
-            decls[0] = Declaration{ .property = "border-width", .value = "1px" };
-            return decls;
-        }
-        return null;
+        // bare `border`, `border-t`, `border-l`, etc. with no value -> width: 1px
+        const decls = try alloc.alloc(Declaration, 1);
+        decls[0] = Declaration{ .property = borderWidthProperty(root), .value = "1px" };
+        return decls;
     };
 
     const width_property = borderWidthProperty(root);
@@ -2563,41 +2658,59 @@ fn resolveShadow(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decla
 // ─── Ring ──────────────────────────────────────────────────────────────────
 
 fn resolveRing(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *Theme) !?[]const Declaration {
-    _ = theme;
     const val = value orelse {
-        // bare `ring` -> 1px ring
+        // ring with no value = 1px ring
         const decls = try alloc.alloc(Declaration, 1);
         decls[0] = Declaration{ .property = "box-shadow", .value = "0 0 0 1px currentColor" };
         return decls;
     };
 
-    // Check if this is a ring width or ring color
     switch (val.kind) {
         .arbitrary => {
-            if (looksLikeBorderWidth(val.value)) {
-                const css_value = try std.fmt.allocPrint(alloc, "0 0 0 {s} currentColor", .{val.value});
+            // Could be color or width - check for numeric
+            if (isPositiveInteger(val.value) or std.mem.endsWith(u8, val.value, "px") or std.mem.endsWith(u8, val.value, "rem")) {
                 const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "box-shadow", .value = css_value };
+                decls[0] = Declaration{ .property = "box-shadow", .value = try std.fmt.allocPrint(alloc, "0 0 0 {s} currentColor", .{val.value}) };
                 return decls;
             }
-            // Otherwise treat as ring color
-            var css_value = try std.fmt.allocPrint(alloc, "0 0 0 1px {s}", .{val.value});
-            if (modifier) |mod| {
-                _ = mod;
-                css_value = try std.fmt.allocPrint(alloc, "0 0 0 1px {s}", .{val.value});
-            }
+            // Treat as color
             const decls = try alloc.alloc(Declaration, 1);
-            decls[0] = Declaration{ .property = "box-shadow", .value = css_value };
+            decls[0] = Declaration{ .property = "--tw-ring-color", .value = val.value };
             return decls;
         },
         .named => {
-            if (isPositiveInteger(val.value)) {
-                const css_value = try std.fmt.allocPrint(alloc, "0 0 0 {s}px currentColor", .{val.value});
+            // Check for special color keywords
+            if (std.mem.eql(u8, val.value, "inherit") or
+                std.mem.eql(u8, val.value, "transparent") or
+                std.mem.eql(u8, val.value, "current"))
+            {
+                const color_val = if (std.mem.eql(u8, val.value, "current")) "currentColor" else val.value;
                 const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "box-shadow", .value = css_value };
+                decls[0] = Declaration{ .property = "--tw-ring-color", .value = color_val };
                 return decls;
             }
-            // Try as color
+
+            // Try as color from theme
+            if (theme.resolve(val.value, "--color") != null) {
+                theme.markUsed(try std.fmt.allocPrint(alloc, "--color-{s}", .{val.value}));
+                var color_css: []const u8 = undefined;
+                if (modifier) |mod| {
+                    color_css = try applyColorOpacity(alloc, try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value}), mod);
+                } else {
+                    color_css = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
+                }
+                const decls = try alloc.alloc(Declaration, 1);
+                decls[0] = Declaration{ .property = "--tw-ring-color", .value = color_css };
+                return decls;
+            }
+
+            // Try as width
+            if (isPositiveInteger(val.value)) {
+                const decls = try alloc.alloc(Declaration, 1);
+                decls[0] = Declaration{ .property = "box-shadow", .value = try std.fmt.allocPrint(alloc, "0 0 0 {s}px currentColor", .{val.value}) };
+                return decls;
+            }
+
             return null;
         },
     }
@@ -3133,6 +3246,17 @@ fn resolveGradientStop(alloc: Allocator, root: []const u8, value: ?Value, modifi
             } else if (theme.resolve(val.value, "--color") != null) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--color-{s}", .{val.value}));
                 css_value = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
+            } else if (std.mem.endsWith(u8, val.value, "%")) {
+                // Gradient position: from-0%, via-50%, to-100%
+                const pos_prop: []const u8 = if (std.mem.eql(u8, root, "from"))
+                    "--tw-gradient-from-position"
+                else if (std.mem.eql(u8, root, "via"))
+                    "--tw-gradient-via-position"
+                else
+                    "--tw-gradient-to-position";
+                const decls = try alloc.alloc(Declaration, 1);
+                decls[0] = Declaration{ .property = pos_prop, .value = val.value };
+                return decls;
             } else {
                 return null;
             }
@@ -3222,15 +3346,37 @@ fn resolveColumns(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decl
             css_value = val.value;
         },
         .named => {
-            // Pure integer 1-12
-            if (isPositiveInteger(val.value)) {
+            if (std.mem.eql(u8, val.value, "auto")) {
+                css_value = "auto";
+            } else if (isPositiveInteger(val.value)) {
+                // Pure integer 1-12
                 css_value = val.value;
             } else if (theme.resolve(val.value, "--container") != null) {
                 // Named container size: 3xs, 2xs, xs, sm, md, lg, xl, 2xl, ...
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--container-{s}", .{val.value}));
                 css_value = try std.fmt.allocPrint(alloc, "var(--container-{s})", .{val.value});
             } else {
-                return null;
+                // Named size values (fallback)
+                const size_map = std.StaticStringMap([]const u8).initComptime(.{
+                    .{ "3xs", "16rem" },
+                    .{ "2xs", "18rem" },
+                    .{ "xs", "20rem" },
+                    .{ "sm", "24rem" },
+                    .{ "md", "28rem" },
+                    .{ "lg", "32rem" },
+                    .{ "xl", "36rem" },
+                    .{ "2xl", "42rem" },
+                    .{ "3xl", "48rem" },
+                    .{ "4xl", "56rem" },
+                    .{ "5xl", "64rem" },
+                    .{ "6xl", "72rem" },
+                    .{ "7xl", "80rem" },
+                });
+                if (size_map.get(val.value)) |sz| {
+                    css_value = sz;
+                } else {
+                    return null;
+                }
             }
         },
     }
@@ -3503,6 +3649,161 @@ fn resolveFontWeight(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const D
     }
     const decls = try alloc.alloc(Declaration, 1);
     decls[0] = Declaration{ .property = "font-weight", .value = css_value };
+    return decls;
+}
+
+// ─── Drop Shadow ───────────────────────────────────────────────────────────
+
+fn resolveDropShadow(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Declaration {
+    const val = value orelse {
+        // bare drop-shadow = default
+        const decls = try alloc.alloc(Declaration, 1);
+        decls[0] = Declaration{ .property = "filter", .value = "drop-shadow(0 1px 2px rgb(0 0 0 / 0.1)) drop-shadow(0 1px 1px rgb(0 0 0 / 0.06))" };
+        return decls;
+    };
+    var css_value: []const u8 = undefined;
+    switch (val.kind) {
+        .arbitrary => {
+            css_value = try std.fmt.allocPrint(alloc, "drop-shadow({s})", .{val.value});
+        },
+        .named => {
+            if (std.mem.eql(u8, val.value, "none")) {
+                css_value = "drop-shadow(0 0 #0000)";
+            } else {
+                const var_name = try std.fmt.allocPrint(alloc, "--drop-shadow-{s}", .{val.value});
+                if (theme.get(var_name) != null) {
+                    theme.markUsed(var_name);
+                    css_value = try std.fmt.allocPrint(alloc, "drop-shadow(var({s}))", .{var_name});
+                } else {
+                    return null;
+                }
+            }
+        },
+    }
+    const decls = try alloc.alloc(Declaration, 1);
+    decls[0] = Declaration{ .property = "filter", .value = css_value };
+    return decls;
+}
+
+// ─── Border Spacing ────────────────────────────────────────────────────────
+
+fn resolveBorderSpacing(alloc: Allocator, root: []const u8, value: ?Value, theme: *Theme) !?[]const Declaration {
+    const val = value orelse return null;
+    var css_value: []const u8 = undefined;
+    switch (val.kind) {
+        .arbitrary => {
+            css_value = val.value;
+        },
+        .named => {
+            if (isValidSpacingMultiplier(val.value)) {
+                theme.markUsed("--spacing");
+                css_value = try std.fmt.allocPrint(alloc, "calc(var(--spacing) * {s})", .{val.value});
+            } else if (std.mem.eql(u8, val.value, "px")) {
+                css_value = "1px";
+            } else if (std.mem.eql(u8, val.value, "0")) {
+                css_value = "0";
+            } else {
+                return null;
+            }
+        },
+    }
+
+    if (std.mem.eql(u8, root, "border-spacing-x")) {
+        const decls = try alloc.alloc(Declaration, 1);
+        decls[0] = Declaration{ .property = "border-spacing", .value = try std.fmt.allocPrint(alloc, "{s} 0", .{css_value}) };
+        return decls;
+    }
+    if (std.mem.eql(u8, root, "border-spacing-y")) {
+        const decls = try alloc.alloc(Declaration, 1);
+        decls[0] = Declaration{ .property = "border-spacing", .value = try std.fmt.allocPrint(alloc, "0 {s}", .{css_value}) };
+        return decls;
+    }
+    const decls = try alloc.alloc(Declaration, 1);
+    decls[0] = Declaration{ .property = "border-spacing", .value = try std.fmt.allocPrint(alloc, "{s} {s}", .{ css_value, css_value }) };
+    return decls;
+}
+
+// ─── Text Indent ───────────────────────────────────────────────────────────
+
+fn resolveIndent(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Declaration {
+    const val = value orelse return null;
+    var css_value: []const u8 = undefined;
+    switch (val.kind) {
+        .arbitrary => {
+            css_value = val.value;
+        },
+        .named => {
+            if (std.mem.eql(u8, val.value, "px")) {
+                css_value = "1px";
+            } else if (isValidSpacingMultiplier(val.value)) {
+                theme.markUsed("--spacing");
+                css_value = try std.fmt.allocPrint(alloc, "calc(var(--spacing) * {s})", .{val.value});
+            } else {
+                return null;
+            }
+        },
+    }
+    const decls = try alloc.alloc(Declaration, 1);
+    decls[0] = Declaration{ .property = "text-indent", .value = css_value };
+    return decls;
+}
+
+// ─── Decoration Thickness ──────────────────────────────────────────────────
+
+fn resolveDecorationThickness(alloc: Allocator, value: ?Value) !?[]const Declaration {
+    const val = value orelse return null;
+    var css_value: []const u8 = undefined;
+    switch (val.kind) {
+        .arbitrary => {
+            css_value = val.value;
+        },
+        .named => {
+            if (std.mem.eql(u8, val.value, "auto")) {
+                css_value = "auto";
+            } else if (std.mem.eql(u8, val.value, "from-font")) {
+                css_value = "from-font";
+            } else if (isPositiveInteger(val.value)) {
+                css_value = try std.fmt.allocPrint(alloc, "{s}px", .{val.value});
+            } else {
+                // Try as color (decoration-red-500) - delegate to color handler
+                return null;
+            }
+        },
+    }
+    const decls = try alloc.alloc(Declaration, 1);
+    decls[0] = Declaration{ .property = "text-decoration-thickness", .value = css_value };
+    return decls;
+}
+
+// ─── Shadow Color ──────────────────────────────────────────────────────────
+
+fn resolveShadowColor(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *Theme) !?[]const Declaration {
+    const val = value orelse return null;
+    var css_value: []const u8 = undefined;
+    switch (val.kind) {
+        .arbitrary => {
+            css_value = val.value;
+        },
+        .named => {
+            if (std.mem.eql(u8, val.value, "inherit")) {
+                css_value = "inherit";
+            } else if (std.mem.eql(u8, val.value, "transparent")) {
+                css_value = "transparent";
+            } else if (std.mem.eql(u8, val.value, "current")) {
+                css_value = "currentColor";
+            } else if (theme.resolve(val.value, "--color") != null) {
+                theme.markUsed(try std.fmt.allocPrint(alloc, "--color-{s}", .{val.value}));
+                css_value = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
+            } else {
+                return null;
+            }
+        },
+    }
+    if (modifier) |mod| {
+        css_value = try applyColorOpacity(alloc, css_value, mod);
+    }
+    const decls = try alloc.alloc(Declaration, 1);
+    decls[0] = Declaration{ .property = "--tw-shadow-color", .value = css_value };
     return decls;
 }
 

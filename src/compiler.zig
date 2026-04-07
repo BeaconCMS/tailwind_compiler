@@ -477,3 +477,70 @@ test "compile: special spacing keywords" {
 
     try std.testing.expect(std.mem.indexOf(u8, result, "width:100%") != null);
 }
+
+test "compile: data variant - basic arbitrary" {
+    const alloc = std.testing.allocator;
+
+    const candidates = [_][]const u8{"data-[state=active]:bg-blue-500"};
+    const result = try compile(alloc, &candidates, null, false);
+    defer alloc.free(result);
+
+    // data-[state=active] should produce [data-state=active] attribute selector
+    try std.testing.expect(std.mem.indexOf(u8, result, "[data-state=active]") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-color") != null);
+}
+
+test "compile: data variant - named" {
+    const alloc = std.testing.allocator;
+
+    const candidates = [_][]const u8{"data-active:bg-red-500"};
+    const result = try compile(alloc, &candidates, null, false);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "[data-active]") != null);
+}
+
+test "compile: data variant - arbitrary boolean" {
+    const alloc = std.testing.allocator;
+
+    const candidates = [_][]const u8{"data-[disabled]:bg-gray-500"};
+    const result = try compile(alloc, &candidates, null, false);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "[data-disabled]") != null);
+}
+
+test "compile: data variant - compound group" {
+    const alloc = std.testing.allocator;
+
+    const candidates = [_][]const u8{"group-data-[state=open]:flex"};
+    const result = try compile(alloc, &candidates, null, false);
+    defer alloc.free(result);
+
+    // Should wrap in group ancestor selector with data attribute
+    try std.testing.expect(std.mem.indexOf(u8, result, ".group[data-state=open]") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "display:flex") != null);
+}
+
+test "compile: data variant - compound has" {
+    const alloc = std.testing.allocator;
+
+    const candidates = [_][]const u8{"has-data-[loading]:opacity-50"};
+    const result = try compile(alloc, &candidates, null, false);
+    defer alloc.free(result);
+
+    // Should produce :has([data-loading])
+    try std.testing.expect(std.mem.indexOf(u8, result, ":has([data-loading])") != null);
+}
+
+test "compile: aria variant - compound group" {
+    const alloc = std.testing.allocator;
+
+    const candidates = [_][]const u8{"group-aria-checked:bg-blue-500"};
+    const result = try compile(alloc, &candidates, null, false);
+    defer alloc.free(result);
+
+    // Should wrap in group ancestor selector with aria attribute
+    try std.testing.expect(std.mem.indexOf(u8, result, ".group[aria-checked=") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-color") != null);
+}

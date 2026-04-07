@@ -530,6 +530,37 @@ fn applyFunctionalVariant(
     return inner;
 }
 
+/// Build an attribute selector from a functional variant value like "data-disabled"
+/// or "data-[state=active]". For data variants:
+///   "data-disabled"        -> "[data-disabled]"
+///   "data-[state=active]"  -> "[data-state=active]"
+/// For aria variants:
+///   "aria-checked"         -> "[aria-checked=\"true\"]"
+///   "aria-[sort=ascending]"-> "[aria-sort=ascending]"
+fn buildFunctionalAttrSelector(alloc: Allocator, value: []const u8) !?[]const u8 {
+    if (std.mem.startsWith(u8, value, "data-")) {
+        const rest = value["data-".len..];
+        if (rest.len > 2 and rest[0] == '[' and rest[rest.len - 1] == ']') {
+            // Arbitrary: data-[state=active] -> [data-state=active]
+            const arb_inner = rest[1 .. rest.len - 1];
+            return try std.fmt.allocPrint(alloc, "[data-{s}]", .{arb_inner});
+        }
+        // Named: data-disabled -> [data-disabled]
+        return try std.fmt.allocPrint(alloc, "[data-{s}]", .{rest});
+    }
+    if (std.mem.startsWith(u8, value, "aria-")) {
+        const rest = value["aria-".len..];
+        if (rest.len > 2 and rest[0] == '[' and rest[rest.len - 1] == ']') {
+            // Arbitrary: aria-[sort=ascending] -> [aria-sort=ascending]
+            const arb_inner = rest[1 .. rest.len - 1];
+            return try std.fmt.allocPrint(alloc, "[aria-{s}]", .{arb_inner});
+        }
+        // Named: aria-checked -> [aria-checked="true"]
+        return try std.fmt.allocPrint(alloc, "[aria-{s}=\"true\"]", .{rest});
+    }
+    return null;
+}
+
 fn applyCompoundVariant(
     alloc: Allocator,
     inner: Rule,
@@ -581,26 +612,9 @@ fn applyCompoundVariant(
                         .children = inner.children,
                         .variant_order = inner.variant_order,
                     };
-                } else if (std.mem.startsWith(u8, val.value, "aria-")) {
-                    // group-aria-checked -> ancestor .group[aria-checked="true"]
-                    const aria_attr = val.value["aria-".len..];
-                    const attr_sel = try std.fmt.allocPrint(alloc, "[aria-{s}=\"true\"]", .{aria_attr});
-                    const sel = try std.fmt.allocPrint(alloc, "{s}:is(:where({s}{s}) *)", .{
-                        inner.selector orelse "",
-                        group_class,
-                        attr_sel,
-                    });
-                    return Rule{
-                        .kind = .style,
-                        .selector = sel,
-                        .declarations = inner.declarations,
-                        .children = inner.children,
-                        .variant_order = inner.variant_order,
-                    };
-                } else if (std.mem.startsWith(u8, val.value, "data-")) {
-                    // group-data-visible -> ancestor .group[data-visible]
-                    const data_attr = val.value["data-".len..];
-                    const attr_sel = try std.fmt.allocPrint(alloc, "[data-{s}]", .{data_attr});
+                } else if (try buildFunctionalAttrSelector(alloc, val.value)) |attr_sel| {
+                    // group-aria-checked, group-aria-[sort=ascending],
+                    // group-data-visible, group-data-[state=active]
                     const sel = try std.fmt.allocPrint(alloc, "{s}:is(:where({s}{s}) *)", .{
                         inner.selector orelse "",
                         group_class,
@@ -639,26 +653,9 @@ fn applyCompoundVariant(
                         .children = inner.children,
                         .variant_order = inner.variant_order,
                     };
-                } else if (std.mem.startsWith(u8, val.value, "aria-")) {
-                    // peer-aria-checked -> sibling .peer[aria-checked="true"]
-                    const aria_attr = val.value["aria-".len..];
-                    const attr_sel = try std.fmt.allocPrint(alloc, "[aria-{s}=\"true\"]", .{aria_attr});
-                    const sel = try std.fmt.allocPrint(alloc, "{s}:is(:where({s}{s}) ~ *)", .{
-                        inner.selector orelse "",
-                        peer_class,
-                        attr_sel,
-                    });
-                    return Rule{
-                        .kind = .style,
-                        .selector = sel,
-                        .declarations = inner.declarations,
-                        .children = inner.children,
-                        .variant_order = inner.variant_order,
-                    };
-                } else if (std.mem.startsWith(u8, val.value, "data-")) {
-                    // peer-data-visible -> sibling .peer[data-visible]
-                    const data_attr = val.value["data-".len..];
-                    const attr_sel = try std.fmt.allocPrint(alloc, "[data-{s}]", .{data_attr});
+                } else if (try buildFunctionalAttrSelector(alloc, val.value)) |attr_sel| {
+                    // peer-aria-checked, peer-aria-[sort=ascending],
+                    // peer-data-visible, peer-data-[state=active]
                     const sel = try std.fmt.allocPrint(alloc, "{s}:is(:where({s}{s}) ~ *)", .{
                         inner.selector orelse "",
                         peer_class,
@@ -684,6 +681,10 @@ fn applyCompoundVariant(
                     if (pseudo_class_map.get(val.value)) |pseudo| {
                         break :blk pseudo;
                     }
+                    // Check for data-*/aria-* functional attribute variants
+                    if (try buildFunctionalAttrSelector(alloc, val.value)) |attr_sel| {
+                        break :blk attr_sel;
+                    }
                     break :blk val.value;
                 },
             };
@@ -701,8 +702,14 @@ fn applyCompoundVariant(
     if (std.mem.eql(u8, root, "not")) {
         if (variant.value) |val| {
             if (val.kind == .named) {
-                if (pseudo_class_map.get(val.value)) |pseudo| {
-                    const sel = try std.fmt.allocPrint(alloc, "{s}:not({s})", .{ inner.selector orelse "", pseudo });
+                const not_arg: ?[]const u8 = if (pseudo_class_map.get(val.value)) |pseudo|
+                    pseudo
+                else if (try buildFunctionalAttrSelector(alloc, val.value)) |attr_sel|
+                    attr_sel
+                else
+                    null;
+                if (not_arg) |arg| {
+                    const sel = try std.fmt.allocPrint(alloc, "{s}:not({s})", .{ inner.selector orelse "", arg });
                     return Rule{
                         .kind = .style,
                         .selector = sel,
@@ -716,12 +723,15 @@ fn applyCompoundVariant(
     }
 
     if (std.mem.eql(u8, root, "in")) {
-        if (variant.value) |val| {
-            const ancestor_sel = switch (val.kind) {
-                .arbitrary => val.value,
-                .named => if (pseudo_class_map.get(val.value)) |pseudo| pseudo else val.value,
-            };
-            const sel = try std.fmt.allocPrint(alloc, ":where({s}) {s}", .{ ancestor_sel, inner.selector orelse "" });
+        const ancestor_sel: ?[]const u8 = if (variant.value) |val| switch (val.kind) {
+            .arbitrary => val.value,
+            .named => if (pseudo_class_map.get(val.value)) |pseudo| pseudo else val.value,
+        } else if (variant.selector) |sel_val|
+            sel_val
+        else
+            null;
+        if (ancestor_sel) |anc_sel| {
+            const sel = try std.fmt.allocPrint(alloc, ":where({s}) {s}", .{ anc_sel, inner.selector orelse "" });
             return Rule{
                 .kind = .style,
                 .selector = sel,
