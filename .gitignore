@@ -13,8 +13,14 @@ benchmark/class_inventory.txt
 # Research artifacts
 research/
 
+# Elixir
+_build/
+deps/
+mix.lock
+
 # OS
 .DS_Store
 
 # Claude
 .claude/
+.Elixir.*.zig
