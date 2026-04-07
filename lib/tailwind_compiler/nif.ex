@@ -22,7 +22,7 @@ defmodule TailwindCompiler.NIF do
   const compiler = @import("compiler");
 
   /// Compile a list of Tailwind CSS candidate strings into minified CSS.
-  pub fn compile(candidates_term: beam.term, theme_json_term: beam.term, preflight_term: beam.term) ![]u8 {
+  pub fn compile(candidates_term: beam.term, theme_json_term: beam.term, preflight_term: beam.term, custom_css_term: beam.term) ![]u8 {
       var arena = std.heap.ArenaAllocator.init(beam.allocator);
       defer arena.deinit();
       const alloc = arena.allocator();
@@ -37,8 +37,12 @@ defmodule TailwindCompiler.NIF do
       // Marshal preflight flag
       const include_preflight = beam.get(bool, preflight_term, .{}) catch true;
 
+      // Marshal custom CSS: binary -> ?[]const u8 (empty string = null)
+      const custom_raw = beam.get([]const u8, custom_css_term, .{}) catch "";
+      const custom_css: ?[]const u8 = if (custom_raw.len == 0) null else custom_raw;
+
       // Call the Zig compiler
-      const css = try compiler.compile(alloc, candidates, theme_json, include_preflight);
+      const css = try compiler.compile(alloc, candidates, theme_json, include_preflight, custom_css);
 
       // Return owned slice (Zigler auto-marshals []u8 to binary)
       return try beam.allocator.dupe(u8, css);

@@ -18,6 +18,7 @@ pub const color = @import("color.zig");
 /// - `candidates`: Tailwind class names (e.g., "flex", "hover:bg-blue-500/50")
 /// - `theme_json`: Optional JSON string with theme overrides
 /// - `include_preflight`: Whether to include the base CSS reset
+/// - `custom_css`: Optional raw CSS to append after @layer utilities (plugins, user stylesheets)
 ///
 /// Returns minified CSS string. Caller owns the returned memory.
 pub fn compile(
@@ -25,8 +26,9 @@ pub fn compile(
     candidates: []const []const u8,
     theme_json: ?[]const u8,
     include_preflight: bool,
+    custom_css: ?[]const u8,
 ) ![]const u8 {
-    return compiler.compile(alloc, candidates, theme_json, include_preflight);
+    return compiler.compile(alloc, candidates, theme_json, include_preflight, custom_css);
 }
 
 test {

@@ -64,6 +64,26 @@ defmodule TailwindCompilerTest do
       count = css |> String.split(".flex{") |> length()
       assert count == 2  # split produces 2 parts for 1 occurrence
     end
+
+    test "accepts custom CSS" do
+      custom = ".custom-class{color:red}"
+      {:ok, css} = TailwindCompiler.compile(["flex"], custom_css: custom, preflight: false)
+      assert css =~ ".flex{display:flex}"
+      assert css =~ ".custom-class{color:red}"
+    end
+
+    test "custom CSS is placed after utilities layer" do
+      custom = ".plugin-btn{background:blue}"
+      {:ok, css} = TailwindCompiler.compile(["flex"], custom_css: custom, preflight: false)
+      utilities_pos = :binary.match(css, "@layer utilities{") |> elem(0)
+      custom_pos = :binary.match(css, ".plugin-btn{") |> elem(0)
+      assert custom_pos > utilities_pos
+    end
+
+    test "works without custom CSS (backward compatible)" do
+      {:ok, css} = TailwindCompiler.compile(["flex"], preflight: false)
+      assert css =~ ".flex{display:flex}"
+    end
   end
 
   describe "compile!/2" do

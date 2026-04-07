@@ -24,3 +24,4 @@ mix.lock
 # Claude
 .claude/
 .Elixir.*.zig
+erl_crash.dump

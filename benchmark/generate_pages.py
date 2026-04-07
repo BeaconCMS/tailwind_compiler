@@ -771,6 +771,61 @@ PLACEHOLDER_SHOWN = [
 # ---------------------------------------------------------------------------
 # All pools in one list for easy reference
 # ---------------------------------------------------------------------------
+# Logical properties (mbs, mbe, pbs, pbe, inline/block sizing)
+LOGICAL_PROPERTIES = [
+    "mbs-2", "mbs-4", "mbs-6", "mbe-2", "mbe-4", "mbe-8",
+    "-mbs-2", "-mbe-4",
+    "pbs-2", "pbs-4", "pbs-6", "pbe-2", "pbe-4", "pbe-8",
+    "mis-2", "mis-4", "mie-2", "mie-4",
+    "-mis-2", "-mie-4",
+    "inline-full", "inline-auto", "inline-1/2",
+    "min-inline-0", "max-inline-lg",
+    "block-full", "block-auto", "block-1/2",
+    "min-block-0", "max-block-screen",
+]
+
+# Viewport unit keywords
+VIEWPORT_UNITS = [
+    "w-svw", "w-lvw", "w-dvw",
+    "h-svh", "h-lvh", "h-dvh",
+    "min-h-svh", "min-h-dvh",
+    "max-h-lvh",
+    "h-lh",
+]
+
+# Mask utilities
+MASK_UTILITIES = [
+    "mask-image-[url('/mask.svg')]", "mask-image-[url('/gradient.png')]",
+    "mask-clip-border", "mask-clip-padding", "mask-clip-content",
+    "mask-origin-border", "mask-origin-padding", "mask-origin-content",
+    "mask-mode-alpha", "mask-mode-luminance", "mask-mode-match",
+    "mask-composite-add", "mask-composite-subtract", "mask-composite-intersect", "mask-composite-exclude",
+    "mask-type-alpha", "mask-type-luminance",
+    "mask-repeat", "mask-no-repeat", "mask-repeat-x", "mask-repeat-y",
+    "mask-auto", "mask-cover", "mask-contain",
+    "mask-center", "mask-top", "mask-bottom",
+]
+
+# 3D transforms
+TRANSFORMS_3D = [
+    "rotate-x-12", "rotate-x-45", "rotate-x-90", "rotate-x-180",
+    "rotate-y-12", "rotate-y-45", "rotate-y-90", "rotate-y-180",
+    "rotate-z-45", "rotate-z-90",
+    "-rotate-x-12", "-rotate-y-45",
+    "translate-z-4", "translate-z-8", "translate-z-12",
+    "-translate-z-4",
+    "scale-z-50", "scale-z-75", "scale-z-100", "scale-z-125",
+    "transform-3d", "backface-hidden", "backface-visible",
+    "perspective-normal", "perspective-distant",
+]
+
+# Touch action composition
+TOUCH_ACTION = [
+    "touch-auto", "touch-none", "touch-manipulation",
+    "touch-pan-x", "touch-pan-y", "touch-pinch-zoom",
+    "touch-pan-left", "touch-pan-right", "touch-pan-up", "touch-pan-down",
+]
+
 ALL_POOLS = [
     LAYOUT, FLEXBOX, GRID, GAP, SPACING_MARGIN, SPACING_PADDING, SIZING,
     TYPOGRAPHY, COLORS_TEXT, COLORS_BG, OPACITY, COLORS_WITH_OPACITY,
@@ -782,6 +837,8 @@ ALL_POOLS = [
     RESPONSIVE_2XL, SPACE, GROUP_PEER, OTHER_STATES, OUTLINE,
     CONTAINER_AND_MISC, LINE_CLAMP, PRINT_CLASSES, MOTION_CLASSES,
     SUPPORTS_CLASSES, ARIA_DATA_CLASSES, PLACEHOLDER_SHOWN,
+    LOGICAL_PROPERTIES, VIEWPORT_UNITS, MASK_UTILITIES, TRANSFORMS_3D,
+    TOUCH_ACTION,
 ]
 
 # ---------------------------------------------------------------------------

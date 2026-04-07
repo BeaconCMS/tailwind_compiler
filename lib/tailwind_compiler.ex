@@ -19,6 +19,8 @@ defmodule TailwindCompiler do
 
     * `:theme` - JSON string with theme overrides (optional)
     * `:preflight` - whether to include the base CSS reset (default: `true`)
+    * `:custom_css` - raw CSS string to append after `@layer utilities` (optional).
+      Use this for plugin CSS, custom components, or user stylesheets.
 
   ## Examples
 
@@ -31,13 +33,17 @@ defmodule TailwindCompiler do
       TailwindCompiler.compile(["flex"], preflight: false)
       #=> {:ok, "@layer utilities{.flex{display:flex}}"}
 
+      TailwindCompiler.compile(["flex"], custom_css: ".custom{color:red}", preflight: false)
+      #=> {:ok, "@layer utilities{.flex{display:flex}}.custom{color:red}"}
+
   """
   @spec compile([String.t()], keyword()) :: {:ok, String.t()} | {:error, term()}
   def compile(candidates, opts \\ []) when is_list(candidates) do
     theme_json = Keyword.get(opts, :theme)
     preflight = Keyword.get(opts, :preflight, true)
+    custom_css = Keyword.get(opts, :custom_css)
 
-    case TailwindCompiler.NIF.compile(candidates, theme_json || "", preflight) do
+    case TailwindCompiler.NIF.compile(candidates, theme_json || "", preflight, custom_css || "") do
       result when is_binary(result) -> {:ok, result}
       error -> {:error, error}
     end

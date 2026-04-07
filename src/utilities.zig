@@ -145,13 +145,22 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     // ─── Touch Action ───
     .{ "touch-auto", &[_]Declaration{.{ .property = "touch-action", .value = "auto" }} },
     .{ "touch-none", &[_]Declaration{.{ .property = "touch-action", .value = "none" }} },
-    .{ "touch-pan-x", &[_]Declaration{.{ .property = "touch-action", .value = "pan-x" }} },
+    .{ "touch-pan-x", &[_]Declaration{
+        .{ .property = "--tw-pan-x", .value = "pan-x" },
+        .{ .property = "touch-action", .value = "var(--tw-pan-x,) var(--tw-pan-y,) var(--tw-pinch-zoom,)" },
+    } },
     .{ "touch-pan-left", &[_]Declaration{.{ .property = "touch-action", .value = "pan-left" }} },
     .{ "touch-pan-right", &[_]Declaration{.{ .property = "touch-action", .value = "pan-right" }} },
-    .{ "touch-pan-y", &[_]Declaration{.{ .property = "touch-action", .value = "pan-y" }} },
+    .{ "touch-pan-y", &[_]Declaration{
+        .{ .property = "--tw-pan-y", .value = "pan-y" },
+        .{ .property = "touch-action", .value = "var(--tw-pan-x,) var(--tw-pan-y,) var(--tw-pinch-zoom,)" },
+    } },
     .{ "touch-pan-up", &[_]Declaration{.{ .property = "touch-action", .value = "pan-up" }} },
     .{ "touch-pan-down", &[_]Declaration{.{ .property = "touch-action", .value = "pan-down" }} },
-    .{ "touch-pinch-zoom", &[_]Declaration{.{ .property = "touch-action", .value = "pinch-zoom" }} },
+    .{ "touch-pinch-zoom", &[_]Declaration{
+        .{ .property = "--tw-pinch-zoom", .value = "pinch-zoom" },
+        .{ .property = "touch-action", .value = "var(--tw-pan-x,) var(--tw-pan-y,) var(--tw-pinch-zoom,)" },
+    } },
     .{ "touch-manipulation", &[_]Declaration{.{ .property = "touch-action", .value = "manipulation" }} },
 
     // ─── Cursor ───
@@ -773,6 +782,58 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "object-right-bottom", &[_]Declaration{.{ .property = "object-position", .value = "right bottom" }} },
     .{ "object-right-top", &[_]Declaration{.{ .property = "object-position", .value = "right top" }} },
     .{ "object-top", &[_]Declaration{.{ .property = "object-position", .value = "top" }} },
+
+    // ─── Mask Clip ───
+    .{ "mask-clip-border", &[_]Declaration{ .{ .property = "-webkit-mask-clip", .value = "border-box" }, .{ .property = "mask-clip", .value = "border-box" } } },
+    .{ "mask-clip-padding", &[_]Declaration{ .{ .property = "-webkit-mask-clip", .value = "padding-box" }, .{ .property = "mask-clip", .value = "padding-box" } } },
+    .{ "mask-clip-content", &[_]Declaration{ .{ .property = "-webkit-mask-clip", .value = "content-box" }, .{ .property = "mask-clip", .value = "content-box" } } },
+    .{ "mask-clip-fill", &[_]Declaration{ .{ .property = "-webkit-mask-clip", .value = "fill-box" }, .{ .property = "mask-clip", .value = "fill-box" } } },
+    .{ "mask-clip-stroke", &[_]Declaration{ .{ .property = "-webkit-mask-clip", .value = "stroke-box" }, .{ .property = "mask-clip", .value = "stroke-box" } } },
+    .{ "mask-clip-view", &[_]Declaration{ .{ .property = "-webkit-mask-clip", .value = "view-box" }, .{ .property = "mask-clip", .value = "view-box" } } },
+    .{ "mask-clip-no-clip", &[_]Declaration{ .{ .property = "-webkit-mask-clip", .value = "no-clip" }, .{ .property = "mask-clip", .value = "no-clip" } } },
+
+    // ─── Mask Origin ───
+    .{ "mask-origin-border", &[_]Declaration{ .{ .property = "-webkit-mask-origin", .value = "border-box" }, .{ .property = "mask-origin", .value = "border-box" } } },
+    .{ "mask-origin-padding", &[_]Declaration{ .{ .property = "-webkit-mask-origin", .value = "padding-box" }, .{ .property = "mask-origin", .value = "padding-box" } } },
+    .{ "mask-origin-content", &[_]Declaration{ .{ .property = "-webkit-mask-origin", .value = "content-box" }, .{ .property = "mask-origin", .value = "content-box" } } },
+    .{ "mask-origin-fill", &[_]Declaration{ .{ .property = "-webkit-mask-origin", .value = "fill-box" }, .{ .property = "mask-origin", .value = "fill-box" } } },
+    .{ "mask-origin-stroke", &[_]Declaration{ .{ .property = "-webkit-mask-origin", .value = "stroke-box" }, .{ .property = "mask-origin", .value = "stroke-box" } } },
+    .{ "mask-origin-view", &[_]Declaration{ .{ .property = "-webkit-mask-origin", .value = "view-box" }, .{ .property = "mask-origin", .value = "view-box" } } },
+
+    // ─── Mask Mode ───
+    .{ "mask-mode-alpha", &[_]Declaration{.{ .property = "mask-mode", .value = "alpha" }} },
+    .{ "mask-mode-luminance", &[_]Declaration{.{ .property = "mask-mode", .value = "luminance" }} },
+    .{ "mask-mode-match", &[_]Declaration{.{ .property = "mask-mode", .value = "match-source" }} },
+
+    // ─── Mask Composite ───
+    .{ "mask-composite-add", &[_]Declaration{ .{ .property = "-webkit-mask-composite", .value = "source-over" }, .{ .property = "mask-composite", .value = "add" } } },
+    .{ "mask-composite-subtract", &[_]Declaration{ .{ .property = "-webkit-mask-composite", .value = "source-out" }, .{ .property = "mask-composite", .value = "subtract" } } },
+    .{ "mask-composite-intersect", &[_]Declaration{ .{ .property = "-webkit-mask-composite", .value = "source-in" }, .{ .property = "mask-composite", .value = "intersect" } } },
+    .{ "mask-composite-exclude", &[_]Declaration{ .{ .property = "-webkit-mask-composite", .value = "xor" }, .{ .property = "mask-composite", .value = "exclude" } } },
+
+    // ─── Mask Type ───
+    .{ "mask-type-alpha", &[_]Declaration{.{ .property = "mask-type", .value = "alpha" }} },
+    .{ "mask-type-luminance", &[_]Declaration{.{ .property = "mask-type", .value = "luminance" }} },
+
+    // ─── Mask Repeat ───
+    .{ "mask-repeat", &[_]Declaration{ .{ .property = "-webkit-mask-repeat", .value = "repeat" }, .{ .property = "mask-repeat", .value = "repeat" } } },
+    .{ "mask-no-repeat", &[_]Declaration{ .{ .property = "-webkit-mask-repeat", .value = "no-repeat" }, .{ .property = "mask-repeat", .value = "no-repeat" } } },
+    .{ "mask-repeat-x", &[_]Declaration{ .{ .property = "-webkit-mask-repeat", .value = "repeat-x" }, .{ .property = "mask-repeat", .value = "repeat-x" } } },
+    .{ "mask-repeat-y", &[_]Declaration{ .{ .property = "-webkit-mask-repeat", .value = "repeat-y" }, .{ .property = "mask-repeat", .value = "repeat-y" } } },
+    .{ "mask-repeat-round", &[_]Declaration{ .{ .property = "-webkit-mask-repeat", .value = "round" }, .{ .property = "mask-repeat", .value = "round" } } },
+    .{ "mask-repeat-space", &[_]Declaration{ .{ .property = "-webkit-mask-repeat", .value = "space" }, .{ .property = "mask-repeat", .value = "space" } } },
+
+    // ─── Mask Size ───
+    .{ "mask-auto", &[_]Declaration{ .{ .property = "-webkit-mask-size", .value = "auto" }, .{ .property = "mask-size", .value = "auto" } } },
+    .{ "mask-cover", &[_]Declaration{ .{ .property = "-webkit-mask-size", .value = "cover" }, .{ .property = "mask-size", .value = "cover" } } },
+    .{ "mask-contain", &[_]Declaration{ .{ .property = "-webkit-mask-size", .value = "contain" }, .{ .property = "mask-size", .value = "contain" } } },
+
+    // ─── Mask Position ───
+    .{ "mask-center", &[_]Declaration{ .{ .property = "-webkit-mask-position", .value = "center" }, .{ .property = "mask-position", .value = "center" } } },
+    .{ "mask-top", &[_]Declaration{ .{ .property = "-webkit-mask-position", .value = "top" }, .{ .property = "mask-position", .value = "top" } } },
+    .{ "mask-bottom", &[_]Declaration{ .{ .property = "-webkit-mask-position", .value = "bottom" }, .{ .property = "mask-position", .value = "bottom" } } },
+    .{ "mask-left", &[_]Declaration{ .{ .property = "-webkit-mask-position", .value = "left" }, .{ .property = "mask-position", .value = "left" } } },
+    .{ "mask-right", &[_]Declaration{ .{ .property = "-webkit-mask-position", .value = "right" }, .{ .property = "mask-position", .value = "right" } } },
 });
 
 // ─── Functional Utility Set ────────────────────────────────────────────────
@@ -814,6 +875,23 @@ pub const functional_utility_set = std.StaticStringMap(void).initComptime(.{
     .{ "max-w", {} },
     .{ "max-h", {} },
     .{ "size", {} },
+    // Logical property spacing
+    .{ "mbs", {} },
+    .{ "mbe", {} },
+    .{ "pbs", {} },
+    .{ "pbe", {} },
+    .{ "-mbs", {} },
+    .{ "-mbe", {} },
+    .{ "mis", {} },
+    .{ "mie", {} },
+    .{ "-mis", {} },
+    .{ "-mie", {} },
+    .{ "inline", {} },
+    .{ "min-inline", {} },
+    .{ "max-inline", {} },
+    .{ "block", {} },
+    .{ "min-block", {} },
+    .{ "max-block", {} },
     // Inset
     .{ "inset", {} },
     .{ "inset-x", {} },
@@ -906,13 +984,22 @@ pub const functional_utility_set = std.StaticStringMap(void).initComptime(.{
     // Transform
     .{ "rotate", {} },
     .{ "-rotate", {} },
+    .{ "rotate-x", {} },
+    .{ "rotate-y", {} },
+    .{ "rotate-z", {} },
+    .{ "-rotate-x", {} },
+    .{ "-rotate-y", {} },
+    .{ "-rotate-z", {} },
     .{ "scale", {} },
     .{ "scale-x", {} },
     .{ "scale-y", {} },
+    .{ "scale-z", {} },
     .{ "translate-x", {} },
     .{ "translate-y", {} },
+    .{ "translate-z", {} },
     .{ "-translate-x", {} },
     .{ "-translate-y", {} },
+    .{ "-translate-z", {} },
     .{ "skew-x", {} },
     .{ "skew-y", {} },
     .{ "-skew-x", {} },
@@ -1070,6 +1157,34 @@ pub fn getRequiredProperties(root: []const u8) []const AtProperty {
         return &[_]AtProperty{
             .{ .name = "--tw-scale-x", .syntax = "*", .inherits = false, .initial_value = "1" },
             .{ .name = "--tw-scale-y", .syntax = "*", .inherits = false, .initial_value = "1" },
+        };
+    }
+    // scale-z
+    if (std.mem.eql(u8, root, "scale-z")) {
+        return &[_]AtProperty{
+            .{ .name = "--tw-scale-z", .syntax = "*", .inherits = false, .initial_value = "1" },
+        };
+    }
+    // rotate axis (3D)
+    if (std.mem.eql(u8, root, "rotate-x") or std.mem.eql(u8, root, "-rotate-x")) {
+        return &[_]AtProperty{
+            .{ .name = "--tw-rotate-x", .syntax = "*", .inherits = false, .initial_value = null },
+        };
+    }
+    if (std.mem.eql(u8, root, "rotate-y") or std.mem.eql(u8, root, "-rotate-y")) {
+        return &[_]AtProperty{
+            .{ .name = "--tw-rotate-y", .syntax = "*", .inherits = false, .initial_value = null },
+        };
+    }
+    if (std.mem.eql(u8, root, "rotate-z") or std.mem.eql(u8, root, "-rotate-z")) {
+        return &[_]AtProperty{
+            .{ .name = "--tw-rotate-z", .syntax = "*", .inherits = false, .initial_value = null },
+        };
+    }
+    // translate-z (3D)
+    if (std.mem.eql(u8, root, "translate-z") or std.mem.eql(u8, root, "-translate-z")) {
+        return &[_]AtProperty{
+            .{ .name = "--tw-translate-z", .syntax = "*", .inherits = false, .initial_value = "0" },
         };
     }
     // before/after content
@@ -1240,11 +1355,14 @@ const ResolverTag = enum {
     auto_rows,
     rotate,
     neg_rotate,
+    rotate_axis,
     scale,
+    scale_z,
     translate_x,
     neg_translate_x,
     translate_y,
     neg_translate_y,
+    translate_z,
     skew_x,
     neg_skew_x,
     skew_y,
@@ -1384,6 +1502,23 @@ const functional_dispatch = std.StaticStringMap(ResolverTag).initComptime(.{
     .{ "scroll-pb", .spacing },
     .{ "scroll-pl", .spacing },
     .{ "basis", .spacing },
+    // ── Logical property spacing utilities ──
+    .{ "mbs", .spacing },
+    .{ "mbe", .spacing },
+    .{ "pbs", .spacing },
+    .{ "pbe", .spacing },
+    .{ "-mbs", .spacing },
+    .{ "-mbe", .spacing },
+    .{ "mis", .spacing },
+    .{ "mie", .spacing },
+    .{ "-mis", .spacing },
+    .{ "-mie", .spacing },
+    .{ "inline", .spacing },
+    .{ "min-inline", .spacing },
+    .{ "max-inline", .spacing },
+    .{ "block", .spacing },
+    .{ "min-block", .spacing },
+    .{ "max-block", .spacing },
     // ── Color utilities ──
     .{ "bg", .color },
     .{ "accent", .color },
@@ -1464,15 +1599,26 @@ const functional_dispatch = std.StaticStringMap(ResolverTag).initComptime(.{
     // ── Transform: rotate ──
     .{ "rotate", .rotate },
     .{ "-rotate", .neg_rotate },
+    // ── Transform: rotate axis (3D) ──
+    .{ "rotate-x", .rotate_axis },
+    .{ "rotate-y", .rotate_axis },
+    .{ "rotate-z", .rotate_axis },
+    .{ "-rotate-x", .rotate_axis },
+    .{ "-rotate-y", .rotate_axis },
+    .{ "-rotate-z", .rotate_axis },
     // ── Transform: scale ──
     .{ "scale", .scale },
     .{ "scale-x", .scale },
     .{ "scale-y", .scale },
+    .{ "scale-z", .scale_z },
     // ── Transform: translate ──
     .{ "translate-x", .translate_x },
     .{ "-translate-x", .neg_translate_x },
     .{ "translate-y", .translate_y },
     .{ "-translate-y", .neg_translate_y },
+    // ── Transform: translate-z (3D) ──
+    .{ "translate-z", .translate_z },
+    .{ "-translate-z", .translate_z },
     // ── Transform: skew ──
     .{ "skew-x", .skew_x },
     .{ "-skew-x", .neg_skew_x },
@@ -1634,11 +1780,14 @@ pub fn resolveFunctional(
         .auto_rows => resolveGridAuto(alloc, value, "grid-auto-rows"),
         .rotate => resolveRotate(alloc, value, negative),
         .neg_rotate => resolveRotate(alloc, value, true),
+        .rotate_axis => resolveRotateAxis(alloc, root, value, negative),
         .scale => resolveScale(alloc, value, root),
+        .scale_z => resolveScaleZ(alloc, value),
         .translate_x => resolveTranslate(alloc, value, "X", negative, theme),
         .neg_translate_x => resolveTranslate(alloc, value, "X", true, theme),
         .translate_y => resolveTranslate(alloc, value, "Y", negative, theme),
         .neg_translate_y => resolveTranslate(alloc, value, "Y", true, theme),
+        .translate_z => resolveTranslateZ(alloc, root, value, negative, theme),
         .skew_x => resolveSkew(alloc, value, "X", negative),
         .neg_skew_x => resolveSkew(alloc, value, "X", true),
         .skew_y => resolveSkew(alloc, value, "Y", negative),
@@ -1816,6 +1965,22 @@ fn spacingProperty(root: []const u8) []const []const u8 {
         .{ "scroll-pr", &[_][]const u8{"scroll-padding-right"} },
         .{ "scroll-pb", &[_][]const u8{"scroll-padding-bottom"} },
         .{ "scroll-pl", &[_][]const u8{"scroll-padding-left"} },
+        .{ "mbs", &[_][]const u8{"margin-block-start"} },
+        .{ "mbe", &[_][]const u8{"margin-block-end"} },
+        .{ "-mbs", &[_][]const u8{"margin-block-start"} },
+        .{ "-mbe", &[_][]const u8{"margin-block-end"} },
+        .{ "pbs", &[_][]const u8{"padding-block-start"} },
+        .{ "pbe", &[_][]const u8{"padding-block-end"} },
+        .{ "mis", &[_][]const u8{"margin-inline-start"} },
+        .{ "mie", &[_][]const u8{"margin-inline-end"} },
+        .{ "-mis", &[_][]const u8{"margin-inline-start"} },
+        .{ "-mie", &[_][]const u8{"margin-inline-end"} },
+        .{ "inline", &[_][]const u8{"inline-size"} },
+        .{ "min-inline", &[_][]const u8{"min-inline-size"} },
+        .{ "max-inline", &[_][]const u8{"max-inline-size"} },
+        .{ "block", &[_][]const u8{"block-size"} },
+        .{ "min-block", &[_][]const u8{"min-block-size"} },
+        .{ "max-block", &[_][]const u8{"max-block-size"} },
     });
     return map.get(root) orelse &[_][]const u8{root};
 }
@@ -1862,6 +2027,20 @@ fn resolveSpacing(
                 } else {
                     css_value = "100vh";
                 }
+            } else if (std.mem.eql(u8, val.value, "svw")) {
+                css_value = "100svw";
+            } else if (std.mem.eql(u8, val.value, "lvw")) {
+                css_value = "100lvw";
+            } else if (std.mem.eql(u8, val.value, "dvw")) {
+                css_value = "100dvw";
+            } else if (std.mem.eql(u8, val.value, "svh")) {
+                css_value = "100svh";
+            } else if (std.mem.eql(u8, val.value, "lvh")) {
+                css_value = "100lvh";
+            } else if (std.mem.eql(u8, val.value, "dvh")) {
+                css_value = "100dvh";
+            } else if (std.mem.eql(u8, val.value, "lh")) {
+                css_value = "1lh";
             } else if (std.mem.eql(u8, val.value, "min")) {
                 css_value = "min-content";
             } else if (std.mem.eql(u8, val.value, "max")) {
@@ -2787,6 +2966,59 @@ fn resolveRotate(alloc: Allocator, value: ?Value, negative: bool) !?[]const Decl
     return decls;
 }
 
+// ─── Transform: rotate axis (3D) ──────────────────────────────────────────
+
+fn resolveRotateAxis(alloc: Allocator, root: []const u8, value: ?Value, negative: bool) !?[]const Declaration {
+    const val = value orelse return null;
+
+    // Determine if negative from prefix or flag
+    const is_neg = negative or (root.len > 0 and root[0] == '-');
+    const axis_root = if (root[0] == '-') root[1..] else root;
+
+    // "rotate-x" -> 'x', "rotate-y" -> 'y', "rotate-z" -> 'z'
+    const axis = axis_root[axis_root.len - 1];
+    const fn_name: []const u8 = switch (axis) {
+        'x' => "rotateX",
+        'y' => "rotateY",
+        'z' => "rotateZ",
+        else => return null,
+    };
+
+    var css_value: []const u8 = undefined;
+    switch (val.kind) {
+        .arbitrary => {
+            if (is_neg) {
+                css_value = try std.fmt.allocPrint(alloc, "-{s}", .{val.value});
+            } else {
+                css_value = val.value;
+            }
+        },
+        .named => {
+            if (isPositiveInteger(val.value)) {
+                if (is_neg) {
+                    css_value = try std.fmt.allocPrint(alloc, "-{s}deg", .{val.value});
+                } else {
+                    css_value = try std.fmt.allocPrint(alloc, "{s}deg", .{val.value});
+                }
+            } else {
+                return null;
+            }
+        },
+    }
+
+    const custom_prop: []const u8 = switch (axis) {
+        'x' => "--tw-rotate-x",
+        'y' => "--tw-rotate-y",
+        'z' => "--tw-rotate-z",
+        else => return null,
+    };
+
+    const decls = try alloc.alloc(Declaration, 2);
+    decls[0] = Declaration{ .property = custom_prop, .value = try std.fmt.allocPrint(alloc, "{s}({s})", .{ fn_name, css_value }) };
+    decls[1] = Declaration{ .property = "transform", .value = COMPOSABLE_TRANSFORM };
+    return decls;
+}
+
 // ─── Transform: scale ──────────────────────────────────────────────────────
 
 fn resolveScale(alloc: Allocator, value: ?Value, root: []const u8) !?[]const Declaration {
@@ -2842,6 +3074,34 @@ fn resolveScale(alloc: Allocator, value: ?Value, root: []const u8) !?[]const Dec
 
 // ─── Transform: translate ──────────────────────────────────────────────────
 
+fn resolveScaleZ(alloc: Allocator, value: ?Value) !?[]const Declaration {
+    const val = value orelse return null;
+
+    var css_value: []const u8 = undefined;
+
+    switch (val.kind) {
+        .arbitrary => {
+            if (std.mem.startsWith(u8, val.value, "0.")) {
+                css_value = val.value[1..];
+            } else {
+                css_value = val.value;
+            }
+        },
+        .named => {
+            if (isPositiveInteger(val.value)) {
+                css_value = try std.fmt.allocPrint(alloc, "{s}%", .{val.value});
+            } else {
+                return null;
+            }
+        },
+    }
+
+    const decls = try alloc.alloc(Declaration, 2);
+    decls[0] = Declaration{ .property = "--tw-scale-z", .value = css_value };
+    decls[1] = Declaration{ .property = "scale", .value = "var(--tw-scale-x) var(--tw-scale-y) var(--tw-scale-z)" };
+    return decls;
+}
+
 fn resolveTranslate(alloc: Allocator, value: ?Value, comptime axis: []const u8, negative: bool, theme: *Theme) !?[]const Declaration {
     const val = value orelse return null;
 
@@ -2888,6 +3148,48 @@ fn resolveTranslate(alloc: Allocator, value: ?Value, comptime axis: []const u8, 
     return decls;
 }
 
+fn resolveTranslateZ(alloc: Allocator, root: []const u8, value: ?Value, negative: bool, theme: *Theme) !?[]const Declaration {
+    const val = value orelse return null;
+
+    const is_neg = negative or (root.len > 0 and root[0] == '-');
+
+    var inner: []const u8 = undefined;
+
+    switch (val.kind) {
+        .arbitrary => {
+            if (is_neg) {
+                if (std.mem.startsWith(u8, val.value, "var(")) {
+                    inner = try std.fmt.allocPrint(alloc, "calc({s} * -1)", .{val.value});
+                } else {
+                    inner = try std.fmt.allocPrint(alloc, "-{s}", .{val.value});
+                }
+            } else {
+                inner = val.value;
+            }
+        },
+        .named => {
+            if (std.mem.eql(u8, val.value, "full")) {
+                inner = if (is_neg) "-100%" else "100%";
+            } else if (std.mem.eql(u8, val.value, "px")) {
+                inner = if (is_neg) "-1px" else "1px";
+            } else if (isValidSpacingMultiplier(val.value)) {
+                theme.markUsed("--spacing");
+                if (is_neg) {
+                    inner = try std.fmt.allocPrint(alloc, "calc(var(--spacing) * -{s})", .{val.value});
+                } else {
+                    inner = try std.fmt.allocPrint(alloc, "calc(var(--spacing) * {s})", .{val.value});
+                }
+            } else {
+                return null;
+            }
+        },
+    }
+
+    const decls = try alloc.alloc(Declaration, 2);
+    decls[0] = Declaration{ .property = "--tw-translate-z", .value = inner };
+    decls[1] = Declaration{ .property = "translate", .value = "var(--tw-translate-x) var(--tw-translate-y) var(--tw-translate-z)" };
+    return decls;
+}
 // ─── Transform: skew ───────────────────────────────────────────────────────
 
 const COMPOSABLE_TRANSFORM = "var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,)";

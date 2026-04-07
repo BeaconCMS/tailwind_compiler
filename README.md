@@ -10,8 +10,8 @@ Benchmarked against the official Tailwind CLI v4.2.2 — 10 rounds, each with 10
 
 | Metric | Zig Compiler | Tailwind CLI v4 | Difference |
 |--------|-------------|-----------------|------------|
-| Avg compile time | **1.48 ms** | 171 ms | **116x faster** |
-| Range | 1.43 – 1.58 ms | 160 – 200 ms | |
+| Avg compile time | **1.64 ms** | 178 ms | **108x faster** |
+| Range | 1.56 – 1.77 ms | 170 – 200 ms | |
 | Peak memory | **4.4 MB** | 131 MB | **30x less** |
 
 Zero output differences — every candidate produces byte-identical CSS to the official Tailwind CLI.
@@ -35,8 +35,13 @@ TailwindCompiler.compile(["flex", "p-4", "hover:bg-blue-500/50", "sm:text-lg"])
 # Without preflight (base CSS reset)
 TailwindCompiler.compile(["flex", "hidden"], preflight: false)
 
-# With theme overrides
-TailwindCompiler.compile(["p-4"], theme: ~s({"spacing":"0.5rem"}))
+# With theme overrides (custom colors, spacing, fonts)
+TailwindCompiler.compile(["text-brand", "p-4"],
+  theme: ~s({"colors":{"brand":"#3f3cbb"},"spacing":"0.5rem"}))
+
+# With custom CSS (plugins, user stylesheets)
+TailwindCompiler.compile(["flex"],
+  custom_css: ".custom-btn{background:blue;padding:1rem}")
 
 # Bang variant (raises on error)
 css = TailwindCompiler.compile!(["flex", "p-4"])
@@ -50,7 +55,7 @@ The NIF runs on a dirty CPU scheduler. For a typical site (~3,000 candidates), e
 const tailwind = @import("tailwind_compiler");
 
 const candidates = [_][]const u8{ "flex", "p-4", "hover:bg-blue-500/50", "sm:text-lg" };
-const css = try tailwind.compile(allocator, &candidates, null, false);
+const css = try tailwind.compile(allocator, &candidates, null, false, null);
 ```
 
 ### Zig API
@@ -61,6 +66,7 @@ pub fn compile(
     candidates: []const []const u8,  // Tailwind class names
     theme_json: ?[]const u8,         // Optional JSON theme overrides
     include_preflight: bool,         // Include base CSS reset
+    custom_css: ?[]const u8,         // Optional raw CSS to append (plugins, user stylesheets)
 ) ![]const u8
 ```
 
@@ -82,18 +88,18 @@ zig build -Doptimize=ReleaseFast
 
 ## Feature Coverage
 
-### Static Utilities (~350)
-Display, position, visibility, isolation, box-sizing, float, clear, overflow, overscroll, object-fit, pointer-events, resize, user-select, touch-action, cursor, appearance, flex direction/wrap/grow/shrink, grid flow, justify/align/place content/items/self (including safe alignment), text alignment/decoration/transform/overflow/wrap, whitespace, word-break, hyphens, font style/variant/smoothing, list style, vertical-align, background attachment/clip/origin/repeat/size/position, border style/collapse, outline, mix/bg blend mode, table layout, caption side, transitions, will-change, contain, forced-color-adjust, sr-only, field-sizing, scroll behavior/snap, break-after/before/inside, box-decoration, content-visibility, color-scheme, font-stretch, transform-style, backface-visibility, and more.
+### Static Utilities (~565)
+Display, position, visibility, isolation, box-sizing, float, clear, overflow, overscroll, object-fit, pointer-events, resize, user-select, touch-action (composable), cursor, appearance, flex direction/wrap/grow/shrink, grid flow, justify/align/place content/items/self (including safe alignment), text alignment/decoration/transform/overflow/wrap, whitespace, word-break, hyphens, font style/variant/smoothing (composable), list style, vertical-align, background attachment/clip/origin/repeat/size/position, border style/collapse, outline, mix/bg blend mode, table layout, caption side, transitions, will-change, contain, forced-color-adjust, sr-only, field-sizing, scroll behavior/snap, break-after/before/inside, box-decoration, content-visibility, color-scheme, font-stretch, transform-style, backface-visibility, mask-clip/origin/mode/composite/type/repeat/size/position (with `-webkit-` prefixes), and more.
 
 ### Functional Utilities (~85 roots)
-- **Spacing**: `p-*`, `m-*`, `gap-*`, `inset-*`, `top/right/bottom/left-*`, `scroll-m*`, `scroll-p*`, `basis-*`
-- **Sizing**: `w-*`, `h-*`, `min-w/h-*`, `max-w/h-*`, `size-*`
+- **Spacing**: `p-*`, `m-*`, `gap-*`, `inset-*`, `top/right/bottom/left-*`, `scroll-m*`, `scroll-p*`, `basis-*`, `mbs-*`, `mbe-*`, `pbs-*`, `pbe-*`, `mis-*`, `mie-*` (logical properties)
+- **Sizing**: `w-*`, `h-*`, `min-w/h-*`, `max-w/h-*`, `size-*`, `inline-*`, `block-*`, `min-inline/block-*`, `max-inline/block-*` + viewport units (`svw`, `lvw`, `dvw`, `svh`, `lvh`, `dvh`, `lh`)
 - **Colors**: `bg-*`, `text-*`, `border-*`, `accent-*`, `caret-*`, `fill-*`, `stroke-*`, `outline-color-*`, `decoration-*`, `shadow-color-*`, `divide-*`, `placeholder-*` — all with opacity modifier support (`bg-red-500/50` pre-resolved to `#hex`)
 - **Typography**: `text-sm/lg/xl` (font-size + line-height), `font-sans/bold` (family + weight), `leading-*`, `tracking-*`, `font-weight-*`
 - **Borders**: `border-*` (width + color), `border-x/y/s/e/t/r/b/l-*`, `rounded-*` (all corners), `divide-x/y-*`
 - **Effects**: `shadow-*`, `inset-shadow-*`, `text-shadow-*`, `ring-*`, `inset-ring-*`, `ring-offset-*`, `opacity-*` — composable `box-shadow` system
 - **Filters**: `blur-*`, `brightness-*`, `contrast-*`, `grayscale`, `hue-rotate-*`, `invert`, `saturate-*`, `sepia` + all `backdrop-*` — composable `filter`/`backdrop-filter`
-- **Transforms**: `rotate-*`, `scale-*`, `translate-x/y-*`, `skew-x/y-*` — composable custom properties
+- **Transforms**: `rotate-*`, `scale-*`, `translate-x/y/z-*`, `skew-x/y-*`, `rotate-x/y/z-*`, `scale-z-*` — composable custom properties (2D + 3D)
 - **Grid**: `cols-*`/`grid-cols-*`, `rows-*`/`grid-rows-*`, `col-span-*`, `col-start/end-*`, `row-span-*`, `row-start/end-*`, `auto-cols/rows-*`
 - **Gradients**: `bg-linear-to-*`/`bg-gradient-to-*`, `bg-radial-*`, `bg-conic-*`, `from-*`, `via-*`, `to-*` — composable stops
 - **Layout**: `aspect-*`, `columns-*`, `perspective-*`, `origin-*`, `container` (responsive max-widths)
@@ -123,6 +129,8 @@ Display, position, visibility, isolation, box-sizing, float, clear, overflow, ov
 - Negative utilities: `-mt-4`, `-rotate-12`, `-translate-y-2`
 - Important modifier: `flex!` → `!important`
 - Fraction values: `w-1/2` → `50%`
+- Custom CSS passthrough: append plugin CSS, user stylesheets, or custom components
+- JSON theme overrides: custom colors, spacing, fonts merged with defaults
 
 ## Benchmark
 

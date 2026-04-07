@@ -131,13 +131,15 @@ pub const CssEmitter = struct {
     buf: std.ArrayList(u8),
     at_properties: std.ArrayList(AtProperty),
     keyframes: std.ArrayList(Keyframes),
+    custom_css: ?[]const u8 = null,
 
-    pub fn init(alloc: Allocator) CssEmitter {
+    pub fn init(alloc: Allocator, custom_css: ?[]const u8) CssEmitter {
         return CssEmitter{
             .alloc = alloc,
             .buf = .empty,
             .at_properties = .empty,
             .keyframes = .empty,
+            .custom_css = custom_css,
         };
     }
 
@@ -183,6 +185,12 @@ pub const CssEmitter = struct {
 
         // @layer utilities
         try self.emitUtilitiesLayer(rules);
+
+        // Custom CSS (plugins, user stylesheets)
+        if (self.custom_css) |css| {
+            try self.buf.ensureUnusedCapacity(self.alloc, css.len);
+            self.buf.appendSliceAssumeCapacity(css);
+        }
 
         // @property declarations
         try self.emitAtProperties();
