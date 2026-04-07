@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tailwind CSS Benchmark: Zig vs Official CLI</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface-hover: #334155;
+    --border: #334155;
+    --text: #f1f5f9;
+    --text-muted: #94a3b8;
+    --zig: #f7a41d;
+    --zig-dim: rgba(247,164,29,0.15);
+    --tw: #38bdf8;
+    --tw-dim: rgba(56,189,248,0.15);
+    --green: #22c55e;
+    --red: #ef4444;
+    --font: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem;
+  }
+  .container { max-width: 1000px; margin: 0 auto; }
+  h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  .subtitle { color: var(--text-muted); margin-bottom: 2rem; font-size: 0.9rem; }
+  .meta-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+  }
+  .meta-pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-family: var(--font);
+  }
+  .meta-pill strong { color: var(--text); }
+  .cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+  .card h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .card h2 .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  .card h2 .dot.zig { background: var(--zig); }
+  .card h2 .dot.tw { background: var(--tw); }
+  .big-num {
+    font-size: 2.5rem;
+    font-weight: 700;
+    font-family: var(--font);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+  }
+  .big-num.zig { color: var(--zig); }
+  .big-num.tw { color: var(--tw); }
+  .big-unit { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem; }
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+    border-top: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .stat-row .label { color: var(--text-muted); }
+  .stat-row .value { font-family: var(--font); font-weight: 600; }
+  .comparison-banner {
+    background: linear-gradient(135deg, var(--zig-dim), var(--tw-dim));
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  .comparison-banner .speedup {
+    font-size: 3.5rem;
+    font-weight: 800;
+    font-family: var(--font);
+    color: var(--zig);
+    line-height: 1;
+  }
+  .comparison-banner .desc {
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+    font-size: 1rem;
+  }
+  .chart-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .chart-section h3 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+  .bar-chart { display: flex; flex-direction: column; gap: 0.75rem; }
+  .bar-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 80px;
+    align-items: center;
+    gap: 1rem;
+  }
+  .bar-row .label { font-size: 0.85rem; font-weight: 600; }
+  .bar-row .label.zig { color: var(--zig); }
+  .bar-row .label.tw { color: var(--tw); }
+  .bar-track { height: 28px; background: var(--bg); border-radius: 6px; overflow: hidden; position: relative; }
+  .bar-fill { height: 100%; border-radius: 6px; transition: width 1s ease; }
+  .bar-fill.zig { background: var(--zig); }
+  .bar-fill.tw { background: var(--tw); }
+  .bar-row .val { font-family: var(--font); font-size: 0.85rem; text-align: right; }
+  .run-chart {
+    height: 200px;
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    padding: 0 40px;
+    position: relative;
+  }
+  .run-group { display: flex; gap: 1px; flex: 1; align-items: flex-end; }
+  .run-bar { flex: 1; border-radius: 3px 3px 0 0; min-width: 4px; transition: height 0.5s ease; }
+  .run-bar.zig { background: var(--zig); }
+  .run-bar.tw { background: var(--tw); }
+  .legend {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+  }
+  .legend-item { display: flex; align-items: center; gap: 0.4rem; color: var(--text-muted); }
+  .legend-item .swatch { width: 12px; height: 12px; border-radius: 3px; }
+  .footer { text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+  #loading { text-align: center; padding: 4rem; color: var(--text-muted); }
+  #report { display: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div id="loading">
+    Loading benchmark results...<br>
+    <small>Make sure <code>benchmark_results.json</code> is in the same directory.</small>
+  </div>
+  <div id="report">
+    <h1>Tailwind CSS Compiler Benchmark</h1>
+    <p class="subtitle">Zig Compiler vs Official Tailwind CLI v4</p>
+
+    <div class="meta-row" id="meta"></div>
+
+    <div class="comparison-banner">
+      <div class="speedup" id="speedup"></div>
+      <div class="desc" id="speedup-desc"></div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <h2><span class="dot zig"></span> Zig Compiler</h2>
+        <div class="big-num zig" id="zig-time"></div>
+        <div class="big-unit">avg compile time</div>
+        <div class="stat-row"><span class="label">Min</span><span class="value" id="zig-min"></span></div>
+        <div class="stat-row"><span class="label">Max</span><span class="value" id="zig-max"></span></div>
+        <div class="stat-row"><span class="label">Median</span><span class="value" id="zig-median"></span></div>
+        <div class="stat-row"><span class="label">Peak Memory</span><span class="value" id="zig-mem"></span></div>
+        <div class="stat-row"><span class="label">CSS Output</span><span class="value" id="zig-css"></span></div>
+      </div>
+      <div class="card">
+        <h2><span class="dot tw"></span> Tailwind CLI v4</h2>
+        <div class="big-num tw" id="tw-time"></div>
+        <div class="big-unit">avg compile time</div>
+        <div class="stat-row"><span class="label">Min</span><span class="value" id="tw-min"></span></div>
+        <div class="stat-row"><span class="label">Max</span><span class="value" id="tw-max"></span></div>
+        <div class="stat-row"><span class="label">Median</span><span class="value" id="tw-median"></span></div>
+        <div class="stat-row"><span class="label">Peak Memory</span><span class="value" id="tw-mem"></span></div>
+        <div class="stat-row"><span class="label">CSS Output</span><span class="value" id="tw-css"></span></div>
+      </div>
+    </div>
+
+    <div class="chart-section">
+      <h3>Compile Time Comparison</h3>
+      <div class="bar-chart">
+        <div class="bar-row">
+          <span class="label zig">Zig</span>
+          <div class="bar-track"><div class="bar-fill zig" id="bar-zig-time"></div></div>
+          <span class="val" id="bar-zig-time-val"></span>
+        </div>
+        <div class="bar-row">
+          <span class="label tw">Tailwind</span>
+          <div class="bar-track"><div class="bar-fill tw" id="bar-tw-time"></div></div>
+          <span class="val" id="bar-tw-time-val"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-section">
+      <h3>Peak Memory Usage</h3>
+      <div class="bar-chart">
+        <div class="bar-row">
+          <span class="label zig">Zig</span>
+          <div class="bar-track"><div class="bar-fill zig" id="bar-zig-mem"></div></div>
+          <span class="val" id="bar-zig-mem-val"></span>
+        </div>
+        <div class="bar-row">
+          <span class="label tw">Tailwind</span>
+          <div class="bar-track"><div class="bar-fill tw" id="bar-tw-mem"></div></div>
+          <span class="val" id="bar-tw-mem-val"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-section">
+      <h3>CSS Output Size</h3>
+      <div class="bar-chart">
+        <div class="bar-row">
+          <span class="label zig">Zig</span>
+          <div class="bar-track"><div class="bar-fill zig" id="bar-zig-css"></div></div>
+          <span class="val" id="bar-zig-css-val"></span>
+        </div>
+        <div class="bar-row">
+          <span class="label tw">Tailwind</span>
+          <div class="bar-track"><div class="bar-fill tw" id="bar-tw-css"></div></div>
+          <span class="val" id="bar-tw-css-val"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-section">
+      <h3>Individual Run Times</h3>
+      <div class="run-chart" id="run-chart"></div>
+      <div class="legend">
+        <div class="legend-item"><div class="swatch" style="background:var(--zig)"></div> Zig</div>
+        <div class="legend-item"><div class="swatch" style="background:var(--tw)"></div> Tailwind CLI</div>
+      </div>
+    </div>
+
+    <div class="footer" id="footer"></div>
+  </div>
+</div>
+
+<script>
+async function load() {
+  let data;
+  try {
+    const resp = await fetch('benchmark_results.json');
+    data = await resp.json();
+  } catch(e) {
+    document.getElementById('loading').innerHTML =
+      '<strong>Could not load benchmark_results.json</strong><br>' +
+      '<small>Run the benchmark first: <code>bash benchmark/run_benchmark.sh</code></small>';
+    return;
+  }
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('report').style.display = 'block';
+
+  const m = data.metadata;
+  const z = data.zig_compiler;
+  const t = data.tailwind_cli;
+  const c = data.comparison;
+
+  // Meta pills
+  const meta = document.getElementById('meta');
+  const pills = [
+    `<strong>${m.html_pages}</strong> HTML pages`,
+    `<strong>${m.unique_candidates.toLocaleString()}</strong> unique classes`,
+    `<strong>${m.iterations}</strong> iterations`,
+    `${m.platform}`,
+    `Zig ${m.zig_version}`,
+    `Tailwind v${m.tailwind_version}`,
+  ];
+  meta.innerHTML = pills.map(p => `<span class="meta-pill">${p}</span>`).join('');
+
+  // Speedup banner
+  const speedup = c.speedup_factor;
+  document.getElementById('speedup').textContent = speedup.toFixed(1) + 'x faster';
+  document.getElementById('speedup-desc').textContent =
+    `Zig compiles ${m.unique_candidates.toLocaleString()} classes in ${fmtTime(z.avg_seconds)} vs ${fmtTime(t.avg_seconds)} — using ${c.memory_ratio.toFixed(1)}x less memory`;
+
+  // Zig card
+  document.getElementById('zig-time').textContent = fmtTime(z.avg_seconds);
+  document.getElementById('zig-min').textContent = fmtTime(z.min_seconds);
+  document.getElementById('zig-max').textContent = fmtTime(z.max_seconds);
+  document.getElementById('zig-median').textContent = fmtTime(z.median_seconds);
+  document.getElementById('zig-mem').textContent = z.peak_rss_mb.toFixed(1) + ' MB';
+  document.getElementById('zig-css').textContent = fmtBytes(z.output_size_bytes);
+
+  // TW card
+  document.getElementById('tw-time').textContent = fmtTime(t.avg_seconds);
+  document.getElementById('tw-min').textContent = fmtTime(t.min_seconds);
+  document.getElementById('tw-max').textContent = fmtTime(t.max_seconds);
+  document.getElementById('tw-median').textContent = fmtTime(t.median_seconds);
+  document.getElementById('tw-mem').textContent = t.peak_rss_mb.toFixed(1) + ' MB';
+  document.getElementById('tw-css').textContent = fmtBytes(t.output_size_bytes);
+
+  // Time bars
+  const maxTime = Math.max(z.avg_seconds, t.avg_seconds);
+  setBar('bar-zig-time', z.avg_seconds / maxTime * 100, fmtTime(z.avg_seconds));
+  setBar('bar-tw-time', t.avg_seconds / maxTime * 100, fmtTime(t.avg_seconds));
+
+  // Memory bars
+  const maxMem = Math.max(z.peak_rss_mb, t.peak_rss_mb);
+  setBar('bar-zig-mem', z.peak_rss_mb / maxMem * 100, z.peak_rss_mb.toFixed(1) + ' MB');
+  setBar('bar-tw-mem', t.peak_rss_mb / maxMem * 100, t.peak_rss_mb.toFixed(1) + ' MB');
+
+  // CSS size bars
+  const maxCSS = Math.max(z.output_size_bytes, t.output_size_bytes);
+  setBar('bar-zig-css', z.output_size_bytes / maxCSS * 100, fmtBytes(z.output_size_bytes));
+  setBar('bar-tw-css', t.output_size_bytes / maxCSS * 100, fmtBytes(t.output_size_bytes));
+
+  // Run chart
+  const chart = document.getElementById('run-chart');
+  const allTimes = [...z.times_seconds, ...t.times_seconds];
+  const maxRun = Math.max(...allTimes);
+
+  for (let i = 0; i < z.times_seconds.length; i++) {
+    const group = document.createElement('div');
+    group.className = 'run-group';
+
+    const zigBar = document.createElement('div');
+    zigBar.className = 'run-bar zig';
+    zigBar.style.height = (z.times_seconds[i] / maxRun * 180) + 'px';
+    zigBar.title = `Zig run ${i+1}: ${fmtTime(z.times_seconds[i])}`;
+
+    const twBar = document.createElement('div');
+    twBar.className = 'run-bar tw';
+    twBar.style.height = (t.times_seconds[i] / maxRun * 180) + 'px';
+    twBar.title = `TW run ${i+1}: ${fmtTime(t.times_seconds[i])}`;
+
+    group.appendChild(zigBar);
+    group.appendChild(twBar);
+    chart.appendChild(group);
+  }
+
+  // Footer
+  document.getElementById('footer').textContent =
+    `Benchmark run on ${m.date} — ${m.cpu}`;
+}
+
+function fmtTime(s) {
+  if (s < 0.001) return (s * 1000000).toFixed(0) + ' \u00b5s';
+  if (s < 1) return (s * 1000).toFixed(1) + ' ms';
+  return s.toFixed(3) + ' s';
+}
+
+function fmtBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  return (b / 1048576).toFixed(2) + ' MB';
+}
+
+function setBar(id, pct, val) {
+  document.getElementById(id).style.width = Math.max(pct, 2) + '%';
+  document.getElementById(id + '-val').textContent = val;
+}
+
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,439 @@
+const std = @import("std");
+const Allocator = std.mem.Allocator;
+const Theme = @import("theme.zig").Theme;
+
+// ─── CSS Rule Representation ───────────────────────────────────────────────
+
+pub const Declaration = struct {
+    property: []const u8,
+    value: []const u8,
+    important: bool = false,
+};
+
+pub const RuleKind = enum {
+    style,
+    media,
+    container,
+    supports,
+    at_starting_style,
+    layer,
+    at_property,
+};
+
+pub const AtProperty = struct {
+    name: []const u8, // e.g. "--tw-shadow"
+    syntax: []const u8, // e.g. "*" or "<length>"
+    inherits: bool,
+    initial_value: ?[]const u8, // e.g. "0 0 #0000"
+};
+
+pub const Keyframes = struct {
+    name: []const u8,
+    body: []const u8, // The full CSS body inside the @keyframes block
+};
+
+pub const Rule = struct {
+    kind: RuleKind = .style,
+    selector: ?[]const u8 = null,
+    at_rule: ?[]const u8 = null, // e.g. "@media (hover:hover)"
+    declarations: []const Declaration = &.{},
+    children: []const Rule = &.{},
+    /// Sort key for variant ordering
+    variant_order: u64 = 0,
+    /// Sort key for property ordering
+    property_order: u32 = 0,
+};
+
+// ─── CSS Selector Escaping (CSS.escape spec) ───────────────────────────────
+
+/// Escape a string for use as a CSS identifier, following the CSSOM CSS.escape() spec.
+pub fn escapeCssIdentifier(alloc: Allocator, input: []const u8) ![]const u8 {
+    if (input.len == 0) return "";
+
+    var result = try std.ArrayList(u8).initCapacity(alloc, input.len * 2);
+
+    for (input, 0..) |c, i| {
+        // NULL -> U+FFFD
+        if (c == 0) {
+            try result.appendSlice(alloc, "\xEF\xBF\xBD"); // UTF-8 for U+FFFD
+            continue;
+        }
+
+        // Control characters U+0001 to U+001F, U+007F -> \hex
+        if ((c >= 0x01 and c <= 0x1F) or c == 0x7F) {
+            try appendHexEscape(alloc, &result, c);
+            continue;
+        }
+
+        // Leading digit
+        if (i == 0 and c >= '0' and c <= '9') {
+            try appendHexEscape(alloc, &result, c);
+            continue;
+        }
+
+        // Digit after leading -
+        if (i == 1 and c >= '0' and c <= '9' and input[0] == '-') {
+            try appendHexEscape(alloc, &result, c);
+            continue;
+        }
+
+        // Solo -
+        if (i == 0 and c == '-' and input.len == 1) {
+            try result.append(alloc, '\\');
+            try result.append(alloc, '-');
+            continue;
+        }
+
+        // Safe characters: >= 0x80, -, _, 0-9, A-Z, a-z
+        if (c >= 0x80 or c == '-' or c == '_' or
+            (c >= '0' and c <= '9') or
+            (c >= 'A' and c <= 'Z') or
+            (c >= 'a' and c <= 'z'))
+        {
+            try result.append(alloc, c);
+            continue;
+        }
+
+        // Everything else: backslash + literal
+        try result.append(alloc, '\\');
+        try result.append(alloc, c);
+    }
+
+    return result.toOwnedSlice(alloc);
+}
+
+fn appendHexEscape(alloc: Allocator, result: *std.ArrayList(u8), c: u8) !void {
+    var buf: [8]u8 = undefined;
+    const hex = std.fmt.bufPrint(&buf, "\\{x} ", .{c}) catch unreachable;
+    try result.appendSlice(alloc, hex);
+}
+
+// ─── CSS Emitter ───────────────────────────────────────────────────────────
+
+pub const CssEmitter = struct {
+    alloc: Allocator,
+    buf: std.ArrayList(u8),
+    at_properties: std.ArrayList(AtProperty),
+    keyframes: std.ArrayList(Keyframes),
+
+    pub fn init(alloc: Allocator) CssEmitter {
+        return CssEmitter{
+            .alloc = alloc,
+            .buf = .empty,
+            .at_properties = .empty,
+            .keyframes = .empty,
+        };
+    }
+
+    pub fn deinit(self: *CssEmitter) void {
+        self.buf.deinit(self.alloc);
+        self.at_properties.deinit(self.alloc);
+        self.keyframes.deinit(self.alloc);
+    }
+
+    pub fn addProperty(self: *CssEmitter, prop: AtProperty) !void {
+        // Deduplicate by name
+        for (self.at_properties.items) |existing| {
+            if (std.mem.eql(u8, existing.name, prop.name)) return;
+        }
+        try self.at_properties.append(self.alloc, prop);
+    }
+
+    pub fn addKeyframes(self: *CssEmitter, kf: Keyframes) !void {
+        for (self.keyframes.items) |existing| {
+            if (std.mem.eql(u8, existing.name, kf.name)) return;
+        }
+        try self.keyframes.append(self.alloc, kf);
+    }
+
+    /// Emit the complete CSS output.
+    pub fn emit(
+        self: *CssEmitter,
+        theme: *Theme,
+        rules: []const Rule,
+        include_preflight: bool,
+    ) ![]const u8 {
+        // @layer theme
+        try self.emitThemeLayer(theme);
+
+        // @layer base (preflight)
+        if (include_preflight) {
+            try self.emitBaseLayer();
+        }
+
+        // @layer utilities
+        try self.emitUtilitiesLayer(rules);
+
+        // @property declarations
+        try self.emitAtProperties();
+
+        // @keyframes declarations
+        try self.emitKeyframes();
+
+        return self.buf.toOwnedSlice(self.alloc);
+    }
+
+    /// Emit @layer theme with used CSS variables.
+    fn emitThemeLayer(self: *CssEmitter, theme: *Theme) !void {
+        // Collect used variables
+        var used_vars: std.ArrayList(UsedVar) = .empty;
+        var iter = theme.used_variables.iterator();
+        while (iter.next()) |entry| {
+            if (theme.get(entry.key_ptr.*)) |value| {
+                try used_vars.append(self.alloc, .{ .name = entry.key_ptr.*, .value = value });
+            }
+        }
+
+        if (used_vars.items.len == 0) return;
+
+        // Sort for deterministic output
+        std.mem.sort(UsedVar, used_vars.items, {}, struct {
+            fn lessThan(_: void, a: UsedVar, b: UsedVar) bool {
+                return std.mem.order(u8, a.name, b.name) == .lt;
+            }
+        }.lessThan);
+
+        try self.buf.appendSlice(self.alloc,"@layer theme{:root{");
+        for (used_vars.items, 0..) |v, i| {
+            if (i > 0) try self.buf.append(self.alloc,';');
+            try self.buf.appendSlice(self.alloc,v.name);
+            try self.buf.append(self.alloc,':');
+            try self.buf.appendSlice(self.alloc,v.value);
+        }
+        try self.buf.appendSlice(self.alloc,"}}");
+    }
+
+    /// Emit @layer base (preflight).
+    fn emitBaseLayer(self: *CssEmitter) !void {
+        try self.buf.appendSlice(self.alloc,"@layer base{");
+        try self.buf.appendSlice(self.alloc,preflight_css);
+        try self.buf.append(self.alloc,'}');
+    }
+
+    /// Emit @property declarations.
+    fn emitAtProperties(self: *CssEmitter) !void {
+        // Sort for deterministic output
+        std.mem.sort(AtProperty, self.at_properties.items, {}, struct {
+            fn lessThan(_: void, a: AtProperty, b: AtProperty) bool {
+                return std.mem.order(u8, a.name, b.name) == .lt;
+            }
+        }.lessThan);
+
+        for (self.at_properties.items) |prop| {
+            try self.buf.appendSlice(self.alloc, "@property ");
+            try self.buf.appendSlice(self.alloc, prop.name);
+            try self.buf.appendSlice(self.alloc, "{syntax:\"");
+            try self.buf.appendSlice(self.alloc, prop.syntax);
+            try self.buf.appendSlice(self.alloc, "\";inherits:");
+            if (prop.inherits) {
+                try self.buf.appendSlice(self.alloc, "true");
+            } else {
+                try self.buf.appendSlice(self.alloc, "false");
+            }
+            if (prop.initial_value) |iv| {
+                try self.buf.appendSlice(self.alloc, ";initial-value:");
+                try self.buf.appendSlice(self.alloc, iv);
+            }
+            try self.buf.append(self.alloc, '}');
+        }
+    }
+
+    /// Emit @keyframes declarations.
+    fn emitKeyframes(self: *CssEmitter) !void {
+        std.mem.sort(Keyframes, self.keyframes.items, {}, struct {
+            fn lessThan(_: void, a: Keyframes, b: Keyframes) bool {
+                return std.mem.order(u8, a.name, b.name) == .lt;
+            }
+        }.lessThan);
+        for (self.keyframes.items) |kf| {
+            try self.buf.appendSlice(self.alloc, "@keyframes ");
+            try self.buf.appendSlice(self.alloc, kf.name);
+            try self.buf.append(self.alloc, '{');
+            try self.buf.appendSlice(self.alloc, kf.body);
+            try self.buf.append(self.alloc, '}');
+        }
+    }
+
+    /// Emit @layer utilities with all generated rules.
+    fn emitUtilitiesLayer(self: *CssEmitter, rules: []const Rule) !void {
+        if (rules.len == 0) return;
+
+        try self.buf.appendSlice(self.alloc,"@layer utilities{");
+        for (rules) |rule| {
+            try self.emitRule(&rule, false);
+        }
+        try self.buf.append(self.alloc,'}');
+    }
+
+    /// Emit a single CSS rule (minified).
+    fn emitRule(self: *CssEmitter, rule: *const Rule, nested: bool) !void {
+        _ = nested;
+        switch (rule.kind) {
+            .style => {
+                if (rule.selector) |sel| {
+                    try self.buf.appendSlice(self.alloc,sel);
+                    try self.buf.append(self.alloc,'{');
+                    try self.emitDeclarations(rule.declarations);
+                    // Emit child rules
+                    for (rule.children) |child| {
+                        try self.emitRule(&child, true);
+                    }
+                    try self.buf.append(self.alloc,'}');
+                }
+            },
+            .media => {
+                if (rule.at_rule) |at| {
+                    try self.buf.appendSlice(self.alloc,at);
+                    try self.buf.append(self.alloc,'{');
+                    for (rule.children) |child| {
+                        try self.emitRule(&child, true);
+                    }
+                    try self.buf.append(self.alloc,'}');
+                }
+            },
+            .container => {
+                if (rule.at_rule) |at| {
+                    try self.buf.appendSlice(self.alloc,at);
+                    try self.buf.append(self.alloc,'{');
+                    for (rule.children) |child| {
+                        try self.emitRule(&child, true);
+                    }
+                    try self.buf.append(self.alloc,'}');
+                }
+            },
+            .supports => {
+                if (rule.at_rule) |at| {
+                    try self.buf.appendSlice(self.alloc,at);
+                    try self.buf.append(self.alloc,'{');
+                    for (rule.children) |child| {
+                        try self.emitRule(&child, true);
+                    }
+                    try self.buf.append(self.alloc,'}');
+                }
+            },
+            .at_starting_style => {
+                try self.buf.appendSlice(self.alloc,"@starting-style{");
+                for (rule.children) |child| {
+                    try self.emitRule(&child, true);
+                }
+                try self.buf.append(self.alloc,'}');
+            },
+            .layer => {
+                if (rule.at_rule) |at| {
+                    try self.buf.appendSlice(self.alloc,at);
+                    try self.buf.append(self.alloc,'{');
+                    for (rule.children) |child| {
+                        try self.emitRule(&child, true);
+                    }
+                    try self.buf.append(self.alloc,'}');
+                }
+            },
+            .at_property => {
+                // @property rules are emitted separately via emitAtProperties
+            },
+        }
+    }
+
+    /// Emit declarations (minified, no trailing semicolons for single-decl rules).
+    fn emitDeclarations(self: *CssEmitter, decls: []const Declaration) !void {
+        for (decls, 0..) |decl, i| {
+            if (i > 0) try self.buf.append(self.alloc,';');
+            try self.buf.appendSlice(self.alloc,decl.property);
+            try self.buf.append(self.alloc,':');
+            try self.buf.appendSlice(self.alloc,decl.value);
+            if (decl.important) {
+                try self.buf.appendSlice(self.alloc,"!important");
+            }
+        }
+    }
+
+    pub fn getOutput(self: *const CssEmitter) []const u8 {
+        return self.buf.items;
+    }
+};
+
+const UsedVar = struct {
+    name: []const u8,
+    value: []const u8,
+};
+
+// ─── Minified Preflight CSS ────────────────────────────────────────────────
+
+const preflight_css =
+    \\*,::after,::before,::backdrop,::file-selector-button{box-sizing:border-box;margin:0;padding:0;border:0 solid}html,:host{line-height:1.5;-webkit-text-size-adjust:100%;tab-size:4;-webkit-tap-highlight-color:transparent}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;-webkit-text-decoration:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}:-moz-focusring{outline:auto}progress{vertical-align:baseline}summary{display:list-item}ol,ul,menu{list-style:none}img,svg,video,canvas,audio,iframe,embed,object{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}button,input,select,optgroup,textarea,::file-selector-button{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;border-radius:0;background-color:transparent;opacity:1}:where(select:is([multiple],[size])) optgroup{font-weight:bolder}:where(select:is([multiple],[size])) optgroup option{padding-inline-start:20px}::file-selector-button{margin-inline-end:4px}::placeholder{opacity:1}@supports (not (-webkit-appearance:-apple-pay-button)) or (contain-intrinsic-size:1px){::placeholder{color:color-mix(in oklab,currentcolor 50%,transparent)}}textarea{resize:vertical}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-date-and-time-value{min-height:1lh;text-align:inherit}::-webkit-datetime-edit{display:inline-flex}::-webkit-datetime-edit-fields-wrapper{padding:0}::-webkit-datetime-edit,::-webkit-datetime-edit-year-field,::-webkit-datetime-edit-month-field,::-webkit-datetime-edit-day-field,::-webkit-datetime-edit-hour-field,::-webkit-datetime-edit-minute-field,::-webkit-datetime-edit-second-field,::-webkit-datetime-edit-millisecond-field,::-webkit-datetime-edit-meridiem-field{padding-block:0}::-webkit-calendar-picker-indicator{line-height:1}:-moz-ui-invalid{box-shadow:none}button,input:where([type='button'],[type='reset'],[type='submit']),::file-selector-button{appearance:button}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[hidden]:where(:not([hidden='until-found'])){display:none!important}
+;
+
+// ─── Tests ─────────────────────────────────────────────────────────────────
+
+test "escapeCssIdentifier: basic" {
+    const alloc = std.testing.allocator;
+
+    const result = try escapeCssIdentifier(alloc, "flex");
+    defer alloc.free(result);
+    try std.testing.expectEqualStrings("flex", result);
+}
+
+test "escapeCssIdentifier: colon" {
+    const alloc = std.testing.allocator;
+
+    const result = try escapeCssIdentifier(alloc, "hover:underline");
+    defer alloc.free(result);
+    try std.testing.expectEqualStrings("hover\\:underline", result);
+}
+
+test "escapeCssIdentifier: slash" {
+    const alloc = std.testing.allocator;
+
+    const result = try escapeCssIdentifier(alloc, "w-1/2");
+    defer alloc.free(result);
+    try std.testing.expectEqualStrings("w-1\\/2", result);
+}
+
+test "escapeCssIdentifier: brackets" {
+    const alloc = std.testing.allocator;
+
+    const result = try escapeCssIdentifier(alloc, "bg-[#0088cc]");
+    defer alloc.free(result);
+    try std.testing.expectEqualStrings("bg-\\[\\#0088cc\\]", result);
+}
+
+test "escapeCssIdentifier: dot" {
+    const alloc = std.testing.allocator;
+
+    const result = try escapeCssIdentifier(alloc, "m-1.5");
+    defer alloc.free(result);
+    try std.testing.expectEqualStrings("m-1\\.5", result);
+}
+
+test "escapeCssIdentifier: leading digit" {
+    const alloc = std.testing.allocator;
+
+    const result = try escapeCssIdentifier(alloc, "2xl");
+    defer alloc.free(result);
+    // Leading digit gets hex escaped: \32 xl
+    try std.testing.expectEqualStrings("\\32 xl", result);
+}
+
+test "escapeCssIdentifier: exclamation" {
+    const alloc = std.testing.allocator;
+
+    const result = try escapeCssIdentifier(alloc, "underline!");
+    defer alloc.free(result);
+    try std.testing.expectEqualStrings("underline\\!", result);
+}
+
+test "escapeCssIdentifier: percent" {
+    const alloc = std.testing.allocator;
+
+    const result = try escapeCssIdentifier(alloc, "w-75%");
+    defer alloc.free(result);
+    try std.testing.expectEqualStrings("w-75\\%", result);
+}
+
+test "escapeCssIdentifier: at sign" {
+    const alloc = std.testing.allocator;
+
+    const result = try escapeCssIdentifier(alloc, "@lg");
+    defer alloc.free(result);
+    try std.testing.expectEqualStrings("\\@lg", result);
+}

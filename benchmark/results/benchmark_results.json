@@ -1,0 +1,45 @@
+{
+  "metadata": {
+    "date": "2026-04-07T19:15:33Z",
+    "platform": "Darwin arm64",
+    "iterations": 10,
+    "html_pages": 120,
+    "unique_candidates": 2980,
+    "zig_version": "0.15.2",
+    "tailwind_version": "4.2.2",
+    "cpu": "Apple M4"
+  },
+  "zig_compiler": {
+    "times_seconds": [0.001411,0.001407,0.001450,0.001407,0.001408,0.001419,0.001449,0.001388,0.001386,0.001380],
+    "avg_seconds": 0.001411,
+    "min_seconds": 0.001380,
+    "max_seconds": 0.001450,
+    "median_seconds": 0.001407,
+    "avg_ms": 1.411,
+    "min_ms": 1.380,
+    "max_ms": 1.450,
+    "median_ms": 1.407,
+    "peak_rss_bytes": 4636672,
+    "peak_rss_mb": 4.42,
+    "output_size_bytes": 175440
+  },
+  "tailwind_cli": {
+    "times_seconds": [0.160000,0.160000,0.160000,0.160000,0.160000,0.160000,0.160000,0.160000,0.160000,0.160000],
+    "avg_seconds": 0.160000,
+    "min_seconds": 0.160000,
+    "max_seconds": 0.160000,
+    "median_seconds": 0.160000,
+    "avg_ms": 160.000,
+    "min_ms": 160,
+    "max_ms": 160,
+    "median_ms": 160,
+    "peak_rss_bytes": 137674752,
+    "peak_rss_mb": 131.29,
+    "output_size_bytes": 262984
+  },
+  "comparison": {
+    "speedup_factor": 113.3,
+    "memory_ratio": 29.6,
+    "zig_output_smaller_by_bytes": 87544
+  }
+}
