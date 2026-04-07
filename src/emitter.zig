@@ -50,6 +50,22 @@ pub const Rule = struct {
 pub fn escapeCssIdentifier(alloc: Allocator, input: []const u8) ![]const u8 {
     if (input.len == 0) return "";
 
+    // Fast path: most Tailwind classes like "flex", "block", "items-center" need no escaping.
+    // Scan the input to check if any character requires escaping; if not, dupe and return.
+    // This avoids the per-character ArrayList append overhead in the common case.
+    var safe = true;
+    for (input, 0..) |c, idx| {
+        const is_safe = (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') or
+            c == '-' or c == '_' or c >= 0x80 or
+            (c >= '0' and c <= '9' and idx > 0);
+        if (!is_safe) {
+            safe = false;
+            break;
+        }
+    }
+    if (safe and !(input[0] == '-' and input.len == 1)) return alloc.dupe(u8, input);
+
+    // Slow path: allocate and escape
     var result = try std.ArrayList(u8).initCapacity(alloc, input.len * 2);
 
     for (input, 0..) |c, i| {
@@ -153,6 +169,10 @@ pub const CssEmitter = struct {
         rules: []const Rule,
         include_preflight: bool,
     ) ![]const u8 {
+        // Pre-size output buffer to avoid reallocations
+        const estimated_size = rules.len * 80 + 4096; // ~80 bytes per rule + overhead for theme/base/properties
+        try self.buf.ensureTotalCapacity(self.alloc, estimated_size);
+
         // @layer theme
         try self.emitThemeLayer(theme);
 
@@ -170,7 +190,9 @@ pub const CssEmitter = struct {
         // @keyframes declarations
         try self.emitKeyframes();
 
-        return self.buf.toOwnedSlice(self.alloc);
+        // Return items slice directly — the caller (compile) dupes into its own allocator
+        // before the arena is freed, so this avoids a redundant copy.
+        return self.buf.items;
     }
 
     /// Emit @layer theme with used CSS variables.
@@ -336,14 +358,21 @@ pub const CssEmitter = struct {
 
     /// Emit declarations (minified, no trailing semicolons for single-decl rules).
     fn emitDeclarations(self: *CssEmitter, decls: []const Declaration) !void {
+        // Pre-calculate total size needed
+        var total: usize = 0;
         for (decls, 0..) |decl, i| {
-            if (i > 0) try self.buf.append(self.alloc,';');
-            try self.buf.appendSlice(self.alloc,decl.property);
-            try self.buf.append(self.alloc,':');
-            try self.buf.appendSlice(self.alloc,decl.value);
-            if (decl.important) {
-                try self.buf.appendSlice(self.alloc,"!important");
-            }
+            if (i > 0) total += 1; // semicolon
+            total += decl.property.len + 1 + decl.value.len; // prop:value
+            if (decl.important) total += 10; // !important
+        }
+        try self.buf.ensureUnusedCapacity(self.alloc, total);
+
+        for (decls, 0..) |decl, i| {
+            if (i > 0) self.buf.appendAssumeCapacity(';');
+            self.buf.appendSliceAssumeCapacity(decl.property);
+            self.buf.appendAssumeCapacity(':');
+            self.buf.appendSliceAssumeCapacity(decl.value);
+            if (decl.important) self.buf.appendSliceAssumeCapacity("!important");
         }
     }
 

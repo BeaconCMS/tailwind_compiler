@@ -76,8 +76,8 @@ pub const Context = struct {
     /// Process a single candidate string.
     pub fn process(self: *Context, raw: []const u8) !void {
         // Deduplicate
-        if (self.seen.contains(raw)) return;
-        try self.seen.put(raw, {});
+        const gop = try self.seen.getOrPut(raw);
+        if (gop.found_existing) return;
 
         // Parse the candidate
         const parsed = try candidate_mod.parseCandidate(
@@ -242,9 +242,8 @@ pub const Context = struct {
             emit_rules[i] = cr.rule;
         }
 
-        // Emit CSS
+        // Emit CSS (no deinit needed — arena owns all memory, and we return buf.items)
         var css_emitter = emitter_mod.CssEmitter.init(self.alloc);
-        defer css_emitter.deinit();
 
         // Pass @property registrations to emitter
         for (self.at_properties.items) |prop| {
@@ -296,6 +295,8 @@ pub fn compile(
     if (theme_json) |json| {
         try ctx.applyThemeJson(json);
     }
+
+    try ctx.seen.ensureTotalCapacity(@intCast(candidates.len));
 
     for (candidates) |candidate| {
         try ctx.process(candidate);

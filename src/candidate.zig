@@ -449,7 +449,14 @@ pub fn parseCandidate(
 
     // Step 1: Split on ':' using bracket-aware segmenting
     var seg_iter = segment(raw, ':');
-    var segments = try seg_iter.collect(alloc);
+    var seg_buf: [16][]const u8 = undefined;
+    var seg_count: usize = 0;
+    while (seg_iter.next()) |seg| {
+        if (seg_count >= 16) return null; // too many segments, invalid
+        seg_buf[seg_count] = seg;
+        seg_count += 1;
+    }
+    const segments = seg_buf[0..seg_count];
 
     if (segments.len == 0) return null;
 
@@ -458,15 +465,20 @@ pub fn parseCandidate(
     const variant_segments = segments[0 .. segments.len - 1];
 
     // Step 4: Parse variants (in reverse order — rightmost is innermost)
-    var parsed_variants: std.ArrayList(Variant) = .empty;
+    var variant_buf: [16]Variant = undefined;
+    var variant_count: usize = 0;
     {
         var i: usize = variant_segments.len;
         while (i > 0) {
             i -= 1;
             const v = parseVariantSegment(alloc, variant_segments[i], variant_exists) orelse return null;
-            try parsed_variants.append(alloc, v);
+            if (variant_count >= 16) return null;
+            variant_buf[variant_count] = v;
+            variant_count += 1;
         }
     }
+    // Copy variants to heap since variant_buf is stack-local and the slice escapes via Candidate
+    const variants = try alloc.dupe(Variant, variant_buf[0..variant_count]);
 
     // Step 5: Detect ! (important)
     var important = false;
@@ -489,7 +501,7 @@ pub fn parseCandidate(
             .kind = .static,
             .raw = raw,
             .root = base,
-            .variants = parsed_variants.items,
+            .variants = variants,
             .important = important,
         };
     }
@@ -551,7 +563,7 @@ pub fn parseCandidate(
                 .value = trimmed,
             },
             .modifier = modifier,
-            .variants = parsed_variants.items,
+            .variants = variants,
             .important = important,
         };
     }
@@ -581,7 +593,7 @@ pub fn parseCandidate(
                     .data_type = typehint.data_type,
                 },
                 .modifier = modifier,
-                .variants = parsed_variants.items,
+                .variants = variants,
                 .important = important,
                 .negative = negative,
             };
@@ -631,7 +643,7 @@ pub fn parseCandidate(
                     .data_type = data_type,
                 },
                 .modifier = modifier,
-                .variants = parsed_variants.items,
+                .variants = variants,
                 .important = important,
                 .negative = negative,
             };
@@ -663,7 +675,7 @@ pub fn parseCandidate(
                     .fraction = fraction,
                 },
                 .modifier = modifier,
-                .variants = parsed_variants.items,
+                .variants = variants,
                 .important = important,
                 .negative = negative,
             };
@@ -675,7 +687,7 @@ pub fn parseCandidate(
                 .root = root_result.root,
                 .value = null,
                 .modifier = modifier,
-                .variants = parsed_variants.items,
+                .variants = variants,
                 .important = important,
                 .negative = negative,
             };

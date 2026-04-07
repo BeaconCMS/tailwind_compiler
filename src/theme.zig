@@ -194,18 +194,19 @@ pub const Theme = struct {
 
     /// Resolve a named value in a given namespace.
     /// E.g., resolve("blue-500", "--color") checks for --color-blue-500 in variables.
-    pub fn resolve(self: *Theme, value: []const u8, namespace: []const u8) ?[]const u8 {
+    /// Returns true if the variable exists, false otherwise.
+    pub fn resolve(self: *Theme, value: []const u8, namespace: []const u8) bool {
         // Build the variable name: namespace-value
         var buf: [512]u8 = undefined;
-        const var_name = std.fmt.bufPrint(&buf, "{s}-{s}", .{ namespace, value }) catch return null;
+        const var_name = std.fmt.bufPrint(&buf, "{s}-{s}", .{ namespace, value }) catch return false;
 
         if (self.variables.get(var_name)) |_| {
             // Mark as used — must dupe the key since buf is stack-allocated
-            const duped = self.alloc.dupe(u8, var_name) catch return var_name;
+            const duped = self.alloc.dupe(u8, var_name) catch return true;
             self.used_variables.put(duped, {}) catch {};
-            return var_name;
+            return true;
         }
-        return null;
+        return false;
     }
 
     /// Get a raw theme variable value.
@@ -253,8 +254,7 @@ test "Theme: resolve namespace" {
 
     try theme.variables.put("--color-red-500", "oklch(63.7% 0.237 25.331)");
     const resolved = theme.resolve("red-500", "--color");
-    try std.testing.expect(resolved != null);
-    try std.testing.expectEqualStrings("--color-red-500", resolved.?);
+    try std.testing.expect(resolved);
 }
 
 test "Theme: parse JSON" {

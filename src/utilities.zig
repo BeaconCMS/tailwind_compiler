@@ -1207,6 +1207,379 @@ pub fn getRequiredKeyframes(root: []const u8) []const Keyframes {
 
 // ─── Functional Utility Handlers ───────────────────────────────────────────
 
+const ResolverTag = enum {
+    spacing,
+    color,
+    decoration_dual,
+    text,
+    border,
+    ring,
+    font,
+    leading,
+    tracking,
+    z_index,
+    neg_z_index,
+    opacity,
+    order,
+    neg_order,
+    rounded,
+    duration,
+    delay,
+    aspect,
+    grid_template_cols,
+    grid_template_rows,
+    grid_col,
+    grid_col_span,
+    grid_col_start,
+    grid_col_end,
+    grid_row,
+    grid_row_span,
+    grid_row_start,
+    grid_row_end,
+    auto_cols,
+    auto_rows,
+    rotate,
+    neg_rotate,
+    scale,
+    translate_x,
+    neg_translate_x,
+    translate_y,
+    neg_translate_y,
+    skew_x,
+    neg_skew_x,
+    skew_y,
+    neg_skew_y,
+    shadow,
+    shadow_color,
+    inset_shadow,
+    drop_shadow,
+    blur,
+    brightness,
+    contrast,
+    grayscale,
+    invert,
+    sepia,
+    saturate,
+    hue_rotate,
+    backdrop_blur,
+    backdrop_brightness,
+    backdrop_contrast,
+    backdrop_grayscale,
+    backdrop_invert,
+    backdrop_sepia,
+    backdrop_saturate,
+    backdrop_hue_rotate,
+    backdrop_opacity,
+    ease,
+    animate,
+    line_clamp,
+    content,
+    list,
+    space_x,
+    space_y,
+    divide_x,
+    divide_y,
+    underline_offset,
+    bg_gradient_dir,
+    bg_gradient,
+    gradient_stop,
+    perspective,
+    origin,
+    columns,
+    outline_offset,
+    outline,
+    grow,
+    shrink,
+    inset_ring,
+    ring_offset,
+    text_shadow,
+    font_weight,
+    mask_image,
+    list_image,
+    neg_bg_gradient_dir,
+    mask_position,
+    mask_size,
+    mask_repeat,
+    mask_type,
+    bg_size,
+    bg_position,
+    font_stretch_fn,
+    border_spacing,
+    indent,
+};
+
+const functional_dispatch = std.StaticStringMap(ResolverTag).initComptime(.{
+    // ── Spacing utilities ──
+    .{ "p", .spacing },
+    .{ "px", .spacing },
+    .{ "py", .spacing },
+    .{ "ps", .spacing },
+    .{ "pe", .spacing },
+    .{ "pt", .spacing },
+    .{ "pr", .spacing },
+    .{ "pb", .spacing },
+    .{ "pl", .spacing },
+    .{ "m", .spacing },
+    .{ "mx", .spacing },
+    .{ "my", .spacing },
+    .{ "ms", .spacing },
+    .{ "me", .spacing },
+    .{ "mt", .spacing },
+    .{ "mr", .spacing },
+    .{ "mb", .spacing },
+    .{ "ml", .spacing },
+    .{ "-m", .spacing },
+    .{ "-mx", .spacing },
+    .{ "-my", .spacing },
+    .{ "-ms", .spacing },
+    .{ "-me", .spacing },
+    .{ "-mt", .spacing },
+    .{ "-mr", .spacing },
+    .{ "-mb", .spacing },
+    .{ "-ml", .spacing },
+    .{ "w", .spacing },
+    .{ "h", .spacing },
+    .{ "min-w", .spacing },
+    .{ "min-h", .spacing },
+    .{ "max-w", .spacing },
+    .{ "max-h", .spacing },
+    .{ "size", .spacing },
+    .{ "inset", .spacing },
+    .{ "inset-x", .spacing },
+    .{ "inset-y", .spacing },
+    .{ "inset-s", .spacing },
+    .{ "inset-e", .spacing },
+    .{ "top", .spacing },
+    .{ "right", .spacing },
+    .{ "bottom", .spacing },
+    .{ "left", .spacing },
+    .{ "-inset", .spacing },
+    .{ "-inset-x", .spacing },
+    .{ "-inset-y", .spacing },
+    .{ "-inset-s", .spacing },
+    .{ "-inset-e", .spacing },
+    .{ "-top", .spacing },
+    .{ "-right", .spacing },
+    .{ "-bottom", .spacing },
+    .{ "-left", .spacing },
+    .{ "gap", .spacing },
+    .{ "gap-x", .spacing },
+    .{ "gap-y", .spacing },
+    .{ "scroll-m", .spacing },
+    .{ "scroll-mx", .spacing },
+    .{ "scroll-my", .spacing },
+    .{ "scroll-ms", .spacing },
+    .{ "scroll-me", .spacing },
+    .{ "scroll-mt", .spacing },
+    .{ "scroll-mr", .spacing },
+    .{ "scroll-mb", .spacing },
+    .{ "scroll-ml", .spacing },
+    .{ "scroll-p", .spacing },
+    .{ "scroll-px", .spacing },
+    .{ "scroll-py", .spacing },
+    .{ "scroll-ps", .spacing },
+    .{ "scroll-pe", .spacing },
+    .{ "scroll-pt", .spacing },
+    .{ "scroll-pr", .spacing },
+    .{ "scroll-pb", .spacing },
+    .{ "scroll-pl", .spacing },
+    .{ "basis", .spacing },
+    // ── Color utilities ──
+    .{ "bg", .color },
+    .{ "accent", .color },
+    .{ "caret", .color },
+    .{ "fill", .color },
+    .{ "stroke", .color },
+    .{ "outline-color", .color },
+    .{ "placeholder", .color },
+    // ── Decoration (dual: thickness or color) ──
+    .{ "decoration", .decoration_dual },
+    // ── Text (dual: color or font-size) ──
+    .{ "text", .text },
+    // ── Border (dual: color or width) ──
+    .{ "border", .border },
+    .{ "border-x", .border },
+    .{ "border-y", .border },
+    .{ "border-s", .border },
+    .{ "border-e", .border },
+    .{ "border-t", .border },
+    .{ "border-r", .border },
+    .{ "border-b", .border },
+    .{ "border-l", .border },
+    // ── Ring ──
+    .{ "ring", .ring },
+    // ── Font (family + weight) ──
+    .{ "font", .font },
+    // ── Leading (line-height) ──
+    .{ "leading", .leading },
+    // ── Tracking (letter-spacing) ──
+    .{ "tracking", .tracking },
+    // ── Z-index ──
+    .{ "z", .z_index },
+    .{ "-z", .neg_z_index },
+    // ── Opacity ──
+    .{ "opacity", .opacity },
+    // ── Order ──
+    .{ "order", .order },
+    .{ "-order", .neg_order },
+    // ── Border radius ──
+    .{ "rounded", .rounded },
+    .{ "rounded-t", .rounded },
+    .{ "rounded-r", .rounded },
+    .{ "rounded-b", .rounded },
+    .{ "rounded-l", .rounded },
+    .{ "rounded-tl", .rounded },
+    .{ "rounded-tr", .rounded },
+    .{ "rounded-br", .rounded },
+    .{ "rounded-bl", .rounded },
+    .{ "rounded-s", .rounded },
+    .{ "rounded-e", .rounded },
+    .{ "rounded-ss", .rounded },
+    .{ "rounded-se", .rounded },
+    .{ "rounded-es", .rounded },
+    .{ "rounded-ee", .rounded },
+    // ── Duration ──
+    .{ "duration", .duration },
+    // ── Delay ──
+    .{ "delay", .delay },
+    // ── Aspect ratio ──
+    .{ "aspect", .aspect },
+    // ── Grid template columns/rows ──
+    .{ "cols", .grid_template_cols },
+    .{ "grid-cols", .grid_template_cols },
+    .{ "rows", .grid_template_rows },
+    .{ "grid-rows", .grid_template_rows },
+    // ── Grid column/row placement ──
+    .{ "col", .grid_col },
+    .{ "col-span", .grid_col_span },
+    .{ "col-start", .grid_col_start },
+    .{ "col-end", .grid_col_end },
+    .{ "row", .grid_row },
+    .{ "row-span", .grid_row_span },
+    .{ "row-start", .grid_row_start },
+    .{ "row-end", .grid_row_end },
+    // ── Grid auto columns/rows ──
+    .{ "auto-cols", .auto_cols },
+    .{ "auto-rows", .auto_rows },
+    // ── Transform: rotate ──
+    .{ "rotate", .rotate },
+    .{ "-rotate", .neg_rotate },
+    // ── Transform: scale ──
+    .{ "scale", .scale },
+    .{ "scale-x", .scale },
+    .{ "scale-y", .scale },
+    // ── Transform: translate ──
+    .{ "translate-x", .translate_x },
+    .{ "-translate-x", .neg_translate_x },
+    .{ "translate-y", .translate_y },
+    .{ "-translate-y", .neg_translate_y },
+    // ── Transform: skew ──
+    .{ "skew-x", .skew_x },
+    .{ "-skew-x", .neg_skew_x },
+    .{ "skew-y", .skew_y },
+    .{ "-skew-y", .neg_skew_y },
+    // ── Shadow ──
+    .{ "shadow", .shadow },
+    .{ "shadow-color", .shadow_color },
+    // ── Inset shadow ──
+    .{ "inset-shadow", .inset_shadow },
+    // ── Drop shadow ──
+    .{ "drop-shadow", .drop_shadow },
+    // ── Filter utilities ──
+    .{ "blur", .blur },
+    .{ "brightness", .brightness },
+    .{ "contrast", .contrast },
+    .{ "grayscale", .grayscale },
+    .{ "invert", .invert },
+    .{ "sepia", .sepia },
+    .{ "saturate", .saturate },
+    .{ "hue-rotate", .hue_rotate },
+    // ── Backdrop filter utilities ──
+    .{ "backdrop-blur", .backdrop_blur },
+    .{ "backdrop-brightness", .backdrop_brightness },
+    .{ "backdrop-contrast", .backdrop_contrast },
+    .{ "backdrop-grayscale", .backdrop_grayscale },
+    .{ "backdrop-invert", .backdrop_invert },
+    .{ "backdrop-sepia", .backdrop_sepia },
+    .{ "backdrop-saturate", .backdrop_saturate },
+    .{ "backdrop-hue-rotate", .backdrop_hue_rotate },
+    .{ "backdrop-opacity", .backdrop_opacity },
+    // ── Ease ──
+    .{ "ease", .ease },
+    // ── Animate ──
+    .{ "animate", .animate },
+    // ── Line clamp ──
+    .{ "line-clamp", .line_clamp },
+    // ── Content ──
+    .{ "content", .content },
+    // ── List style type ──
+    .{ "list", .list },
+    // ── Space between ──
+    .{ "space-x", .space_x },
+    .{ "space-y", .space_y },
+    // ── Divide width ──
+    .{ "divide-x", .divide_x },
+    .{ "divide-y", .divide_y },
+    // ── Divide color (handled as color) ──
+    .{ "divide", .color },
+    // ── Underline offset ──
+    .{ "underline-offset", .underline_offset },
+    // ── Gradient direction utilities ──
+    .{ "bg-linear", .bg_gradient_dir },
+    .{ "bg-radial", .bg_gradient_dir },
+    .{ "bg-conic", .bg_gradient_dir },
+    .{ "bg-gradient", .bg_gradient },
+    // ── Gradient color stop utilities ──
+    .{ "from", .gradient_stop },
+    .{ "via", .gradient_stop },
+    .{ "to", .gradient_stop },
+    // ── Perspective ──
+    .{ "perspective", .perspective },
+    // ── Transform origin ──
+    .{ "origin", .origin },
+    // ── Columns ──
+    .{ "columns", .columns },
+    // ── Outline offset ──
+    .{ "outline-offset", .outline_offset },
+    // ── Outline (functional: width or color) ──
+    .{ "outline", .outline },
+    // ── Grow / Shrink ──
+    .{ "grow", .grow },
+    .{ "shrink", .shrink },
+    // ── Inset ring ──
+    .{ "inset-ring", .inset_ring },
+    // ── Ring offset ──
+    .{ "ring-offset", .ring_offset },
+    // ── Text shadow ──
+    .{ "text-shadow", .text_shadow },
+    // ── Font weight (standalone) ──
+    .{ "font-weight", .font_weight },
+    // ── Mask image ──
+    .{ "mask-image", .mask_image },
+    // ── List image ──
+    .{ "list-image", .list_image },
+    // ── Negative gradient direction utilities ──
+    .{ "-bg-linear", .neg_bg_gradient_dir },
+    .{ "-bg-conic", .neg_bg_gradient_dir },
+    // ── Mask utilities (single-property) ──
+    .{ "mask-position", .mask_position },
+    .{ "mask-size", .mask_size },
+    .{ "mask-repeat", .mask_repeat },
+    .{ "mask-type", .mask_type },
+    // ── Background size/position ──
+    .{ "bg-size", .bg_size },
+    .{ "bg-position", .bg_position },
+    // ── Font stretch ──
+    .{ "font-stretch", .font_stretch_fn },
+    // ── Border spacing ──
+    .{ "border-spacing", .border_spacing },
+    .{ "border-spacing-x", .border_spacing },
+    .{ "border-spacing-y", .border_spacing },
+    // ── Text indent ──
+    .{ "indent", .indent },
+    .{ "-indent", .indent },
+});
+
 /// Resolve a functional utility to CSS declarations.
 pub fn resolveFunctional(
     alloc: Allocator,
@@ -1216,489 +1589,154 @@ pub fn resolveFunctional(
     theme: *Theme,
     negative: bool,
 ) !?[]const Declaration {
-    // Spacing utilities
-    if (isSpacingUtility(root)) {
-        return resolveSpacing(alloc, root, value, theme, negative);
-    }
+    const tag = functional_dispatch.get(root) orelse return null;
 
-    // Decoration: dual behavior (thickness when numeric/length, color otherwise)
-    if (std.mem.eql(u8, root, "decoration")) {
-        if (value) |val| {
-            if (val.kind == .named and isPositiveInteger(val.value)) {
-                return resolveDecorationThickness(alloc, value);
+    return switch (tag) {
+        .spacing => resolveSpacing(alloc, root, value, theme, negative),
+        .decoration_dual => blk: {
+            if (value) |val| {
+                if (val.kind == .named and isPositiveInteger(val.value))
+                    break :blk resolveDecorationThickness(alloc, value);
+                if (val.kind == .named and (std.mem.eql(u8, val.value, "auto") or std.mem.eql(u8, val.value, "from-font")))
+                    break :blk resolveDecorationThickness(alloc, value);
+                if (val.kind == .arbitrary and looksLikeLength(val.value))
+                    break :blk resolveDecorationThickness(alloc, value);
             }
-            if (val.kind == .named and (std.mem.eql(u8, val.value, "auto") or std.mem.eql(u8, val.value, "from-font"))) {
-                return resolveDecorationThickness(alloc, value);
-            }
-            // Arbitrary values that look like lengths -> thickness
-            if (val.kind == .arbitrary and looksLikeLength(val.value)) {
-                return resolveDecorationThickness(alloc, value);
-            }
-        }
-        // Fall through to color handling
-    }
-
-    // Color utilities (pure color roots)
-    if (isColorUtility(root)) {
-        return resolveColor(alloc, root, value, modifier, theme);
-    }
-
-    // Text: dual behavior (color + font-size)
-    if (std.mem.eql(u8, root, "text")) {
-        return resolveText(alloc, value, modifier, theme);
-    }
-
-    // Border: dual behavior (color + width)
-    if (std.mem.eql(u8, root, "border") or
-        std.mem.eql(u8, root, "border-x") or
-        std.mem.eql(u8, root, "border-y") or
-        std.mem.eql(u8, root, "border-s") or
-        std.mem.eql(u8, root, "border-e") or
-        std.mem.eql(u8, root, "border-t") or
-        std.mem.eql(u8, root, "border-r") or
-        std.mem.eql(u8, root, "border-b") or
-        std.mem.eql(u8, root, "border-l"))
-    {
-        return resolveBorder(alloc, root, value, modifier, theme);
-    }
-
-    // Ring
-    if (std.mem.eql(u8, root, "ring")) {
-        return resolveRing(alloc, value, modifier, theme);
-    }
-
-    // Font (family + weight)
-    if (std.mem.eql(u8, root, "font")) {
-        return resolveFont(alloc, value, theme);
-    }
-
-    // Leading (line-height)
-    if (std.mem.eql(u8, root, "leading")) {
-        return resolveLeading(alloc, value, theme);
-    }
-
-    // Tracking (letter-spacing)
-    if (std.mem.eql(u8, root, "tracking")) {
-        return resolveTracking(alloc, value, theme);
-    }
-
-    // Z-index
-    if (std.mem.eql(u8, root, "z") or std.mem.eql(u8, root, "-z")) {
-        return resolveZIndex(alloc, value, negative or std.mem.eql(u8, root, "-z"));
-    }
-
-    // Opacity
-    if (std.mem.eql(u8, root, "opacity")) {
-        return resolveOpacity(alloc, value);
-    }
-
-    // Order
-    if (std.mem.eql(u8, root, "order") or std.mem.eql(u8, root, "-order")) {
-        return resolveOrder(alloc, value, negative or std.mem.eql(u8, root, "-order"));
-    }
-
-    // Border radius
-    if (std.mem.startsWith(u8, root, "rounded")) {
-        return resolveRounded(alloc, root, value, theme);
-    }
-
-    // Duration
-    if (std.mem.eql(u8, root, "duration")) {
-        return resolveDuration(alloc, value);
-    }
-
-    // Delay
-    if (std.mem.eql(u8, root, "delay")) {
-        return resolveDelay(alloc, value);
-    }
-
-    // Aspect ratio
-    if (std.mem.eql(u8, root, "aspect")) {
-        return resolveAspect(alloc, value, theme);
-    }
-
-    // Grid template columns/rows
-    if (std.mem.eql(u8, root, "cols") or std.mem.eql(u8, root, "grid-cols")) {
-        return resolveGridTemplate(alloc, value, "grid-template-columns");
-    }
-    if (std.mem.eql(u8, root, "rows") or std.mem.eql(u8, root, "grid-rows")) {
-        return resolveGridTemplate(alloc, value, "grid-template-rows");
-    }
-
-    // Grid column/row placement
-    if (std.mem.eql(u8, root, "col")) {
-        return resolveGridPlacement(alloc, value, "grid-column");
-    }
-    if (std.mem.eql(u8, root, "col-span")) {
-        return resolveGridSpan(alloc, value, "grid-column");
-    }
-    if (std.mem.eql(u8, root, "col-start")) {
-        return resolveGridStartEnd(alloc, value, "grid-column-start");
-    }
-    if (std.mem.eql(u8, root, "col-end")) {
-        return resolveGridStartEnd(alloc, value, "grid-column-end");
-    }
-    if (std.mem.eql(u8, root, "row")) {
-        return resolveGridPlacement(alloc, value, "grid-row");
-    }
-    if (std.mem.eql(u8, root, "row-span")) {
-        return resolveGridSpan(alloc, value, "grid-row");
-    }
-    if (std.mem.eql(u8, root, "row-start")) {
-        return resolveGridStartEnd(alloc, value, "grid-row-start");
-    }
-    if (std.mem.eql(u8, root, "row-end")) {
-        return resolveGridStartEnd(alloc, value, "grid-row-end");
-    }
-
-    // Grid auto columns/rows
-    if (std.mem.eql(u8, root, "auto-cols")) {
-        return resolveGridAuto(alloc, value, "grid-auto-columns");
-    }
-    if (std.mem.eql(u8, root, "auto-rows")) {
-        return resolveGridAuto(alloc, value, "grid-auto-rows");
-    }
-
-    // Transform: rotate
-    if (std.mem.eql(u8, root, "rotate") or std.mem.eql(u8, root, "-rotate")) {
-        return resolveRotate(alloc, value, negative or std.mem.eql(u8, root, "-rotate"));
-    }
-
-    // Transform: scale
-    if (std.mem.eql(u8, root, "scale") or std.mem.eql(u8, root, "scale-x") or std.mem.eql(u8, root, "scale-y")) {
-        return resolveScale(alloc, value, root);
-    }
-
-    // Transform: translate
-    if (std.mem.eql(u8, root, "translate-x") or std.mem.eql(u8, root, "-translate-x")) {
-        return resolveTranslate(alloc, value, "X", negative or std.mem.eql(u8, root, "-translate-x"), theme);
-    }
-    if (std.mem.eql(u8, root, "translate-y") or std.mem.eql(u8, root, "-translate-y")) {
-        return resolveTranslate(alloc, value, "Y", negative or std.mem.eql(u8, root, "-translate-y"), theme);
-    }
-
-    // Transform: skew
-    if (std.mem.eql(u8, root, "skew-x") or std.mem.eql(u8, root, "-skew-x")) {
-        return resolveSkew(alloc, value, "X", negative or std.mem.eql(u8, root, "-skew-x"));
-    }
-    if (std.mem.eql(u8, root, "skew-y") or std.mem.eql(u8, root, "-skew-y")) {
-        return resolveSkew(alloc, value, "Y", negative or std.mem.eql(u8, root, "-skew-y"));
-    }
-
-    // Shadow (size or color)
-    if (std.mem.eql(u8, root, "shadow")) {
-        // Try as shadow size first, then as shadow color
-        if (value) |val| {
-            if (val.kind == .named) {
-                // Check if it's a color
-                if (std.mem.eql(u8, val.value, "inherit") or
-                    std.mem.eql(u8, val.value, "transparent") or
-                    std.mem.eql(u8, val.value, "current") or
-                    theme.resolve(val.value, "--color") != null)
-                {
-                    return resolveShadowColor(alloc, value, modifier, theme);
+            break :blk resolveColor(alloc, root, value, modifier, theme);
+        },
+        .color => resolveColor(alloc, root, value, modifier, theme),
+        .text => resolveText(alloc, value, modifier, theme),
+        .border => resolveBorder(alloc, root, value, modifier, theme),
+        .ring => resolveRing(alloc, value, modifier, theme),
+        .font => resolveFont(alloc, value, theme),
+        .leading => resolveLeading(alloc, value, theme),
+        .tracking => resolveTracking(alloc, value, theme),
+        .z_index => resolveZIndex(alloc, value, negative),
+        .neg_z_index => resolveZIndex(alloc, value, true),
+        .opacity => resolveOpacity(alloc, value),
+        .order => resolveOrder(alloc, value, negative),
+        .neg_order => resolveOrder(alloc, value, true),
+        .rounded => resolveRounded(alloc, root, value, theme),
+        .duration => resolveDuration(alloc, value),
+        .delay => resolveDelay(alloc, value),
+        .aspect => resolveAspect(alloc, value, theme),
+        .grid_template_cols => resolveGridTemplate(alloc, value, "grid-template-columns"),
+        .grid_template_rows => resolveGridTemplate(alloc, value, "grid-template-rows"),
+        .grid_col => resolveGridPlacement(alloc, value, "grid-column"),
+        .grid_col_span => resolveGridSpan(alloc, value, "grid-column"),
+        .grid_col_start => resolveGridStartEnd(alloc, value, "grid-column-start"),
+        .grid_col_end => resolveGridStartEnd(alloc, value, "grid-column-end"),
+        .grid_row => resolveGridPlacement(alloc, value, "grid-row"),
+        .grid_row_span => resolveGridSpan(alloc, value, "grid-row"),
+        .grid_row_start => resolveGridStartEnd(alloc, value, "grid-row-start"),
+        .grid_row_end => resolveGridStartEnd(alloc, value, "grid-row-end"),
+        .auto_cols => resolveGridAuto(alloc, value, "grid-auto-columns"),
+        .auto_rows => resolveGridAuto(alloc, value, "grid-auto-rows"),
+        .rotate => resolveRotate(alloc, value, negative),
+        .neg_rotate => resolveRotate(alloc, value, true),
+        .scale => resolveScale(alloc, value, root),
+        .translate_x => resolveTranslate(alloc, value, "X", negative, theme),
+        .neg_translate_x => resolveTranslate(alloc, value, "X", true, theme),
+        .translate_y => resolveTranslate(alloc, value, "Y", negative, theme),
+        .neg_translate_y => resolveTranslate(alloc, value, "Y", true, theme),
+        .skew_x => resolveSkew(alloc, value, "X", negative),
+        .neg_skew_x => resolveSkew(alloc, value, "X", true),
+        .skew_y => resolveSkew(alloc, value, "Y", negative),
+        .neg_skew_y => resolveSkew(alloc, value, "Y", true),
+        .shadow => blk: {
+            if (value) |val| {
+                if (val.kind == .named) {
+                    if (std.mem.eql(u8, val.value, "inherit") or
+                        std.mem.eql(u8, val.value, "transparent") or
+                        std.mem.eql(u8, val.value, "current") or
+                        theme.resolve(val.value, "--color"))
+                    {
+                        break :blk resolveShadowColor(alloc, value, modifier, theme);
+                    }
                 }
             }
-        }
-        return resolveShadow(alloc, value, theme);
-    }
-
-    // Filter utilities
-    if (std.mem.eql(u8, root, "blur")) {
-        return resolveFilterBlur(alloc, value, false, "--blur", theme);
-    }
-    if (std.mem.eql(u8, root, "brightness")) {
-        return resolveFilterPercent(alloc, value, false, "brightness");
-    }
-    if (std.mem.eql(u8, root, "contrast")) {
-        return resolveFilterPercent(alloc, value, false, "contrast");
-    }
-    if (std.mem.eql(u8, root, "grayscale")) {
-        return resolveFilterToggle(alloc, value, false, "grayscale");
-    }
-    if (std.mem.eql(u8, root, "invert")) {
-        return resolveFilterToggle(alloc, value, false, "invert");
-    }
-    if (std.mem.eql(u8, root, "sepia")) {
-        return resolveFilterToggle(alloc, value, false, "sepia");
-    }
-    if (std.mem.eql(u8, root, "saturate")) {
-        return resolveFilterPercent(alloc, value, false, "saturate");
-    }
-    if (std.mem.eql(u8, root, "hue-rotate")) {
-        return resolveFilterDeg(alloc, value, false, "hue-rotate");
-    }
-
-    // Backdrop filter utilities
-    if (std.mem.eql(u8, root, "backdrop-blur")) {
-        return resolveFilterBlur(alloc, value, true, "--blur", theme);
-    }
-    if (std.mem.eql(u8, root, "backdrop-brightness")) {
-        return resolveFilterPercent(alloc, value, true, "brightness");
-    }
-    if (std.mem.eql(u8, root, "backdrop-contrast")) {
-        return resolveFilterPercent(alloc, value, true, "contrast");
-    }
-    if (std.mem.eql(u8, root, "backdrop-grayscale")) {
-        return resolveFilterToggle(alloc, value, true, "grayscale");
-    }
-    if (std.mem.eql(u8, root, "backdrop-invert")) {
-        return resolveFilterToggle(alloc, value, true, "invert");
-    }
-    if (std.mem.eql(u8, root, "backdrop-sepia")) {
-        return resolveFilterToggle(alloc, value, true, "sepia");
-    }
-    if (std.mem.eql(u8, root, "backdrop-saturate")) {
-        return resolveFilterPercent(alloc, value, true, "saturate");
-    }
-    if (std.mem.eql(u8, root, "backdrop-hue-rotate")) {
-        return resolveFilterDeg(alloc, value, true, "hue-rotate");
-    }
-    if (std.mem.eql(u8, root, "backdrop-opacity")) {
-        return resolveFilterPercent(alloc, value, true, "opacity");
-    }
-
-    // Ease (transition-timing-function)
-    if (std.mem.eql(u8, root, "ease")) {
-        return resolveEase(alloc, value, theme);
-    }
-
-    // Animate
-    if (std.mem.eql(u8, root, "animate")) {
-        return resolveAnimate(alloc, value, theme);
-    }
-
-    // Line clamp
-    if (std.mem.eql(u8, root, "line-clamp")) {
-        return resolveLineClamp(alloc, value);
-    }
-
-    // Content
-    if (std.mem.eql(u8, root, "content")) {
-        return resolveContent(alloc, value);
-    }
-
-    // List style type
-    if (std.mem.eql(u8, root, "list")) {
-        return resolveListStyleType(alloc, value);
-    }
-
-    // Space between (gap-based approach)
-    if (std.mem.eql(u8, root, "space-x")) {
-        return resolveSpaceBetween(alloc, value, "column-gap", theme);
-    }
-    if (std.mem.eql(u8, root, "space-y")) {
-        return resolveSpaceBetween(alloc, value, "row-gap", theme);
-    }
-
-    // Divide width
-    if (std.mem.eql(u8, root, "divide-x")) {
-        return resolveDivide(alloc, value, "border-inline-width");
-    }
-    if (std.mem.eql(u8, root, "divide-y")) {
-        return resolveDivide(alloc, value, "border-block-width");
-    }
-
-    // Underline offset
-    if (std.mem.eql(u8, root, "underline-offset")) {
-        return resolveUnderlineOffset(alloc, value);
-    }
-
-    // Gradient direction utilities
-    if (std.mem.eql(u8, root, "bg-linear") or
-        std.mem.eql(u8, root, "bg-radial") or
-        std.mem.eql(u8, root, "bg-conic"))
-    {
-        return resolveGradient(alloc, root, value);
-    }
-
-    // bg-gradient-to-* (v3 compat alias for bg-linear-to-*)
-    if (std.mem.eql(u8, root, "bg-gradient")) {
-        return resolveGradient(alloc, "bg-linear", value);
-    }
-
-    // Gradient color stop utilities
-    if (std.mem.eql(u8, root, "from") or
-        std.mem.eql(u8, root, "via") or
-        std.mem.eql(u8, root, "to"))
-    {
-        return resolveGradientStop(alloc, root, value, modifier, theme);
-    }
-
-    // Perspective
-    if (std.mem.eql(u8, root, "perspective")) {
-        return resolvePerspective(alloc, value, theme);
-    }
-
-    // Transform origin
-    if (std.mem.eql(u8, root, "origin")) {
-        return resolveOrigin(alloc, value);
-    }
-
-    // Columns
-    if (std.mem.eql(u8, root, "columns")) {
-        return resolveColumns(alloc, value, theme);
-    }
-
-    // Outline offset
-    if (std.mem.eql(u8, root, "outline-offset")) {
-        return resolveOutlineOffset(alloc, value);
-    }
-
-    // Outline (functional: width or color)
-    if (std.mem.eql(u8, root, "outline")) {
-        return resolveOutline(alloc, value, modifier, theme);
-    }
-
-    // Grow / Shrink with values
-    if (std.mem.eql(u8, root, "grow")) {
-        return resolveGrowShrink(alloc, value, "flex-grow");
-    }
-    if (std.mem.eql(u8, root, "shrink")) {
-        return resolveGrowShrink(alloc, value, "flex-shrink");
-    }
-
-    // Inset shadow
-    if (std.mem.eql(u8, root, "inset-shadow")) {
-        return resolveInsetShadow(alloc, value, theme);
-    }
-
-    // Ring offset
-    if (std.mem.eql(u8, root, "ring-offset")) {
-        return resolveRingOffset(alloc, value, modifier, theme);
-    }
-
-    // Inset ring
-    if (std.mem.eql(u8, root, "inset-ring")) {
-        return resolveInsetRing(alloc, value, modifier, theme);
-    }
-
-    // Text shadow
-    if (std.mem.eql(u8, root, "text-shadow")) {
-        return resolveTextShadow(alloc, value, theme);
-    }
-
-    // Font weight (standalone)
-    if (std.mem.eql(u8, root, "font-weight")) {
-        return resolveFontWeight(alloc, value, theme);
-    }
-
-    // Mask image
-    if (std.mem.eql(u8, root, "mask-image")) {
-        const val = value orelse return null;
-        const decls = try alloc.alloc(Declaration, 2);
-        decls[0] = Declaration{ .property = "-webkit-mask-image", .value = val.value };
-        decls[1] = Declaration{ .property = "mask-image", .value = val.value };
-        return decls;
-    }
-
-    // List image
-    if (std.mem.eql(u8, root, "list-image")) {
-        const val = value orelse return null;
-        switch (val.kind) {
-            .arbitrary => {
-                const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "list-style-image", .value = val.value };
-                return decls;
-            },
-            .named => {
-                if (std.mem.eql(u8, val.value, "none")) {
+            break :blk resolveShadow(alloc, value, theme);
+        },
+        .shadow_color => resolveShadowColor(alloc, value, modifier, theme),
+        .inset_shadow => resolveInsetShadow(alloc, value, theme),
+        .drop_shadow => resolveDropShadow(alloc, value, theme),
+        .blur => resolveFilterBlur(alloc, value, false, "--blur", theme),
+        .brightness => resolveFilterPercent(alloc, value, false, "brightness"),
+        .contrast => resolveFilterPercent(alloc, value, false, "contrast"),
+        .grayscale => resolveFilterToggle(alloc, value, false, "grayscale"),
+        .invert => resolveFilterToggle(alloc, value, false, "invert"),
+        .sepia => resolveFilterToggle(alloc, value, false, "sepia"),
+        .saturate => resolveFilterPercent(alloc, value, false, "saturate"),
+        .hue_rotate => resolveFilterDeg(alloc, value, false, "hue-rotate"),
+        .backdrop_blur => resolveFilterBlur(alloc, value, true, "--blur", theme),
+        .backdrop_brightness => resolveFilterPercent(alloc, value, true, "brightness"),
+        .backdrop_contrast => resolveFilterPercent(alloc, value, true, "contrast"),
+        .backdrop_grayscale => resolveFilterToggle(alloc, value, true, "grayscale"),
+        .backdrop_invert => resolveFilterToggle(alloc, value, true, "invert"),
+        .backdrop_sepia => resolveFilterToggle(alloc, value, true, "sepia"),
+        .backdrop_saturate => resolveFilterPercent(alloc, value, true, "saturate"),
+        .backdrop_hue_rotate => resolveFilterDeg(alloc, value, true, "hue-rotate"),
+        .backdrop_opacity => resolveFilterPercent(alloc, value, true, "opacity"),
+        .ease => resolveEase(alloc, value, theme),
+        .animate => resolveAnimate(alloc, value, theme),
+        .line_clamp => resolveLineClamp(alloc, value),
+        .content => resolveContent(alloc, value),
+        .list => resolveListStyleType(alloc, value),
+        .space_x => resolveSpaceBetween(alloc, value, "column-gap", theme),
+        .space_y => resolveSpaceBetween(alloc, value, "row-gap", theme),
+        .divide_x => resolveDivide(alloc, value, "border-inline-width"),
+        .divide_y => resolveDivide(alloc, value, "border-block-width"),
+        .underline_offset => resolveUnderlineOffset(alloc, value),
+        .bg_gradient_dir => resolveGradient(alloc, root, value),
+        .bg_gradient => resolveGradient(alloc, "bg-linear", value),
+        .gradient_stop => resolveGradientStop(alloc, root, value, modifier, theme),
+        .perspective => resolvePerspective(alloc, value, theme),
+        .origin => resolveOrigin(alloc, value),
+        .columns => resolveColumns(alloc, value, theme),
+        .outline_offset => resolveOutlineOffset(alloc, value),
+        .outline => resolveOutline(alloc, value, modifier, theme),
+        .grow => resolveGrowShrink(alloc, value, "flex-grow"),
+        .shrink => resolveGrowShrink(alloc, value, "flex-shrink"),
+        .inset_ring => resolveInsetRing(alloc, value, modifier, theme),
+        .ring_offset => resolveRingOffset(alloc, value, modifier, theme),
+        .text_shadow => resolveTextShadow(alloc, value, theme),
+        .font_weight => resolveFontWeight(alloc, value, theme),
+        .mask_image => blk: {
+            const val = value orelse break :blk null;
+            const decls = try alloc.alloc(Declaration, 2);
+            decls[0] = Declaration{ .property = "-webkit-mask-image", .value = val.value };
+            decls[1] = Declaration{ .property = "mask-image", .value = val.value };
+            break :blk decls;
+        },
+        .list_image => blk: {
+            const val = value orelse break :blk null;
+            switch (val.kind) {
+                .arbitrary => {
                     const decls = try alloc.alloc(Declaration, 1);
-                    decls[0] = Declaration{ .property = "list-style-image", .value = "none" };
-                    return decls;
-                }
-                return null;
-            },
-        }
-    }
-
-    // Negative gradient direction utilities
-    if (std.mem.eql(u8, root, "-bg-linear") or std.mem.eql(u8, root, "-bg-conic")) {
-        return resolveGradient(alloc, root, value);
-    }
-
-    // Mask utilities (simple single-property)
-    if (std.mem.eql(u8, root, "mask-position")) {
-        return resolveSingleProp(alloc, value, "mask-position");
-    }
-    if (std.mem.eql(u8, root, "mask-size")) {
-        return resolveSingleProp(alloc, value, "mask-size");
-    }
-    if (std.mem.eql(u8, root, "mask-repeat")) {
-        return resolveSingleProp(alloc, value, "mask-repeat");
-    }
-    if (std.mem.eql(u8, root, "mask-type")) {
-        return resolveSingleProp(alloc, value, "mask-type");
-    }
-    if (std.mem.eql(u8, root, "bg-size")) {
-        return resolveSingleProp(alloc, value, "background-size");
-    }
-    if (std.mem.eql(u8, root, "bg-position")) {
-        return resolveSingleProp(alloc, value, "background-position");
-    }
-    if (std.mem.eql(u8, root, "font-stretch")) {
-        return resolveSingleProp(alloc, value, "font-stretch");
-    }
-
-    // Drop shadow
-    if (std.mem.eql(u8, root, "drop-shadow")) {
-        return resolveDropShadow(alloc, value, theme);
-    }
-
-    // Border spacing
-    if (std.mem.eql(u8, root, "border-spacing") or
-        std.mem.eql(u8, root, "border-spacing-x") or
-        std.mem.eql(u8, root, "border-spacing-y"))
-    {
-        return resolveBorderSpacing(alloc, root, value, theme);
-    }
-
-    // Text indent
-    if (std.mem.eql(u8, root, "indent") or std.mem.eql(u8, root, "-indent")) {
-        return resolveIndent(alloc, value, theme);
-    }
-
-    // Shadow as color (shadow-color-*)
-    if (std.mem.eql(u8, root, "shadow-color")) {
-        return resolveShadowColor(alloc, value, modifier, theme);
-    }
-
-    return null;
-}
-
-fn isSpacingUtility(root: []const u8) bool {
-    const spacing_roots = [_][]const u8{
-        "p",    "px",   "py",   "ps",   "pe",   "pt",   "pr",   "pb",   "pl",
-        "m",    "mx",   "my",   "ms",   "me",   "mt",   "mr",   "mb",   "ml",
-        "-m",   "-mx",  "-my",  "-ms",  "-me",  "-mt",  "-mr",  "-mb",  "-ml",
-        "w",    "h",    "min-w", "min-h", "max-w", "max-h", "size",
-        "inset", "inset-x", "inset-y", "inset-s", "inset-e",
-        "top",  "right", "bottom", "left",
-        "-inset", "-inset-x", "-inset-y", "-inset-s", "-inset-e",
-        "-top", "-right", "-bottom", "-left",
-        "gap",  "gap-x", "gap-y",
-        "scroll-m", "scroll-mx", "scroll-my", "scroll-ms", "scroll-me",
-        "scroll-mt", "scroll-mr", "scroll-mb", "scroll-ml",
-        "scroll-p", "scroll-px", "scroll-py", "scroll-ps", "scroll-pe",
-        "scroll-pt", "scroll-pr", "scroll-pb", "scroll-pl",
-        "basis",
+                    decls[0] = Declaration{ .property = "list-style-image", .value = val.value };
+                    break :blk decls;
+                },
+                .named => {
+                    if (std.mem.eql(u8, val.value, "none")) {
+                        const decls = try alloc.alloc(Declaration, 1);
+                        decls[0] = Declaration{ .property = "list-style-image", .value = "none" };
+                        break :blk decls;
+                    }
+                    break :blk null;
+                },
+            }
+        },
+        .neg_bg_gradient_dir => resolveGradient(alloc, root, value),
+        .mask_position => resolveSingleProp(alloc, value, "mask-position"),
+        .mask_size => resolveSingleProp(alloc, value, "mask-size"),
+        .mask_repeat => resolveSingleProp(alloc, value, "mask-repeat"),
+        .mask_type => resolveSingleProp(alloc, value, "mask-type"),
+        .bg_size => resolveSingleProp(alloc, value, "background-size"),
+        .bg_position => resolveSingleProp(alloc, value, "background-position"),
+        .font_stretch_fn => resolveSingleProp(alloc, value, "font-stretch"),
+        .border_spacing => resolveBorderSpacing(alloc, root, value, theme),
+        .indent => resolveIndent(alloc, value, theme),
     };
-    for (spacing_roots) |r| {
-        if (std.mem.eql(u8, root, r)) return true;
-    }
-    return false;
-}
-
-fn isColorUtility(root: []const u8) bool {
-    const color_roots = [_][]const u8{
-        "bg",    "accent",  "caret",
-        "fill",  "stroke",  "outline-color", "decoration",
-        "shadow-color", "divide", "placeholder",
-    };
-    for (color_roots) |r| {
-        if (std.mem.eql(u8, root, r)) return true;
-    }
-    return false;
 }
 
 /// Map spacing utility roots to CSS properties.
@@ -1843,7 +1881,7 @@ fn resolveSpacing(
                 } else {
                     css_value = try std.fmt.allocPrint(alloc, "calc(var(--spacing) * {s})", .{stripLeadingZero(val.value)});
                 }
-            } else if (theme.resolve(val.value, "--spacing") != null) {
+            } else if (theme.resolve(val.value, "--spacing")) {
                 // Named spacing value from theme
                 const var_name = try std.fmt.allocPrint(alloc, "var(--spacing-{s})", .{val.value});
                 if (is_neg) {
@@ -1922,7 +1960,7 @@ fn resolveColor(
                 css_value = "#0000";
             } else if (std.mem.eql(u8, val.value, "current")) {
                 css_value = "currentColor";
-            } else if (theme.resolve(val.value, "--color") != null) {
+            } else if (theme.resolve(val.value, "--color")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--color-{s}", .{val.value}));
                 css_value = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
             } else {
@@ -2267,7 +2305,7 @@ fn resolveText(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
             if (std.mem.eql(u8, val.value, "inherit") or
                 std.mem.eql(u8, val.value, "transparent") or
                 std.mem.eql(u8, val.value, "current") or
-                theme.resolve(val.value, "--color") != null)
+                theme.resolve(val.value, "--color"))
             {
                 // It's a color value
                 var css_value: []const u8 = undefined;
@@ -2290,7 +2328,7 @@ fn resolveText(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
             }
 
             // Try font-size theme
-            if (theme.resolve(val.value, "--text") != null) {
+            if (theme.resolve(val.value, "--text")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--text-{s}", .{val.value}));
                 const font_size = try std.fmt.allocPrint(alloc, "var(--text-{s})", .{val.value});
                 const line_height = try std.fmt.allocPrint(alloc, "var(--tw-leading,var(--text-{s}--line-height))", .{val.value});
@@ -2320,7 +2358,7 @@ fn resolveFont(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Declara
         },
         .named => {
             // Try font-family first (--font-{value})
-            if (theme.resolve(val.value, "--font") != null) {
+            if (theme.resolve(val.value, "--font")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--font-{s}", .{val.value}));
                 const css_value = try std.fmt.allocPrint(alloc, "var(--font-{s})", .{val.value});
                 const decls = try alloc.alloc(Declaration, 1);
@@ -2329,7 +2367,7 @@ fn resolveFont(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Declara
             }
 
             // Try font-weight (--font-weight-{value})
-            if (theme.resolve(val.value, "--font-weight") != null) {
+            if (theme.resolve(val.value, "--font-weight")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--font-weight-{s}", .{val.value}));
                 const css_value = try std.fmt.allocPrint(alloc, "var(--font-weight-{s})", .{val.value});
                 const decls = try alloc.alloc(Declaration, 2);
@@ -2356,7 +2394,7 @@ fn resolveLeading(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decl
         },
         .named => {
             // Try theme --leading-{value}
-            if (theme.resolve(val.value, "--leading") != null) {
+            if (theme.resolve(val.value, "--leading")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--leading-{s}", .{val.value}));
                 css_value = try std.fmt.allocPrint(alloc, "var(--leading-{s})", .{val.value});
             } else if (std.mem.eql(u8, val.value, "none")) {
@@ -2394,7 +2432,7 @@ fn resolveTracking(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Dec
             }
         },
         .named => {
-            if (theme.resolve(val.value, "--tracking") != null) {
+            if (theme.resolve(val.value, "--tracking")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--tracking-{s}", .{val.value}));
                 css_value = try std.fmt.allocPrint(alloc, "var(--tracking-{s})", .{val.value});
             } else {
@@ -2469,7 +2507,7 @@ fn resolveBorder(alloc: Allocator, root: []const u8, value: ?Value, modifier: ?M
                 const decls = try alloc.alloc(Declaration, 1);
                 decls[0] = Declaration{ .property = color_property, .value = "currentColor" };
                 return decls;
-            } else if (theme.resolve(val.value, "--color") != null) {
+            } else if (theme.resolve(val.value, "--color")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--color-{s}", .{val.value}));
                 var css_value: []const u8 = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
                 if (modifier) |mod| {
@@ -2570,7 +2608,7 @@ fn resolveAspect(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decla
             } else if (val.fraction != null) {
                 // Fraction like 4/3
                 css_value = val.fraction.?;
-            } else if (theme.resolve(val.value, "--aspect") != null) {
+            } else if (theme.resolve(val.value, "--aspect")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--aspect-{s}", .{val.value}));
                 css_value = try std.fmt.allocPrint(alloc, "var(--aspect-{s})", .{val.value});
             } else {
@@ -2905,7 +2943,7 @@ fn resolveShadow(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decla
         .named => {
             if (std.mem.eql(u8, val.value, "none")) {
                 shadow_value = "0 0 #0000";
-            } else if (theme.resolve(val.value, "--shadow") != null) {
+            } else if (theme.resolve(val.value, "--shadow")) {
                 const var_name = try std.fmt.allocPrint(alloc, "--shadow-{s}", .{val.value});
                 theme.markUsed(var_name);
                 if (theme.get(var_name)) |raw_val| {
@@ -2968,7 +3006,7 @@ fn resolveRing(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
             }
 
             // Try as color from theme
-            if (theme.resolve(val.value, "--color") != null) {
+            if (theme.resolve(val.value, "--color")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--color-{s}", .{val.value}));
                 var color_css: []const u8 = undefined;
                 if (modifier) |mod| {
@@ -3026,7 +3064,7 @@ fn resolveFilterBlur(alloc: Allocator, value: ?Value, comptime is_backdrop: bool
             css_value = try std.fmt.allocPrint(alloc, "blur({s})", .{val.value});
         },
         .named => {
-            if (theme.resolve(val.value, theme_ns) != null) {
+            if (theme.resolve(val.value, theme_ns)) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "{s}-{s}", .{ theme_ns, val.value }));
                 css_value = try std.fmt.allocPrint(alloc, "blur(var({s}-{s}))", .{ theme_ns, val.value });
             } else {
@@ -3124,7 +3162,7 @@ fn resolveEase(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Declara
         .named => {
             if (std.mem.eql(u8, val.value, "linear")) {
                 css_value = "linear";
-            } else if (theme.resolve(val.value, "--ease") != null) {
+            } else if (theme.resolve(val.value, "--ease")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--ease-{s}", .{val.value}));
                 css_value = try std.fmt.allocPrint(alloc, "var(--ease-{s})", .{val.value});
             } else {
@@ -3153,7 +3191,7 @@ fn resolveAnimate(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decl
         .named => {
             if (std.mem.eql(u8, val.value, "none")) {
                 css_value = "none";
-            } else if (theme.resolve(val.value, "--animate") != null) {
+            } else if (theme.resolve(val.value, "--animate")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--animate-{s}", .{val.value}));
                 css_value = try std.fmt.allocPrint(alloc, "var(--animate-{s})", .{val.value});
             } else {
@@ -3612,7 +3650,7 @@ fn resolveGradientStop(alloc: Allocator, root: []const u8, value: ?Value, modifi
                 css_value = "transparent";
             } else if (std.mem.eql(u8, val.value, "current")) {
                 css_value = "currentcolor"; // lowercase in gradient stops
-            } else if (theme.resolve(val.value, "--color") != null) {
+            } else if (theme.resolve(val.value, "--color")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--color-{s}", .{val.value}));
                 css_value = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
             } else if (std.mem.endsWith(u8, val.value, "%")) {
@@ -3666,7 +3704,7 @@ fn resolvePerspective(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const 
         .named => {
             if (std.mem.eql(u8, val.value, "none")) {
                 css_value = "none";
-            } else if (theme.resolve(val.value, "--perspective") != null) {
+            } else if (theme.resolve(val.value, "--perspective")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--perspective-{s}", .{val.value}));
                 css_value = try std.fmt.allocPrint(alloc, "var(--perspective-{s})", .{val.value});
             } else {
@@ -3731,7 +3769,7 @@ fn resolveColumns(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decl
             } else if (isPositiveInteger(val.value)) {
                 // Pure integer 1-12
                 css_value = val.value;
-            } else if (theme.resolve(val.value, "--container") != null) {
+            } else if (theme.resolve(val.value, "--container")) {
                 // Named container size: 3xs, 2xs, xs, sm, md, lg, xl, 2xl, ...
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--container-{s}", .{val.value}));
                 css_value = try std.fmt.allocPrint(alloc, "var(--container-{s})", .{val.value});
@@ -3835,7 +3873,7 @@ fn resolveOutline(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *
                 const decls = try alloc.alloc(Declaration, 1);
                 decls[0] = Declaration{ .property = "outline-color", .value = "currentColor" };
                 return decls;
-            } else if (theme.resolve(val.value, "--color") != null) {
+            } else if (theme.resolve(val.value, "--color")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--color-{s}", .{val.value}));
                 var css_value: []const u8 = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
                 if (modifier) |mod| {
@@ -3924,7 +3962,7 @@ fn resolveRingOffset(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme
         },
         .named => {
             // Check if it's a color
-            if (theme.resolve(val.value, "--color") != null) {
+            if (theme.resolve(val.value, "--color")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--color-{s}", .{val.value}));
                 const color_val = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
                 const decls = try alloc.alloc(Declaration, 1);
@@ -3961,7 +3999,7 @@ fn resolveInsetRing(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme:
         },
         .named => {
             // Check if it's a color
-            if (theme.resolve(val.value, "--color") != null) {
+            if (theme.resolve(val.value, "--color")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--color-{s}", .{val.value}));
                 const color_val = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
                 const decls = try alloc.alloc(Declaration, 1);
@@ -4210,7 +4248,7 @@ fn resolveShadowColor(alloc: Allocator, value: ?Value, modifier: ?Modifier, them
                 css_value = "#0000";
             } else if (std.mem.eql(u8, val.value, "current")) {
                 css_value = "currentColor";
-            } else if (theme.resolve(val.value, "--color") != null) {
+            } else if (theme.resolve(val.value, "--color")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--color-{s}", .{val.value}));
                 css_value = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
             } else {
