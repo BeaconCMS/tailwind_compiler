@@ -343,9 +343,9 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "text-ellipsis", &[_]Declaration{.{ .property = "text-overflow", .value = "ellipsis" }} },
     .{ "text-clip", &[_]Declaration{.{ .property = "text-overflow", .value = "clip" }} },
     .{ "truncate", &[_]Declaration{
-        .{ .property = "overflow", .value = "hidden" },
         .{ .property = "text-overflow", .value = "ellipsis" },
         .{ .property = "white-space", .value = "nowrap" },
+        .{ .property = "overflow", .value = "hidden" },
     } },
 
     // ─── Text Wrap ───
@@ -593,15 +593,15 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
 
     // ─── SR Only ───
     .{ "sr-only", &[_]Declaration{
-        .{ .property = "position", .value = "absolute" },
-        .{ .property = "width", .value = "1px" },
-        .{ .property = "height", .value = "1px" },
-        .{ .property = "padding", .value = "0" },
-        .{ .property = "margin", .value = "-1px" },
-        .{ .property = "overflow", .value = "hidden" },
+        .{ .property = "clip-path", .value = "inset(50%)" },
         .{ .property = "white-space", .value = "nowrap" },
         .{ .property = "border-width", .value = "0" },
-        .{ .property = "clip-path", .value = "inset(50%)" },
+        .{ .property = "width", .value = "1px" },
+        .{ .property = "height", .value = "1px" },
+        .{ .property = "margin", .value = "-1px" },
+        .{ .property = "padding", .value = "0" },
+        .{ .property = "position", .value = "absolute" },
+        .{ .property = "overflow", .value = "hidden" },
     } },
     .{ "not-sr-only", &[_]Declaration{
         .{ .property = "position", .value = "static" },
@@ -2082,7 +2082,7 @@ fn resolveRounded(alloc: Allocator, root: []const u8, value: ?Value, theme: *The
         .{ "rounded", &[_][]const u8{"border-radius"} },
         .{ "rounded-t", &[_][]const u8{ "border-top-left-radius", "border-top-right-radius" } },
         .{ "rounded-r", &[_][]const u8{ "border-top-right-radius", "border-bottom-right-radius" } },
-        .{ "rounded-b", &[_][]const u8{ "border-bottom-left-radius", "border-bottom-right-radius" } },
+        .{ "rounded-b", &[_][]const u8{ "border-bottom-right-radius", "border-bottom-left-radius" } },
         .{ "rounded-l", &[_][]const u8{ "border-top-left-radius", "border-bottom-left-radius" } },
         .{ "rounded-tl", &[_][]const u8{"border-top-left-radius"} },
         .{ "rounded-tr", &[_][]const u8{"border-top-right-radius"} },
@@ -3175,26 +3175,26 @@ fn resolveLineClamp(alloc: Allocator, value: ?Value) !?[]const Declaration {
     switch (val.kind) {
         .arbitrary => {
             const decls = try alloc.alloc(Declaration, 4);
-            decls[0] = Declaration{ .property = "overflow", .value = "hidden" };
-            decls[1] = Declaration{ .property = "display", .value = "-webkit-box" };
-            decls[2] = Declaration{ .property = "-webkit-box-orient", .value = "vertical" };
-            decls[3] = Declaration{ .property = "-webkit-line-clamp", .value = val.value };
+            decls[0] = Declaration{ .property = "-webkit-line-clamp", .value = val.value };
+            decls[1] = Declaration{ .property = "-webkit-box-orient", .value = "vertical" };
+            decls[2] = Declaration{ .property = "display", .value = "-webkit-box" };
+            decls[3] = Declaration{ .property = "overflow", .value = "hidden" };
             return decls;
         },
         .named => {
             if (std.mem.eql(u8, val.value, "none")) {
                 const decls = try alloc.alloc(Declaration, 4);
-                decls[0] = Declaration{ .property = "overflow", .value = "visible" };
-                decls[1] = Declaration{ .property = "display", .value = "block" };
-                decls[2] = Declaration{ .property = "-webkit-box-orient", .value = "horizontal" };
-                decls[3] = Declaration{ .property = "-webkit-line-clamp", .value = "unset" };
+                decls[0] = Declaration{ .property = "-webkit-line-clamp", .value = "unset" };
+                decls[1] = Declaration{ .property = "-webkit-box-orient", .value = "horizontal" };
+                decls[2] = Declaration{ .property = "display", .value = "block" };
+                decls[3] = Declaration{ .property = "overflow", .value = "visible" };
                 return decls;
             } else if (isPositiveInteger(val.value)) {
                 const decls = try alloc.alloc(Declaration, 4);
-                decls[0] = Declaration{ .property = "overflow", .value = "hidden" };
-                decls[1] = Declaration{ .property = "display", .value = "-webkit-box" };
-                decls[2] = Declaration{ .property = "-webkit-box-orient", .value = "vertical" };
-                decls[3] = Declaration{ .property = "-webkit-line-clamp", .value = val.value };
+                decls[0] = Declaration{ .property = "-webkit-line-clamp", .value = val.value };
+                decls[1] = Declaration{ .property = "-webkit-box-orient", .value = "vertical" };
+                decls[2] = Declaration{ .property = "display", .value = "-webkit-box" };
+                decls[3] = Declaration{ .property = "overflow", .value = "hidden" };
                 return decls;
             }
             return null;
