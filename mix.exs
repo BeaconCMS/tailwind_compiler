@@ -19,7 +19,8 @@ defmodule TailwindCompiler.MixProject do
 
   defp deps do
     [
-      {:zigler, "~> 0.15.1", runtime: false}
+      {:zigler, "~> 0.15.1", runtime: false},
+      {:jason, "~> 1.4"}
     ]
   end
 end
