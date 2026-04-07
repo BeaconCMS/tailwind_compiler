@@ -3126,6 +3126,71 @@ def build_extra_class_pool():
     ]
     extra.extend(extra_columns)
 
+    # Logical properties
+    extra_logical = [
+        "mbs-2", "mbs-4", "mbs-6", "mbs-8", "mbs-auto",
+        "mbe-2", "mbe-4", "mbe-6", "mbe-8",
+        "-mbs-2", "-mbs-4", "-mbe-2",
+        "pbs-2", "pbs-4", "pbs-6", "pbs-8",
+        "pbe-2", "pbe-4", "pbe-6", "pbe-8",
+        "mis-2", "mis-4", "mis-auto", "mie-2", "mie-4",
+        "-mis-2", "-mie-4",
+        "inline-full", "inline-auto", "inline-1/2", "inline-1/3",
+        "min-inline-0", "max-inline-lg", "max-inline-xl",
+        "block-full", "block-auto", "block-screen",
+        "min-block-0", "max-block-screen",
+        "sm:mbs-4", "md:pbs-6", "lg:inline-1/2",
+        "hover:mbs-2", "dark:pbe-8",
+    ]
+    extra.extend(extra_logical)
+
+    # Viewport units
+    extra_viewport = [
+        "w-svw", "w-lvw", "w-dvw",
+        "h-svh", "h-lvh", "h-dvh",
+        "min-h-svh", "min-h-dvh", "min-h-lvh",
+        "max-h-svh", "max-h-dvh", "max-h-lvh",
+        "h-lh",
+        "sm:h-svh", "md:h-dvh", "lg:min-h-svh",
+    ]
+    extra.extend(extra_viewport)
+
+    # Mask utilities
+    extra_mask = [
+        "mask-clip-border", "mask-clip-padding", "mask-clip-content",
+        "mask-origin-border", "mask-origin-padding", "mask-origin-content",
+        "mask-mode-alpha", "mask-mode-luminance", "mask-mode-match",
+        "mask-composite-add", "mask-composite-subtract", "mask-composite-intersect", "mask-composite-exclude",
+        "mask-type-alpha", "mask-type-luminance",
+        "mask-repeat", "mask-no-repeat", "mask-repeat-x", "mask-repeat-y",
+        "mask-auto", "mask-cover", "mask-contain",
+        "mask-center", "mask-top", "mask-bottom", "mask-left", "mask-right",
+        "mask-image-[url('/mask.svg')]", "mask-image-[url('/gradient.png')]",
+    ]
+    extra.extend(extra_mask)
+
+    # 3D transforms
+    extra_3d = [
+        "rotate-x-12", "rotate-x-45", "rotate-x-90", "rotate-x-180",
+        "rotate-y-12", "rotate-y-45", "rotate-y-90", "rotate-y-180",
+        "rotate-z-45", "rotate-z-90", "rotate-z-180",
+        "-rotate-x-12", "-rotate-x-45", "-rotate-y-12", "-rotate-y-90",
+        "translate-z-2", "translate-z-4", "translate-z-8", "translate-z-12",
+        "-translate-z-2", "-translate-z-4",
+        "scale-z-50", "scale-z-75", "scale-z-100", "scale-z-125", "scale-z-150",
+        "hover:rotate-x-12", "hover:rotate-y-45",
+        "group-hover:rotate-x-180", "group-hover:translate-z-4",
+        "sm:rotate-x-45", "md:translate-z-8",
+    ]
+    extra.extend(extra_3d)
+
+    # Touch action composition
+    extra_touch = [
+        "touch-pan-x", "touch-pan-y", "touch-pinch-zoom",
+        "touch-pan-left", "touch-pan-right", "touch-pan-up", "touch-pan-down",
+    ]
+    extra.extend(extra_touch)
+
     return extra
 
 
