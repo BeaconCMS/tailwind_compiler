@@ -7,6 +7,7 @@ defmodule TailwindCompiler.MixProject do
       version: "0.1.0",
       elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
+      compilers: Mix.compilers(),
       deps: deps()
     ]
   end
@@ -20,7 +21,7 @@ defmodule TailwindCompiler.MixProject do
   defp deps do
     [
       {:zigler, "~> 0.15.1", runtime: false},
-      {:jason, "~> 1.4"}
+      {:jason, "~> 1.4", runtime: false}
     ]
   end
 end
