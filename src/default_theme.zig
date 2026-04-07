@@ -460,6 +460,7 @@ pub const inset_shadows = [_]ThemeEntry{
 };
 
 pub const drop_shadows = [_]ThemeEntry{
+    .{ .key = "--drop-shadow", .value = "0 1px 2px rgb(0 0 0 / 0.1), 0 1px 1px rgb(0 0 0 / 0.06)" },
     .{ .key = "--drop-shadow-xs", .value = "0 1px 1px rgb(0 0 0 / 0.05)" },
     .{ .key = "--drop-shadow-sm", .value = "0 1px 2px rgb(0 0 0 / 0.15)" },
     .{ .key = "--drop-shadow-md", .value = "0 3px 3px rgb(0 0 0 / 0.12)" },

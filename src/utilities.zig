@@ -548,12 +548,12 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
         .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
     } },
     .{ "transition", &[_]Declaration{
-        .{ .property = "transition-property", .value = "color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,translate,scale,rotate,filter,-webkit-backdrop-filter,backdrop-filter" },
+        .{ .property = "transition-property", .value = "color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to,opacity,box-shadow,transform,translate,scale,rotate,filter,-webkit-backdrop-filter,backdrop-filter,display,content-visibility,overlay,pointer-events" },
         .{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" },
         .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
     } },
     .{ "transition-colors", &[_]Declaration{
-        .{ .property = "transition-property", .value = "color,background-color,border-color,outline-color,text-decoration-color,fill,stroke" },
+        .{ .property = "transition-property", .value = "color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to" },
         .{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" },
         .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
     } },
@@ -598,7 +598,6 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
         .{ .property = "padding", .value = "0" },
         .{ .property = "margin", .value = "-1px" },
         .{ .property = "overflow", .value = "hidden" },
-        .{ .property = "clip", .value = "rect(0,0,0,0)" },
         .{ .property = "white-space", .value = "nowrap" },
         .{ .property = "border-width", .value = "0" },
         .{ .property = "clip-path", .value = "inset(50%)" },
@@ -610,7 +609,6 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
         .{ .property = "padding", .value = "0" },
         .{ .property = "margin", .value = "0" },
         .{ .property = "overflow", .value = "visible" },
-        .{ .property = "clip", .value = "auto" },
         .{ .property = "white-space", .value = "normal" },
         .{ .property = "clip-path", .value = "none" },
     } },
@@ -625,9 +623,9 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
 
     // ─── Scroll Snap Type ───
     .{ "snap-none", &[_]Declaration{.{ .property = "scroll-snap-type", .value = "none" }} },
-    .{ "snap-x", &[_]Declaration{.{ .property = "scroll-snap-type", .value = "x var(--tw-scroll-snap-strictness,proximity)" }} },
-    .{ "snap-y", &[_]Declaration{.{ .property = "scroll-snap-type", .value = "y var(--tw-scroll-snap-strictness,proximity)" }} },
-    .{ "snap-both", &[_]Declaration{.{ .property = "scroll-snap-type", .value = "both var(--tw-scroll-snap-strictness,proximity)" }} },
+    .{ "snap-x", &[_]Declaration{.{ .property = "scroll-snap-type", .value = "x var(--tw-scroll-snap-strictness)" }} },
+    .{ "snap-y", &[_]Declaration{.{ .property = "scroll-snap-type", .value = "y var(--tw-scroll-snap-strictness)" }} },
+    .{ "snap-both", &[_]Declaration{.{ .property = "scroll-snap-type", .value = "both var(--tw-scroll-snap-strictness)" }} },
     .{ "snap-mandatory", &[_]Declaration{.{ .property = "--tw-scroll-snap-strictness", .value = "mandatory" }} },
     .{ "snap-proximity", &[_]Declaration{.{ .property = "--tw-scroll-snap-strictness", .value = "proximity" }} },
 
@@ -706,7 +704,7 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "rotate-none", &[_]Declaration{.{ .property = "rotate", .value = "none" }} },
     .{ "transform-none", &[_]Declaration{.{ .property = "transform", .value = "none" }} },
     .{ "transform-cpu", &[_]Declaration{.{ .property = "will-change", .value = "auto" }} },
-    .{ "transform-gpu", &[_]Declaration{.{ .property = "will-change", .value = "transform" }} },
+    .{ "transform-gpu", &[_]Declaration{.{ .property = "transform", .value = "translateZ(0) var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,)" }} },
     .{ "transform-flat", &[_]Declaration{.{ .property = "transform-style", .value = "flat" }} },
     .{ "transform-3d", &[_]Declaration{.{ .property = "transform-style", .value = "preserve-3d" }} },
     .{ "backface-hidden", &[_]Declaration{.{ .property = "backface-visibility", .value = "hidden" }} },
@@ -722,7 +720,10 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
 
     // ─── Shadow ───
     .{ "shadow-initial", &[_]Declaration{.{ .property = "box-shadow", .value = "var(--tw-shadow)" }} },
-    .{ "shadow-inner", &[_]Declaration{.{ .property = "box-shadow", .value = "inset 0 2px 4px 0 rgb(0 0 0 / 0.05)" }} },
+    .{ "shadow-inner", &[_]Declaration{
+        .{ .property = "--tw-shadow", .value = "inset 0 2px 4px 0 var(--tw-shadow-color,#0000000d)" },
+        .{ .property = "box-shadow", .value = "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)" },
+    } },
     .{ "inset-shadow-none", &[_]Declaration{.{ .property = "box-shadow", .value = "0 0 #0000" }} },
     .{ "inset-shadow-initial", &[_]Declaration{.{ .property = "box-shadow", .value = "var(--tw-inset-shadow)" }} },
     .{ "text-shadow-none", &[_]Declaration{.{ .property = "text-shadow", .value = "none" }} },
@@ -1040,7 +1041,7 @@ pub const functional_utility_set = std.StaticStringMap(void).initComptime(.{
 /// Return any @property declarations needed for a given utility root.
 pub fn getRequiredProperties(root: []const u8) []const AtProperty {
     // shadow utilities
-    if (std.mem.eql(u8, root, "shadow")) {
+    if (std.mem.eql(u8, root, "shadow") or std.mem.eql(u8, root, "shadow-inner")) {
         return &[_]AtProperty{
             .{ .name = "--tw-shadow", .syntax = "*", .inherits = false, .initial_value = "0 0 #0000" },
             .{ .name = "--tw-shadow-color", .syntax = "*", .inherits = false, .initial_value = null },
@@ -1094,6 +1095,7 @@ pub fn getRequiredProperties(root: []const u8) []const AtProperty {
         return &[_]AtProperty{
             .{ .name = "--tw-ring-offset-width", .syntax = "*", .inherits = false, .initial_value = "0px" },
             .{ .name = "--tw-ring-offset-color", .syntax = "*", .inherits = false, .initial_value = "#fff" },
+            .{ .name = "--tw-ring-offset-shadow", .syntax = "*", .inherits = false, .initial_value = "0 0 #0000" },
         };
     }
     // text-shadow
@@ -1166,6 +1168,21 @@ pub fn getRequiredProperties(root: []const u8) []const AtProperty {
             .{ .name = "--tw-numeric-figure", .syntax = "*", .inherits = false, .initial_value = null },
             .{ .name = "--tw-numeric-spacing", .syntax = "*", .inherits = false, .initial_value = null },
             .{ .name = "--tw-numeric-fraction", .syntax = "*", .inherits = false, .initial_value = null },
+        };
+    }
+    // outline (functional: width needs --tw-outline-style)
+    if (std.mem.eql(u8, root, "outline")) {
+        return &[_]AtProperty{
+            .{ .name = "--tw-outline-style", .syntax = "*", .inherits = false, .initial_value = "solid" },
+        };
+    }
+    // scroll snap strictness
+    if (std.mem.eql(u8, root, "snap-x") or
+        std.mem.eql(u8, root, "snap-y") or
+        std.mem.eql(u8, root, "snap-both"))
+    {
+        return &[_]AtProperty{
+            .{ .name = "--tw-scroll-snap-strictness", .syntax = "*", .inherits = false, .initial_value = "proximity" },
         };
     }
     return &[_]AtProperty{};
@@ -1779,14 +1796,18 @@ fn resolveSpacing(
 
     switch (val.kind) {
         .arbitrary => {
+            // Strip units from zero values: 0px, 0rem, 0em -> 0
+            const arb_val = if (std.mem.eql(u8, val.value, "0px") or
+                std.mem.eql(u8, val.value, "0rem") or
+                std.mem.eql(u8, val.value, "0em")) "0" else val.value;
             if (is_neg) {
-                if (std.mem.startsWith(u8, val.value, "var(")) {
-                    css_value = try std.fmt.allocPrint(alloc, "calc({s} * -1)", .{val.value});
+                if (std.mem.startsWith(u8, arb_val, "var(")) {
+                    css_value = try std.fmt.allocPrint(alloc, "calc({s} * -1)", .{arb_val});
                 } else {
-                    css_value = try std.fmt.allocPrint(alloc, "-{s}", .{val.value});
+                    css_value = try std.fmt.allocPrint(alloc, "-{s}", .{arb_val});
                 }
             } else {
-                css_value = val.value;
+                css_value = arb_val;
             }
         },
         .named => {
@@ -3139,7 +3160,7 @@ fn resolveLineClamp(alloc: Allocator, value: ?Value) !?[]const Declaration {
                 decls[0] = Declaration{ .property = "overflow", .value = "visible" };
                 decls[1] = Declaration{ .property = "display", .value = "block" };
                 decls[2] = Declaration{ .property = "-webkit-box-orient", .value = "horizontal" };
-                decls[3] = Declaration{ .property = "-webkit-line-clamp", .value = "none" };
+                decls[3] = Declaration{ .property = "-webkit-line-clamp", .value = "unset" };
                 return decls;
             } else if (isPositiveInteger(val.value)) {
                 const decls = try alloc.alloc(Declaration, 4);
@@ -3289,12 +3310,33 @@ fn resolveFraction(alloc: Allocator, fraction: []const u8, negative: bool) ![]co
     var percentage = (numerator / denominator) * 100.0;
     if (negative) percentage = -percentage;
 
-    const rounded = @round(percentage * 10000.0) / 10000.0;
-    const int_pct = @as(i64, @intFromFloat(@round(rounded)));
-    if (@as(f64, @floatFromInt(int_pct)) == rounded) {
+    const int_pct = @as(i64, @intFromFloat(@round(percentage)));
+    if (@as(f64, @floatFromInt(int_pct)) == percentage) {
         return std.fmt.allocPrint(alloc, "{d}%", .{int_pct});
     }
-    return std.fmt.allocPrint(alloc, "{d:.4}%", .{rounded});
+    // Format with 6 significant digits (matching TW behavior)
+    // 33.3333%, 8.33333%, 66.6667% — count digits before decimal to determine precision
+    const abs_pct = if (percentage < 0) -percentage else percentage;
+    const digits_before: u32 = if (abs_pct >= 100) 3 else if (abs_pct >= 10) 2 else 1;
+    const decimal_places = 6 - digits_before;
+    const formatted = switch (decimal_places) {
+        3 => try std.fmt.allocPrint(alloc, "{d:.3}%", .{percentage}),
+        4 => try std.fmt.allocPrint(alloc, "{d:.4}%", .{percentage}),
+        5 => try std.fmt.allocPrint(alloc, "{d:.5}%", .{percentage}),
+        else => try std.fmt.allocPrint(alloc, "{d:.4}%", .{percentage}),
+    };
+    // Find the '%' and strip trailing zeros before it
+    const pct_idx = std.mem.indexOfScalar(u8, formatted, '%') orelse return formatted;
+    var end = pct_idx;
+    while (end > 0 and formatted[end - 1] == '0') {
+        end -= 1;
+    }
+    // Don't strip the decimal point itself if it would leave a bare dot
+    if (end > 0 and formatted[end - 1] == '.') {
+        end -= 1;
+    }
+    const trimmed = try std.fmt.allocPrint(alloc, "{s}%", .{formatted[0..end]});
+    return trimmed;
 }
 
 fn resolveFractionCalc(alloc: Allocator, fraction: []const u8, negative: bool) ![]const u8 {
@@ -3729,8 +3771,9 @@ fn resolveOutline(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *
     switch (val.kind) {
         .arbitrary => {
             if (looksLikeBorderWidth(val.value)) {
-                const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "outline-width", .value = val.value };
+                const decls = try alloc.alloc(Declaration, 2);
+                decls[0] = Declaration{ .property = "outline-style", .value = "var(--tw-outline-style)" };
+                decls[1] = Declaration{ .property = "outline-width", .value = val.value };
                 return decls;
             }
             // Otherwise treat as color
@@ -3746,8 +3789,9 @@ fn resolveOutline(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *
             // Check if it's a bare number (outline width)
             if (isPositiveInteger(val.value)) {
                 const css_value = try std.fmt.allocPrint(alloc, "{s}px", .{val.value});
-                const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "outline-width", .value = css_value };
+                const decls = try alloc.alloc(Declaration, 2);
+                decls[0] = Declaration{ .property = "outline-style", .value = "var(--tw-outline-style)" };
+                decls[1] = Declaration{ .property = "outline-width", .value = css_value };
                 return decls;
             }
 
@@ -3868,8 +3912,9 @@ fn resolveRingOffset(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme
             }
         },
     }
-    const decls = try alloc.alloc(Declaration, 1);
+    const decls = try alloc.alloc(Declaration, 2);
     decls[0] = Declaration{ .property = "--tw-ring-offset-width", .value = css_value };
+    decls[1] = Declaration{ .property = "--tw-ring-offset-shadow", .value = "var(--tw-ring-inset,) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color)" };
     return decls;
 }
 
@@ -3972,14 +4017,18 @@ fn resolveFontWeight(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const D
 
 fn resolveDropShadow(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Declaration {
     const val = value orelse {
-        // bare drop-shadow = default: uses theme var with color wrapping
+        // bare drop-shadow = default: resolve from theme and convert colors
         if (theme.get("--drop-shadow")) |raw_val| {
             theme.markUsed("--drop-shadow");
-            const converted = try convertDropShadowColors(alloc, raw_val);
-            const drop_shadow_size = try std.fmt.allocPrint(alloc, "drop-shadow({s})", .{converted});
+            // --tw-drop-shadow-size: with var(--tw-drop-shadow-color,...) wrapping
+            const color_wrapped = try convertDropShadowColors(alloc, raw_val);
+            const drop_shadow_size = try wrapDropShadowParts(alloc, color_wrapped);
+            // --tw-drop-shadow: with raw hex colors (no var wrapping)
+            const hex_converted = try convertRgbToHexOnly(alloc, raw_val);
+            const drop_shadow_value = try wrapDropShadowParts(alloc, hex_converted);
             const decls = try alloc.alloc(Declaration, 3);
-            decls[0] = Declaration{ .property = "--tw-drop-shadow", .value = "drop-shadow(var(--drop-shadow))" };
-            decls[1] = Declaration{ .property = "--tw-drop-shadow-size", .value = drop_shadow_size };
+            decls[0] = Declaration{ .property = "--tw-drop-shadow-size", .value = drop_shadow_size };
+            decls[1] = Declaration{ .property = "--tw-drop-shadow", .value = drop_shadow_value };
             decls[2] = Declaration{ .property = "filter", .value = COMPOSABLE_FILTER };
             return decls;
         }
@@ -4186,6 +4235,40 @@ fn convertShadowColors(alloc: Allocator, raw: []const u8) ![]const u8 {
     return result.toOwnedSlice(alloc);
 }
 
+/// Split a comma-separated drop-shadow value and wrap each part in drop-shadow().
+/// E.g. "0 1px 2px #0000001a, 0 1px 1px #0000000f" -> "drop-shadow(0 1px 2px #0000001a) drop-shadow(0 1px 1px #0000000f)"
+fn wrapDropShadowParts(alloc: Allocator, converted: []const u8) ![]const u8 {
+    var result = try std.ArrayList(u8).initCapacity(alloc, converted.len + 30);
+    // Split on commas, but only top-level (not inside parens)
+    var start: usize = 0;
+    var depth: usize = 0;
+    var first = true;
+    for (converted, 0..) |ch, idx| {
+        if (ch == '(') depth += 1;
+        if (ch == ')') depth -= 1;
+        if (ch == ',' and depth == 0) {
+            const part = std.mem.trim(u8, converted[start..idx], " ");
+            if (part.len > 0) {
+                if (!first) try result.append(alloc, ' ');
+                try result.appendSlice(alloc, "drop-shadow(");
+                try result.appendSlice(alloc, part);
+                try result.append(alloc, ')');
+                first = false;
+            }
+            start = idx + 1;
+        }
+    }
+    // Last part
+    const part = std.mem.trim(u8, converted[start..], " ");
+    if (part.len > 0) {
+        if (!first) try result.append(alloc, ' ');
+        try result.appendSlice(alloc, "drop-shadow(");
+        try result.appendSlice(alloc, part);
+        try result.append(alloc, ')');
+    }
+    return result.toOwnedSlice(alloc);
+}
+
 /// Convert rgb() colors in a drop-shadow value to hex8 format and wrap in var(--tw-drop-shadow-color,...).
 fn convertDropShadowColors(alloc: Allocator, raw: []const u8) ![]const u8 {
     var result = try std.ArrayList(u8).initCapacity(alloc, raw.len);
@@ -4211,6 +4294,30 @@ fn convertDropShadowColors(alloc: Allocator, raw: []const u8) ![]const u8 {
             try result.appendSlice(alloc, "var(--tw-drop-shadow-color,");
             try result.appendSlice(alloc, hex);
             try result.append(alloc, ')');
+            i = j;
+        } else {
+            try result.append(alloc, raw[i]);
+            i += 1;
+        }
+    }
+    return result.toOwnedSlice(alloc);
+}
+
+/// Convert rgb() colors to hex without var() wrapping (for --tw-drop-shadow).
+fn convertRgbToHexOnly(alloc: Allocator, raw: []const u8) ![]const u8 {
+    var result = try std.ArrayList(u8).initCapacity(alloc, raw.len);
+    var i: usize = 0;
+    while (i < raw.len) {
+        if (i + 4 <= raw.len and std.mem.eql(u8, raw[i .. i + 4], "rgb(")) {
+            var depth: usize = 0;
+            var j = i;
+            while (j < raw.len) {
+                if (raw[j] == '(') depth += 1;
+                if (raw[j] == ')') { depth -= 1; if (depth == 0) { j += 1; break; } }
+                j += 1;
+            }
+            const hex = try rgbToHex8(alloc, raw[i..j]);
+            try result.appendSlice(alloc, hex);
             i = j;
         } else {
             try result.append(alloc, raw[i]);

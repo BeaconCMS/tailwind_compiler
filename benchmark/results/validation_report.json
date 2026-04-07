@@ -2,23 +2,13 @@
   "summary": {
     "total": 2980,
     "both_skip": 52,
-    "match": 2565,
-    "different": 363,
+    "match": 2586,
+    "different": 342,
     "zig_only": 0,
     "tw_only": 0
   },
   "tw_only": [],
   "different": [
-    {
-      "candidate": "active:shadow-inner",
-      "zig": {
-        "box-shadow": "inset 0 2px 4px 0 rgb(0 0 0 / 0.05)"
-      },
-      "tw": {
-        "--tw-shadow": "inset 0 2px 4px 0 var(--tw-shadow-color,#0000000d)",
-        "box-shadow": "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)"
-      }
-    },
     {
       "candidate": "active:translate-y-0.5",
       "zig": {
@@ -455,6 +445,15 @@
     },
     {
       "candidate": "bg-green-50",
+      "zig": {
+        "background-color": "color-mix(in oklab,var(--color-green-500) 75%,transparent)"
+      },
+      "tw": {
+        "background-color": "color-mix(in oklab, var(--color-green-500) 75%, transparent)"
+      }
+    },
+    {
+      "candidate": "bg-green-500",
       "zig": {
         "background-color": "color-mix(in oklab,var(--color-green-500) 75%,transparent)"
       },
