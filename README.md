@@ -10,8 +10,9 @@ Benchmarked against the official Tailwind CLI v4.2.2 — 10 rounds, each with 10
 
 | Metric | Zig Compiler | Tailwind CLI v4 | Difference |
 |--------|-------------|-----------------|------------|
-| Avg compile time | **1.7 ms** | 168 ms | **99x faster** |
-| Peak memory | **4.5 MB** | 130 MB | **29x less** |
+| Avg compile time | **1.48 ms** | 171 ms | **116x faster** |
+| Range | 1.43 – 1.58 ms | 160 – 200 ms | |
+| Peak memory | **4.4 MB** | 131 MB | **30x less** |
 
 Zero output differences — every candidate produces byte-identical CSS to the official Tailwind CLI.
 
@@ -41,7 +42,7 @@ TailwindCompiler.compile(["p-4"], theme: ~s({"spacing":"0.5rem"}))
 css = TailwindCompiler.compile!(["flex", "p-4"])
 ```
 
-The NIF runs on a dirty CPU scheduler. For a typical site (~3,000 candidates), expect sub-2ms latency.
+The NIF runs on a dirty CPU scheduler. For a typical site (~3,000 candidates), expect ~1.5ms latency.
 
 ## Zig Usage
 
