@@ -150,7 +150,7 @@ pub fn main() !void {
         "max-lg:hidden",
     };
 
-    const css = try tailwind.compile(gpa, &candidates, null, false, null);
+    const css = try tailwind.compile(gpa, &candidates, null, false, null, null);
     defer gpa.free(css);
 
     var stdout_buffer: [131072]u8 = undefined;

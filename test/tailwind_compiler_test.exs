@@ -84,6 +84,47 @@ defmodule TailwindCompilerTest do
       {:ok, css} = TailwindCompiler.compile(["flex"], preflight: false)
       assert css =~ ".flex{display:flex}"
     end
+
+    test "accepts custom utilities as map" do
+      {:ok, css} =
+        TailwindCompiler.compile(
+          ["flex", "btn-primary", "link-default"],
+          preflight: false,
+          custom_utilities: %{
+            "btn-primary" => "background:blue;color:white;padding:0.5rem 1rem",
+            "link-default" => "color:inherit;text-decoration:underline"
+          }
+        )
+
+      assert css =~ ".flex{display:flex}"
+      assert css =~ ".btn-primary{background:blue;color:white;padding:0.5rem 1rem}"
+      assert css =~ ".link-default{color:inherit;text-decoration:underline}"
+    end
+
+    test "custom utilities support variants" do
+      {:ok, css} =
+        TailwindCompiler.compile(
+          ["hover:btn-primary"],
+          preflight: false,
+          custom_utilities: %{"btn-primary" => "background:blue;color:white"}
+        )
+
+      assert css =~ "btn-primary"
+      assert css =~ "background:blue"
+      assert css =~ "@media (hover:hover)"
+    end
+
+    test "custom utilities get selector escaping" do
+      {:ok, css} =
+        TailwindCompiler.compile(
+          ["my.class"],
+          preflight: false,
+          custom_utilities: %{"my.class" => "color:red"}
+        )
+
+      assert css =~ "my\\.class"
+      assert css =~ "color:red"
+    end
   end
 
   describe "compile!/2" do

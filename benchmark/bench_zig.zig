@@ -42,7 +42,7 @@ pub fn main() !void {
     // Compile with timing
     var timer = std.time.Timer.start() catch unreachable;
 
-    const css = try tailwind.compile(gpa, lines.items, null, true, null);
+    const css = try tailwind.compile(gpa, lines.items, null, true, null, null);
     defer gpa.free(css);
 
     const elapsed_ns = timer.read();

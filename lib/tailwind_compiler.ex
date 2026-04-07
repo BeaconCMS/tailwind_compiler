@@ -21,6 +21,9 @@ defmodule TailwindCompiler do
     * `:preflight` - whether to include the base CSS reset (default: `true`)
     * `:custom_css` - raw CSS string to append after `@layer utilities` (optional).
       Use this for plugin CSS, custom components, or user stylesheets.
+    * `:custom_utilities` - map of `%{"class-name" => "css-declarations"}` (optional).
+      These get full selector escaping, variant support, and deduplication like built-in
+      utilities. Example: `%{"btn-primary" => "background:blue;color:white"}`
 
   ## Examples
 
@@ -42,8 +45,16 @@ defmodule TailwindCompiler do
     theme_json = Keyword.get(opts, :theme)
     preflight = Keyword.get(opts, :preflight, true)
     custom_css = Keyword.get(opts, :custom_css)
+    custom_utilities = Keyword.get(opts, :custom_utilities)
 
-    case TailwindCompiler.NIF.compile(candidates, theme_json || "", preflight, custom_css || "") do
+    custom_utilities_json =
+      case custom_utilities do
+        nil -> ""
+        map when is_map(map) -> Jason.encode!(map)
+        str when is_binary(str) -> str
+      end
+
+    case TailwindCompiler.NIF.compile(candidates, theme_json || "", preflight, custom_css || "", custom_utilities_json) do
       result when is_binary(result) -> {:ok, result}
       error -> {:error, error}
     end
