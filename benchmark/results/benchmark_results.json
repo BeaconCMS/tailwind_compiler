@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "date": "2026-04-07T20:38:07Z",
+    "date": "2026-04-07T21:01:13Z",
     "platform": "Darwin arm64",
     "iterations": 10,
     "html_pages": 120,
@@ -10,36 +10,36 @@
     "cpu": "Apple M4"
   },
   "zig_compiler": {
-    "times_seconds": [0.003406,0.002555,0.002010,0.001745,0.001629,0.001602,0.001599,0.001671,0.001615,0.001605],
-    "avg_seconds": 0.001944,
-    "min_seconds": 0.001599,
-    "max_seconds": 0.003406,
-    "median_seconds": 0.001629,
-    "avg_ms": 1.944,
-    "min_ms": 1.599,
-    "max_ms": 3.406,
-    "median_ms": 1.629,
-    "peak_rss_bytes": 4751360,
-    "peak_rss_mb": 4.53,
-    "output_size_bytes": 241814
+    "times_seconds": [0.005131,0.003022,0.002344,0.001950,0.001760,0.001759,0.001677,0.001715,0.001717,0.001701],
+    "avg_seconds": 0.002278,
+    "min_seconds": 0.001677,
+    "max_seconds": 0.005131,
+    "median_seconds": 0.001759,
+    "avg_ms": 2.278,
+    "min_ms": 1.677,
+    "max_ms": 5.131,
+    "median_ms": 1.759,
+    "peak_rss_bytes": 4767744,
+    "peak_rss_mb": 4.54,
+    "output_size_bytes": 243299
   },
   "tailwind_cli": {
-    "times_seconds": [0.160000,0.160000,0.160000,0.160000,0.160000,0.160000,0.160000,0.160000,0.160000,0.170000],
-    "avg_seconds": 0.161000,
+    "times_seconds": [0.170000,0.230000,0.160000,0.170000,0.170000,0.170000,0.170000,0.170000,0.170000,0.170000],
+    "avg_seconds": 0.175000,
     "min_seconds": 0.160000,
-    "max_seconds": 0.170000,
-    "median_seconds": 0.160000,
-    "avg_ms": 161.000,
+    "max_seconds": 0.230000,
+    "median_seconds": 0.170000,
+    "avg_ms": 175.000,
     "min_ms": 160,
-    "max_ms": 170,
-    "median_ms": 160,
-    "peak_rss_bytes": 138674176,
-    "peak_rss_mb": 132.25,
+    "max_ms": 230,
+    "median_ms": 170,
+    "peak_rss_bytes": 137871360,
+    "peak_rss_mb": 131.48,
     "output_size_bytes": 262984
   },
   "comparison": {
-    "speedup_factor": 82.8,
-    "memory_ratio": 29.1,
-    "zig_output_smaller_by_bytes": 21170
+    "speedup_factor": 76.8,
+    "memory_ratio": 28.9,
+    "zig_output_smaller_by_bytes": 19685
   }
 }

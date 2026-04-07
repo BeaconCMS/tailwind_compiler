@@ -426,7 +426,7 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "bg-clip-border", &[_]Declaration{.{ .property = "background-clip", .value = "border-box" }} },
     .{ "bg-clip-padding", &[_]Declaration{.{ .property = "background-clip", .value = "padding-box" }} },
     .{ "bg-clip-content", &[_]Declaration{.{ .property = "background-clip", .value = "content-box" }} },
-    .{ "bg-clip-text", &[_]Declaration{.{ .property = "background-clip", .value = "text" }} },
+    .{ "bg-clip-text", &[_]Declaration{ .{ .property = "-webkit-background-clip", .value = "text" }, .{ .property = "background-clip", .value = "text" } } },
 
     // ─── Background Origin ───
     .{ "bg-origin-border", &[_]Declaration{.{ .property = "background-origin", .value = "border-box" }} },
@@ -568,7 +568,7 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
         .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
     } },
     .{ "transition-transform", &[_]Declaration{
-        .{ .property = "transition-property", .value = "transform, translate, scale, rotate" },
+        .{ .property = "transition-property", .value = "transform,translate,scale,rotate" },
         .{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" },
         .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
     } },
@@ -601,6 +601,7 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
         .{ .property = "clip", .value = "rect(0,0,0,0)" },
         .{ .property = "white-space", .value = "nowrap" },
         .{ .property = "border-width", .value = "0" },
+        .{ .property = "clip-path", .value = "inset(50%)" },
     } },
     .{ "not-sr-only", &[_]Declaration{
         .{ .property = "position", .value = "static" },
@@ -611,6 +612,7 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
         .{ .property = "overflow", .value = "visible" },
         .{ .property = "clip", .value = "auto" },
         .{ .property = "white-space", .value = "normal" },
+        .{ .property = "clip-path", .value = "none" },
     } },
 
     // ─── Field Sizing ───
@@ -623,9 +625,9 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
 
     // ─── Scroll Snap Type ───
     .{ "snap-none", &[_]Declaration{.{ .property = "scroll-snap-type", .value = "none" }} },
-    .{ "snap-x", &[_]Declaration{.{ .property = "scroll-snap-type", .value = "x var(--tw-scroll-snap-strictness, proximity)" }} },
-    .{ "snap-y", &[_]Declaration{.{ .property = "scroll-snap-type", .value = "y var(--tw-scroll-snap-strictness, proximity)" }} },
-    .{ "snap-both", &[_]Declaration{.{ .property = "scroll-snap-type", .value = "both var(--tw-scroll-snap-strictness, proximity)" }} },
+    .{ "snap-x", &[_]Declaration{.{ .property = "scroll-snap-type", .value = "x var(--tw-scroll-snap-strictness,proximity)" }} },
+    .{ "snap-y", &[_]Declaration{.{ .property = "scroll-snap-type", .value = "y var(--tw-scroll-snap-strictness,proximity)" }} },
+    .{ "snap-both", &[_]Declaration{.{ .property = "scroll-snap-type", .value = "both var(--tw-scroll-snap-strictness,proximity)" }} },
     .{ "snap-mandatory", &[_]Declaration{.{ .property = "--tw-scroll-snap-strictness", .value = "mandatory" }} },
     .{ "snap-proximity", &[_]Declaration{.{ .property = "--tw-scroll-snap-strictness", .value = "proximity" }} },
 
@@ -1815,9 +1817,9 @@ fn resolveSpacing(
                 // Bare number: multiply by spacing
                 theme.markUsed("--spacing");
                 if (is_neg) {
-                    css_value = try std.fmt.allocPrint(alloc, "calc(var(--spacing) * -{s})", .{val.value});
+                    css_value = try std.fmt.allocPrint(alloc, "calc(var(--spacing) * -{s})", .{stripLeadingZero(val.value)});
                 } else {
-                    css_value = try std.fmt.allocPrint(alloc, "calc(var(--spacing) * {s})", .{val.value});
+                    css_value = try std.fmt.allocPrint(alloc, "calc(var(--spacing) * {s})", .{stripLeadingZero(val.value)});
                 }
             } else if (theme.resolve(val.value, "--spacing") != null) {
                 // Named spacing value from theme
@@ -2104,7 +2106,7 @@ fn resolveDuration(alloc: Allocator, value: ?Value) !?[]const Declaration {
 
     switch (val.kind) {
         .arbitrary => {
-            css_value = val.value;
+            css_value = try normalizeDurationValue(alloc, val.value);
         },
         .named => {
             if (isPositiveInteger(val.value)) {
@@ -2129,7 +2131,7 @@ fn resolveDelay(alloc: Allocator, value: ?Value) !?[]const Declaration {
 
     switch (val.kind) {
         .arbitrary => {
-            css_value = val.value;
+            css_value = try normalizeDurationValue(alloc, val.value);
         },
         .named => {
             if (isPositiveInteger(val.value)) {
@@ -2314,7 +2316,7 @@ fn resolveLeading(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decl
             } else if (isValidSpacingMultiplier(val.value)) {
                 // Bare number = spacing multiplier
                 theme.markUsed("--spacing");
-                css_value = try std.fmt.allocPrint(alloc, "calc(var(--spacing) * {s})", .{val.value});
+                css_value = try std.fmt.allocPrint(alloc, "calc(var(--spacing) * {s})", .{stripLeadingZero(val.value)});
             } else {
                 return null;
             }
@@ -2382,12 +2384,13 @@ fn resolveBorder(alloc: Allocator, root: []const u8, value: ?Value, modifier: ?M
                 return decls;
             }
             // Otherwise treat as color
+            const color_property = borderColorProperty(root);
             var css_value: []const u8 = val.value;
             if (modifier) |mod| {
                 css_value = try applyColorOpacity(alloc, css_value, mod);
             }
             const decls = try alloc.alloc(Declaration, 1);
-            decls[0] = Declaration{ .property = "border-color", .value = css_value };
+            decls[0] = Declaration{ .property = color_property, .value = css_value };
             return decls;
         },
         .named => {
@@ -2403,18 +2406,20 @@ fn resolveBorder(alloc: Allocator, root: []const u8, value: ?Value, modifier: ?M
                 return decls;
             }
 
+            const color_property = borderColorProperty(root);
+
             // Try as color
             if (std.mem.eql(u8, val.value, "inherit")) {
                 const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "border-color", .value = "inherit" };
+                decls[0] = Declaration{ .property = color_property, .value = "inherit" };
                 return decls;
             } else if (std.mem.eql(u8, val.value, "transparent")) {
                 const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "border-color", .value = "#0000" };
+                decls[0] = Declaration{ .property = color_property, .value = "#0000" };
                 return decls;
             } else if (std.mem.eql(u8, val.value, "current")) {
                 const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "border-color", .value = "currentColor" };
+                decls[0] = Declaration{ .property = color_property, .value = "currentColor" };
                 return decls;
             } else if (theme.resolve(val.value, "--color") != null) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--color-{s}", .{val.value}));
@@ -2423,7 +2428,7 @@ fn resolveBorder(alloc: Allocator, root: []const u8, value: ?Value, modifier: ?M
                     css_value = try applyColorOpacity(alloc, css_value, mod);
                 }
                 const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "border-color", .value = css_value };
+                decls[0] = Declaration{ .property = color_property, .value = css_value };
                 return decls;
             }
 
@@ -2445,6 +2450,21 @@ fn borderWidthProperty(root: []const u8) []const u8 {
         .{ "border-l", "border-left-width" },
     });
     return map.get(root) orelse "border-width";
+}
+
+fn borderColorProperty(root: []const u8) []const u8 {
+    const map = std.StaticStringMap([]const u8).initComptime(.{
+        .{ "border", "border-color" },
+        .{ "border-x", "border-inline-color" },
+        .{ "border-y", "border-block-color" },
+        .{ "border-s", "border-inline-start-color" },
+        .{ "border-e", "border-inline-end-color" },
+        .{ "border-t", "border-top-color" },
+        .{ "border-r", "border-right-color" },
+        .{ "border-b", "border-bottom-color" },
+        .{ "border-l", "border-left-color" },
+    });
+    return map.get(root) orelse "border-color";
 }
 
 fn borderStyleProperty(root: []const u8) []const u8 {
@@ -2487,7 +2507,12 @@ fn resolveAspect(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decla
 
     switch (val.kind) {
         .arbitrary => {
-            css_value = val.value;
+            // Simplify "1/1" to "1"
+            if (std.mem.eql(u8, val.value, "1/1")) {
+                css_value = "1";
+            } else {
+                css_value = val.value;
+            }
         },
         .named => {
             if (std.mem.eql(u8, val.value, "auto")) {
@@ -2754,7 +2779,7 @@ fn resolveTranslate(alloc: Allocator, value: ?Value, comptime axis: []const u8, 
             } else if (std.mem.eql(u8, val.value, "px")) {
                 inner = if (negative) "-1px" else "1px";
             } else if (val.fraction) |frac| {
-                inner = try resolveFraction(alloc, frac, negative);
+                inner = try resolveFractionCalc(alloc, frac, negative);
             } else if (isValidSpacingMultiplier(val.value)) {
                 theme.markUsed("--spacing");
                 if (negative) {
@@ -2836,8 +2861,8 @@ fn resolveShadow(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decla
                 const var_name = try std.fmt.allocPrint(alloc, "--shadow-{s}", .{val.value});
                 theme.markUsed(var_name);
                 if (theme.get(var_name)) |raw_val| {
-                    // Use raw theme value directly
-                    shadow_value = raw_val;
+                    // Convert rgb() colors to hex8 and wrap in var(--tw-shadow-color,...)
+                    shadow_value = try convertShadowColors(alloc, raw_val);
                 } else {
                     shadow_value = try std.fmt.allocPrint(alloc, "var({s})", .{var_name});
                 }
@@ -2972,7 +2997,12 @@ fn resolveFilterPercent(alloc: Allocator, value: ?Value, comptime is_backdrop: b
 
     switch (val.kind) {
         .arbitrary => {
-            css_value = try std.fmt.allocPrint(alloc, "{s}({s})", .{ fn_name, val.value });
+            // Strip leading zero from decimal values: 0.8 -> .8
+            const inner = if (std.mem.startsWith(u8, val.value, "0."))
+                val.value[1..]
+            else
+                val.value;
+            css_value = try std.fmt.allocPrint(alloc, "{s}({s})", .{ fn_name, inner });
         },
         .named => {
             if (isPositiveInteger(val.value)) {
@@ -3220,6 +3250,14 @@ fn isPositiveInteger(s: []const u8) bool {
     return true;
 }
 
+/// Strip leading zero from decimal numbers: "0.5" -> ".5", "1.5" -> "1.5", "4" -> "4"
+fn stripLeadingZero(s: []const u8) []const u8 {
+    if (s.len >= 2 and s[0] == '0' and s[1] == '.') {
+        return s[1..]; // ".5" instead of "0.5"
+    }
+    return s;
+}
+
 fn isValidSpacingMultiplier(s: []const u8) bool {
     // Must be a valid number that is a multiple of 0.25
     // Accept integers and decimals like 0.5, 1.5, 2.5
@@ -3239,48 +3277,37 @@ fn isValidSpacingMultiplier(s: []const u8) bool {
 }
 
 fn resolveFraction(alloc: Allocator, fraction: []const u8, negative: bool) ![]const u8 {
-    // Parse "1/2" -> 50%
+    // Parse "1/2" -> "50%" for sizing contexts (w-1/2, h-1/3, etc.)
     const slash_idx = std.mem.indexOfScalar(u8, fraction, '/') orelse return error.OutOfMemory;
     const numerator_str = fraction[0..slash_idx];
     const denominator_str = fraction[slash_idx + 1 ..];
 
     const numerator = std.fmt.parseFloat(f64, numerator_str) catch return error.OutOfMemory;
     const denominator = std.fmt.parseFloat(f64, denominator_str) catch return error.OutOfMemory;
-
     if (denominator == 0) return error.OutOfMemory;
 
     var percentage = (numerator / denominator) * 100.0;
     if (negative) percentage = -percentage;
 
-    // Format as integer percentage if possible
-    const int_pct = @as(i64, @intFromFloat(@round(percentage)));
-    if (@as(f64, @floatFromInt(int_pct)) == percentage) {
+    const rounded = @round(percentage * 10000.0) / 10000.0;
+    const int_pct = @as(i64, @intFromFloat(@round(rounded)));
+    if (@as(f64, @floatFromInt(int_pct)) == rounded) {
         return std.fmt.allocPrint(alloc, "{d}%", .{int_pct});
     }
+    return std.fmt.allocPrint(alloc, "{d:.4}%", .{rounded});
+}
 
-    // Round to 4 decimal places
-    const factor: f64 = 10000.0;
-    const rounded = @round(percentage * factor) / factor;
+fn resolveFractionCalc(alloc: Allocator, fraction: []const u8, negative: bool) ![]const u8 {
+    // Parse "1/2" -> "calc(1 / 2 * 100%)" for translate contexts
+    const slash_idx = std.mem.indexOfScalar(u8, fraction, '/') orelse return error.OutOfMemory;
+    const numerator_str = fraction[0..slash_idx];
+    const denominator_str = fraction[slash_idx + 1 ..];
 
-    // Format with 4 decimal places, then strip trailing zeros
-    const full = try std.fmt.allocPrint(alloc, "{d:.4}%", .{rounded});
-
-    // Find the '%' and work backwards to strip trailing zeros
-    const pct_pos = std.mem.indexOfScalar(u8, full, '%') orelse return full;
-    var end = pct_pos;
-    while (end > 0 and full[end - 1] == '0') {
-        end -= 1;
+    if (negative) {
+        return std.fmt.allocPrint(alloc, "calc(calc({s} / {s} * 100%) * -1)", .{ numerator_str, denominator_str });
+    } else {
+        return std.fmt.allocPrint(alloc, "calc({s} / {s} * 100%)", .{ numerator_str, denominator_str });
     }
-    // Don't strip the decimal point itself if all decimals are zero
-    if (end > 0 and full[end - 1] == '.') {
-        end -= 1;
-    }
-
-    // Build the final string: digits + '%'
-    const result = try alloc.alloc(u8, end + 1);
-    @memcpy(result[0..end], full[0..end]);
-    result[end] = '%';
-    return result;
 }
 
 // ─── Space Between (gap-based) ─────────────────────────────────────────────
@@ -3305,7 +3332,7 @@ fn resolveSpaceBetween(alloc: Allocator, value: ?Value, property: []const u8, th
                 return decls;
             } else if (isValidSpacingMultiplier(val.value)) {
                 theme.markUsed("--spacing");
-                css_value = try std.fmt.allocPrint(alloc, "calc(var(--spacing) * {s})", .{val.value});
+                css_value = try std.fmt.allocPrint(alloc, "calc(var(--spacing) * {s})", .{stripLeadingZero(val.value)});
             } else {
                 return null;
             }
@@ -3945,7 +3972,17 @@ fn resolveFontWeight(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const D
 
 fn resolveDropShadow(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Declaration {
     const val = value orelse {
-        // bare drop-shadow = default: uses theme var
+        // bare drop-shadow = default: uses theme var with color wrapping
+        if (theme.get("--drop-shadow")) |raw_val| {
+            theme.markUsed("--drop-shadow");
+            const converted = try convertDropShadowColors(alloc, raw_val);
+            const drop_shadow_size = try std.fmt.allocPrint(alloc, "drop-shadow({s})", .{converted});
+            const decls = try alloc.alloc(Declaration, 3);
+            decls[0] = Declaration{ .property = "--tw-drop-shadow", .value = "drop-shadow(var(--drop-shadow))" };
+            decls[1] = Declaration{ .property = "--tw-drop-shadow-size", .value = drop_shadow_size };
+            decls[2] = Declaration{ .property = "filter", .value = COMPOSABLE_FILTER };
+            return decls;
+        }
         const decls = try alloc.alloc(Declaration, 2);
         decls[0] = Declaration{ .property = "--tw-drop-shadow", .value = "drop-shadow(var(--drop-shadow))" };
         decls[1] = Declaration{ .property = "filter", .value = COMPOSABLE_FILTER };
@@ -3966,11 +4003,15 @@ fn resolveDropShadow(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const D
                 return decls;
             } else {
                 const var_name = try std.fmt.allocPrint(alloc, "--drop-shadow-{s}", .{val.value});
-                if (theme.get(var_name) != null) {
+                if (theme.get(var_name)) |raw_val| {
                     theme.markUsed(var_name);
-                    const decls = try alloc.alloc(Declaration, 2);
+                    // Convert rgb colors and wrap in var(--tw-drop-shadow-color,...)
+                    const converted = try convertDropShadowColors(alloc, raw_val);
+                    const drop_shadow_size = try std.fmt.allocPrint(alloc, "drop-shadow({s})", .{converted});
+                    const decls = try alloc.alloc(Declaration, 3);
                     decls[0] = Declaration{ .property = "--tw-drop-shadow", .value = try std.fmt.allocPrint(alloc, "drop-shadow(var({s}))", .{var_name}) };
-                    decls[1] = Declaration{ .property = "filter", .value = COMPOSABLE_FILTER };
+                    decls[1] = Declaration{ .property = "--tw-drop-shadow-size", .value = drop_shadow_size };
+                    decls[2] = Declaration{ .property = "filter", .value = COMPOSABLE_FILTER };
                     return decls;
                 } else {
                     return null;
@@ -3992,7 +4033,7 @@ fn resolveBorderSpacing(alloc: Allocator, root: []const u8, value: ?Value, theme
         .named => {
             if (isValidSpacingMultiplier(val.value)) {
                 theme.markUsed("--spacing");
-                css_value = try std.fmt.allocPrint(alloc, "calc(var(--spacing) * {s})", .{val.value});
+                css_value = try std.fmt.allocPrint(alloc, "calc(var(--spacing) * {s})", .{stripLeadingZero(val.value)});
             } else if (std.mem.eql(u8, val.value, "px")) {
                 css_value = "1px";
             } else if (std.mem.eql(u8, val.value, "0")) {
@@ -4037,7 +4078,7 @@ fn resolveIndent(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decla
                 css_value = "1px";
             } else if (isValidSpacingMultiplier(val.value)) {
                 theme.markUsed("--spacing");
-                css_value = try std.fmt.allocPrint(alloc, "calc(var(--spacing) * {s})", .{val.value});
+                css_value = try std.fmt.allocPrint(alloc, "calc(var(--spacing) * {s})", .{stripLeadingZero(val.value)});
             } else {
                 return null;
             }
@@ -4105,6 +4146,117 @@ fn resolveShadowColor(alloc: Allocator, value: ?Value, modifier: ?Modifier, them
     const decls = try alloc.alloc(Declaration, 1);
     decls[0] = Declaration{ .property = "--tw-shadow-color", .value = css_value };
     return decls;
+}
+
+// ─── Shadow Color Conversion Helpers ────────────────────────────────────────
+
+/// Convert rgb() colors in a shadow value to hex8 format and wrap in var(--tw-shadow-color,...).
+/// e.g. "0 10px 15px -3px rgb(0 0 0 / 0.1)" -> "0 10px 15px -3px var(--tw-shadow-color,#0000001a)"
+fn convertShadowColors(alloc: Allocator, raw: []const u8) ![]const u8 {
+    var result = try std.ArrayList(u8).initCapacity(alloc, raw.len);
+    var i: usize = 0;
+    while (i < raw.len) {
+        if (i + 4 <= raw.len and std.mem.eql(u8, raw[i .. i + 4], "rgb(")) {
+            // Find closing paren
+            var depth: usize = 0;
+            var j = i;
+            while (j < raw.len) {
+                if (raw[j] == '(') depth += 1;
+                if (raw[j] == ')') {
+                    depth -= 1;
+                    if (depth == 0) {
+                        j += 1;
+                        break;
+                    }
+                }
+                j += 1;
+            }
+            const rgb_str = raw[i..j];
+            // Convert to hex and wrap
+            const hex = try rgbToHex8(alloc, rgb_str);
+            try result.appendSlice(alloc, "var(--tw-shadow-color,");
+            try result.appendSlice(alloc, hex);
+            try result.append(alloc, ')');
+            i = j;
+        } else {
+            try result.append(alloc, raw[i]);
+            i += 1;
+        }
+    }
+    return result.toOwnedSlice(alloc);
+}
+
+/// Convert rgb() colors in a drop-shadow value to hex8 format and wrap in var(--tw-drop-shadow-color,...).
+fn convertDropShadowColors(alloc: Allocator, raw: []const u8) ![]const u8 {
+    var result = try std.ArrayList(u8).initCapacity(alloc, raw.len);
+    var i: usize = 0;
+    while (i < raw.len) {
+        if (i + 4 <= raw.len and std.mem.eql(u8, raw[i .. i + 4], "rgb(")) {
+            // Find closing paren
+            var depth: usize = 0;
+            var j = i;
+            while (j < raw.len) {
+                if (raw[j] == '(') depth += 1;
+                if (raw[j] == ')') {
+                    depth -= 1;
+                    if (depth == 0) {
+                        j += 1;
+                        break;
+                    }
+                }
+                j += 1;
+            }
+            const rgb_str = raw[i..j];
+            const hex = try rgbToHex8(alloc, rgb_str);
+            try result.appendSlice(alloc, "var(--tw-drop-shadow-color,");
+            try result.appendSlice(alloc, hex);
+            try result.append(alloc, ')');
+            i = j;
+        } else {
+            try result.append(alloc, raw[i]);
+            i += 1;
+        }
+    }
+    return result.toOwnedSlice(alloc);
+}
+
+/// Parse "rgb(R G B / A)" and convert to "#RRGGBBAA" hex8 format.
+fn rgbToHex8(alloc: Allocator, rgb: []const u8) ![]const u8 {
+    const inner_start = std.mem.indexOf(u8, rgb, "(") orelse return rgb;
+    const inner_end = std.mem.lastIndexOf(u8, rgb, ")") orelse return rgb;
+    if (inner_start + 1 >= inner_end) return rgb;
+    const inner = std.mem.trim(u8, rgb[inner_start + 1 .. inner_end], " ");
+
+    // Split on spaces and /
+    var parts: [4][]const u8 = undefined;
+    var part_count: usize = 0;
+    var iter = std.mem.tokenizeAny(u8, inner, " /");
+    while (iter.next()) |part| {
+        if (part_count < 4) {
+            parts[part_count] = part;
+            part_count += 1;
+        }
+    }
+
+    if (part_count < 4) return rgb; // Can't parse, return as-is
+
+    const r = std.fmt.parseInt(u8, parts[0], 10) catch return rgb;
+    const g = std.fmt.parseInt(u8, parts[1], 10) catch return rgb;
+    const b = std.fmt.parseInt(u8, parts[2], 10) catch return rgb;
+    const alpha = std.fmt.parseFloat(f64, parts[3]) catch return rgb;
+    const a: u8 = @intFromFloat(@round(alpha * 255.0));
+
+    return std.fmt.allocPrint(alloc, "#{x:0>2}{x:0>2}{x:0>2}{x:0>2}", .{ r, g, b, a });
+}
+
+/// Normalize arbitrary duration/delay values: convert "250ms" -> ".25s", pass through "s" values.
+fn normalizeDurationValue(alloc: Allocator, val: []const u8) ![]const u8 {
+    if (std.mem.endsWith(u8, val, "ms")) {
+        const num_str = val[0 .. val.len - 2];
+        const ms_val = std.fmt.parseInt(u32, num_str, 10) catch return val;
+        return formatMsToSeconds(alloc, ms_val);
+    }
+    return val;
 }
 
 // ─── Tests ─────────────────────────────────────────────────────────────────
