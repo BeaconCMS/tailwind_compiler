@@ -3109,9 +3109,27 @@ def inject_extra_classes_as_html(extra_classes_batch):
 
 
 def main():
-    random.seed(42)  # Reproducible output
+    import sys
+    seed = 42
+    num_pages = 120
+    output_dir = OUTPUT_DIR
 
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    # Parse CLI args: generate_pages.py [--seed N] [--pages N] [--output DIR]
+    args = sys.argv[1:]
+    i = 0
+    while i < len(args):
+        if args[i] == "--seed" and i + 1 < len(args):
+            seed = int(args[i + 1]); i += 2
+        elif args[i] == "--pages" and i + 1 < len(args):
+            num_pages = int(args[i + 1]); i += 2
+        elif args[i] == "--output" and i + 1 < len(args):
+            output_dir = args[i + 1]; i += 2
+        else:
+            i += 1
+
+    random.seed(seed)
+
+    os.makedirs(output_dir, exist_ok=True)
 
     # Build extra class pool
     extra_pool = build_extra_class_pool()
@@ -3127,12 +3145,11 @@ def main():
     all_classes_global = set()
     num_generators = len(PAGE_GENERATORS)
 
-    # Distribute extra classes evenly across 120 pages
-    # Each page gets a slice of the extra pool
-    extras_per_page = len(extra_pool) // 120
-    remainder = len(extra_pool) % 120
+    # Distribute extra classes evenly across pages
+    extras_per_page = len(extra_pool) // num_pages
+    remainder = len(extra_pool) % num_pages
 
-    for i in range(120):
+    for i in range(num_pages):
         gen_idx = i % num_generators
         variant = i // num_generators
         gen_name, gen_func = PAGE_GENERATORS[gen_idx]
@@ -3153,38 +3170,13 @@ def main():
             html = html.replace("</body>", f"{showcase}\n</body>")
 
         filename = f"page-{i+1:03d}.html"
-        filepath = os.path.join(OUTPUT_DIR, filename)
+        filepath = os.path.join(output_dir, filename)
         with open(filepath, "w") as f:
             f.write(html)
 
     # Print stats
-    print(f"Generated 120 pages in {OUTPUT_DIR}")
-    print(f"Total unique classes across all pages: {len(all_classes_global)}")
-    print(f"Extra pool size (new classes): {len(extra_pool)}")
-    print(f"Extras per page: ~{extras_per_page}")
-
-    # Verify per-page stats
-    min_cls = float('inf')
-    max_cls = 0
-    for i in range(120):
-        gen_idx = i % num_generators
-        variant = i // num_generators
-        _, gen_func = PAGE_GENERATORS[gen_idx]
-        _, classes = gen_func(variant)
-        start = i * extras_per_page + min(i, remainder)
-        end = start + extras_per_page + (1 if i < remainder else 0)
-        total = len(classes) + (end - start)
-        min_cls = min(min_cls, total)
-        max_cls = max(max_cls, total)
-    print(f"Per-page class count range: {min_cls} - {max_cls}")
-
-    # Write class inventory for reference
-    inventory_path = os.path.join(os.path.dirname(OUTPUT_DIR), "class_inventory.txt")
-    sorted_classes = sorted(all_classes_global)
-    with open(inventory_path, "w") as f:
-        for cls_name in sorted_classes:
-            f.write(cls_name + "\n")
-    print(f"Class inventory written to {inventory_path}")
+    print(f"Generated {num_pages} pages in {output_dir} (seed={seed})")
+    print(f"Total unique classes: {len(all_classes_global)}")
 
 
 if __name__ == "__main__":

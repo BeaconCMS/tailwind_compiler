@@ -295,9 +295,9 @@ async function load() {
   // Meta pills
   const meta = document.getElementById('meta');
   const pills = [
-    `<strong>${m.html_pages}</strong> HTML pages`,
-    `<strong>${m.unique_candidates.toLocaleString()}</strong> unique classes`,
-    `<strong>${m.iterations}</strong> iterations`,
+    `<strong>${m.rounds}</strong> rounds`,
+    `<strong>~${m.avg_pages}</strong> pages/round`,
+    `<strong>~${m.avg_candidates.toLocaleString()}</strong> classes/round`,
     `${m.platform}`,
     `Zig ${m.zig_version}`,
     `Tailwind v${m.tailwind_version}`,
@@ -308,57 +308,55 @@ async function load() {
   const speedup = c.speedup_factor;
   document.getElementById('speedup').textContent = speedup.toFixed(1) + 'x faster';
   document.getElementById('speedup-desc').textContent =
-    `Zig compiles ${m.unique_candidates.toLocaleString()} classes in ${fmtTime(z.avg_seconds)} vs ${fmtTime(t.avg_seconds)} — using ${c.memory_ratio.toFixed(1)}x less memory`;
+    `Zig compiles ~${m.avg_candidates.toLocaleString()} classes in ${fmtMs(z.avg_ms)} vs ${fmtMs(t.avg_ms)} — using ${c.memory_ratio.toFixed(1)}x less memory`;
 
   // Zig card
-  document.getElementById('zig-time').textContent = fmtTime(z.avg_seconds);
-  document.getElementById('zig-min').textContent = fmtTime(z.min_seconds);
-  document.getElementById('zig-max').textContent = fmtTime(z.max_seconds);
-  document.getElementById('zig-median').textContent = fmtTime(z.median_seconds);
-  document.getElementById('zig-mem').textContent = z.peak_rss_mb.toFixed(1) + ' MB';
-  document.getElementById('zig-css').textContent = fmtBytes(z.output_size_bytes);
+  document.getElementById('zig-time').textContent = fmtMs(z.avg_ms);
+  document.getElementById('zig-min').textContent = fmtMs(z.min_ms);
+  document.getElementById('zig-max').textContent = fmtMs(z.max_ms);
+  document.getElementById('zig-median').textContent = fmtMs(z.median_ms);
+  document.getElementById('zig-mem').textContent = z.avg_rss_mb.toFixed(1) + ' MB';
+  document.getElementById('zig-css').textContent = '—';
 
   // TW card
-  document.getElementById('tw-time').textContent = fmtTime(t.avg_seconds);
-  document.getElementById('tw-min').textContent = fmtTime(t.min_seconds);
-  document.getElementById('tw-max').textContent = fmtTime(t.max_seconds);
-  document.getElementById('tw-median').textContent = fmtTime(t.median_seconds);
-  document.getElementById('tw-mem').textContent = t.peak_rss_mb.toFixed(1) + ' MB';
-  document.getElementById('tw-css').textContent = fmtBytes(t.output_size_bytes);
+  document.getElementById('tw-time').textContent = fmtMs(t.avg_ms);
+  document.getElementById('tw-min').textContent = fmtMs(t.min_ms);
+  document.getElementById('tw-max').textContent = fmtMs(t.max_ms);
+  document.getElementById('tw-median').textContent = fmtMs(t.median_ms);
+  document.getElementById('tw-mem').textContent = t.avg_rss_mb.toFixed(1) + ' MB';
+  document.getElementById('tw-css').textContent = '—';
 
   // Time bars
-  const maxTime = Math.max(z.avg_seconds, t.avg_seconds);
-  setBar('bar-zig-time', z.avg_seconds / maxTime * 100, fmtTime(z.avg_seconds));
-  setBar('bar-tw-time', t.avg_seconds / maxTime * 100, fmtTime(t.avg_seconds));
+  const maxTime = Math.max(z.avg_ms, t.avg_ms);
+  setBar('bar-zig-time', z.avg_ms / maxTime * 100, fmtMs(z.avg_ms));
+  setBar('bar-tw-time', t.avg_ms / maxTime * 100, fmtMs(t.avg_ms));
 
   // Memory bars
-  const maxMem = Math.max(z.peak_rss_mb, t.peak_rss_mb);
-  setBar('bar-zig-mem', z.peak_rss_mb / maxMem * 100, z.peak_rss_mb.toFixed(1) + ' MB');
-  setBar('bar-tw-mem', t.peak_rss_mb / maxMem * 100, t.peak_rss_mb.toFixed(1) + ' MB');
+  const maxMem = Math.max(z.avg_rss_mb, t.avg_rss_mb);
+  setBar('bar-zig-mem', z.avg_rss_mb / maxMem * 100, z.avg_rss_mb.toFixed(1) + ' MB');
+  setBar('bar-tw-mem', t.avg_rss_mb / maxMem * 100, t.avg_rss_mb.toFixed(1) + ' MB');
 
-  // CSS size bars
-  const maxCSS = Math.max(z.output_size_bytes, t.output_size_bytes);
-  setBar('bar-zig-css', z.output_size_bytes / maxCSS * 100, fmtBytes(z.output_size_bytes));
-  setBar('bar-tw-css', t.output_size_bytes / maxCSS * 100, fmtBytes(t.output_size_bytes));
+  // CSS size bars — hide since we don't track per-round
+  document.querySelectorAll('.chart-section')[2].style.display = 'none';
 
-  // Run chart
+  // Run chart — per-round times
   const chart = document.getElementById('run-chart');
-  const allTimes = [...z.times_seconds, ...t.times_seconds];
+  const allTimes = [...z.times_ms, ...t.times_ms];
   const maxRun = Math.max(...allTimes);
 
-  for (let i = 0; i < z.times_seconds.length; i++) {
+  for (let i = 0; i < z.times_ms.length; i++) {
     const group = document.createElement('div');
     group.className = 'run-group';
 
     const zigBar = document.createElement('div');
     zigBar.className = 'run-bar zig';
-    zigBar.style.height = (z.times_seconds[i] / maxRun * 180) + 'px';
-    zigBar.title = `Zig run ${i+1}: ${fmtTime(z.times_seconds[i])}`;
+    zigBar.style.height = (z.times_ms[i] / maxRun * 180) + 'px';
+    zigBar.title = `Zig round ${i+1}: ${fmtMs(z.times_ms[i])} (${m.pages_per_round[i]} pages, ${m.candidates_per_round[i]} classes)`;
 
     const twBar = document.createElement('div');
     twBar.className = 'run-bar tw';
-    twBar.style.height = (t.times_seconds[i] / maxRun * 180) + 'px';
-    twBar.title = `TW run ${i+1}: ${fmtTime(t.times_seconds[i])}`;
+    twBar.style.height = (t.times_ms[i] / maxRun * 180) + 'px';
+    twBar.title = `TW round ${i+1}: ${fmtMs(t.times_ms[i])} (${m.pages_per_round[i]} pages, ${m.candidates_per_round[i]} classes)`;
 
     group.appendChild(zigBar);
     group.appendChild(twBar);
@@ -368,6 +366,12 @@ async function load() {
   // Footer
   document.getElementById('footer').textContent =
     `Benchmark run on ${m.date} — ${m.cpu}`;
+}
+
+function fmtMs(ms) {
+  if (ms < 1) return (ms * 1000).toFixed(0) + ' \u00b5s';
+  if (ms < 1000) return ms.toFixed(1) + ' ms';
+  return (ms / 1000).toFixed(2) + ' s';
 }
 
 function fmtTime(s) {
