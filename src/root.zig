@@ -11,6 +11,7 @@ pub const variants = @import("variants.zig");
 pub const emitter = @import("emitter.zig");
 pub const theme = @import("theme.zig");
 pub const default_theme = @import("default_theme.zig");
+pub const color = @import("color.zig");
 
 /// Compile a list of candidate strings into minified CSS.
 ///

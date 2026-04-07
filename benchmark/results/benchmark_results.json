@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "date": "2026-04-07T21:18:20Z",
+    "date": "2026-04-07T21:37:23Z",
     "platform": "Darwin arm64",
     "iterations": 10,
     "html_pages": 120,
@@ -10,36 +10,36 @@
     "cpu": "Apple M4"
   },
   "zig_compiler": {
-    "times_seconds": [0.001663,0.001570,0.001547,0.001608,0.001536,0.001594,0.001540,0.001529,0.001562,0.001622],
-    "avg_seconds": 0.001577,
-    "min_seconds": 0.001529,
-    "max_seconds": 0.001663,
-    "median_seconds": 0.001562,
-    "avg_ms": 1.577,
-    "min_ms": 1.529,
-    "max_ms": 1.663,
-    "median_ms": 1.562,
-    "peak_rss_bytes": 4800512,
-    "peak_rss_mb": 4.57,
-    "output_size_bytes": 245229
+    "times_seconds": [0.005088,0.003024,0.002294,0.001980,0.001798,0.001745,0.001753,0.001717,0.001723,0.001709],
+    "avg_seconds": 0.002283,
+    "min_seconds": 0.001709,
+    "max_seconds": 0.005088,
+    "median_seconds": 0.001753,
+    "avg_ms": 2.283,
+    "min_ms": 1.709,
+    "max_ms": 5.088,
+    "median_ms": 1.753,
+    "peak_rss_bytes": 4767744,
+    "peak_rss_mb": 4.54,
+    "output_size_bytes": 234392
   },
   "tailwind_cli": {
-    "times_seconds": [0.160000,0.160000,0.160000,0.160000,0.160000,0.170000,0.180000,0.160000,0.160000,0.170000],
-    "avg_seconds": 0.164000,
+    "times_seconds": [0.170000,0.160000,0.160000,0.170000,0.160000,0.160000,0.160000,0.170000,0.170000,0.170000],
+    "avg_seconds": 0.165000,
     "min_seconds": 0.160000,
-    "max_seconds": 0.180000,
+    "max_seconds": 0.170000,
     "median_seconds": 0.160000,
-    "avg_ms": 164.000,
+    "avg_ms": 165.000,
     "min_ms": 160,
-    "max_ms": 180,
+    "max_ms": 170,
     "median_ms": 160,
-    "peak_rss_bytes": 137347072,
-    "peak_rss_mb": 130.98,
+    "peak_rss_bytes": 136986624,
+    "peak_rss_mb": 130.64,
     "output_size_bytes": 262984
   },
   "comparison": {
-    "speedup_factor": 103.9,
-    "memory_ratio": 28.6,
-    "zig_output_smaller_by_bytes": 17755
+    "speedup_factor": 72.2,
+    "memory_ratio": 28.7,
+    "zig_output_smaller_by_bytes": 28592
   }
 }
