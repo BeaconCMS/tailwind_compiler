@@ -169,6 +169,15 @@ pub const Context = struct {
                     .functional => {
                         // Only color/gradient utilities accept modifiers
                         if (!utilities.supportsModifier(parsed.root)) return;
+                        // Validate named modifier values are valid non-negative numbers
+                        // Named modifiers like /50, /2.5 are valid; /foo, /hsl are not
+                        // Exception: "text" uses modifiers for line-height (accepts named values)
+                        if (parsed.modifier) |mod| {
+                            if (mod.kind == .named and !utilities.modifierAcceptsNamed(parsed.root)) {
+                                const f = std.fmt.parseFloat(f64, mod.value) catch return;
+                                if (f < 0) return;
+                            }
+                        }
                     },
                     .arbitrary => {}, // Arbitrary properties accept modifiers
                 }

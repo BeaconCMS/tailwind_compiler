@@ -711,9 +711,24 @@ fn parseVariantSegment(
     // Reject variant segments with `/` modifier on known static/compound/functional variants.
     // e.g., "first-letter/foo" -> "first-letter" is a known variant, reject.
     // This prevents static variants from accepting modifiers.
+    // Also reject functional variants with modifiers (e.g., aria-checked/foo, nth-3/foo, max-lg/foo)
+    // Only @-prefixed variants support /name modifiers (e.g., @lg/name, @max-lg/name).
     if (std.mem.indexOfScalar(u8, input, '/')) |slash_idx| {
         const base = input[0..slash_idx];
         if (variant_exists(base)) return null;
+        // Check if the base looks like a functional variant with value (e.g., aria-checked, nth-3, max-lg)
+        // These should not accept modifiers (only @ variants support /name)
+        // Skip check for @-prefixed variants which handle their own modifiers
+        if (base.len > 0 and base[0] != '@') {
+            if (std.mem.indexOfScalar(u8, base, '-')) |dash_idx| {
+                const var_root = base[0..dash_idx];
+                if (variant_is_functional_root) |fn_root_check| {
+                    if (fn_root_check(var_root)) {
+                        return null;
+                    }
+                }
+            }
+        }
     }
 
     // Arbitrary variant: [...]
@@ -743,80 +758,181 @@ fn parseVariantSegment(
     const compound_prefixes = [_][]const u8{ "group-", "peer-", "has-", "not-", "in-" };
     for (compound_prefixes) |prefix| {
         if (std.mem.startsWith(u8, input, prefix)) {
-            const inner_variant_str = input[prefix.len..];
+            const full_inner = input[prefix.len..];
+            if (full_inner.len == 0) continue;
+
+            // Strip modifier (/name) from inner variant string if present
+            // e.g., "hover/parent-name" -> inner = "hover", modifier = "parent-name"
+            var inner_variant_str = full_inner;
+            var compound_modifier: ?[]const u8 = null;
+            // Find slash that's not inside brackets
+            var bracket_depth_slash: u32 = 0;
+            for (full_inner, 0..) |ch, idx| {
+                if (ch == '[') bracket_depth_slash += 1
+                else if (ch == ']' and bracket_depth_slash > 0) bracket_depth_slash -= 1
+                else if (ch == '/' and bracket_depth_slash == 0) {
+                    inner_variant_str = full_inner[0..idx];
+                    compound_modifier = full_inner[idx + 1 ..];
+                    break;
+                }
+            }
             if (inner_variant_str.len == 0) continue;
 
             // Try to parse the inner part as a variant
-            const inner_variant = parseVariantSegment(
+            if (parseVariantSegment(
                 alloc,
                 inner_variant_str,
                 variant_exists,
                 variant_is_functional_root,
-            ) orelse continue;
+            )) |inner_variant| {
+                // Reject certain compound+arbitrary combinations:
+                // - group/peer: reject relative (>, +, ~) and at-rule (@) selectors
+                // - has: reject at-rule (@) selectors (but allow relative selectors)
+                if (inner_variant.kind == .arbitrary) {
+                    if (inner_variant.selector) |sel| {
+                        if (sel.len > 0) {
+                            const is_group_or_peer = std.mem.eql(u8, prefix, "group-") or std.mem.eql(u8, prefix, "peer-");
+                            const is_has = std.mem.eql(u8, prefix, "has-");
+                            if (is_group_or_peer and (sel[0] == '>' or sel[0] == '+' or sel[0] == '~' or sel[0] == '@')) {
+                                return null;
+                            }
+                            if (is_has and sel[0] == '@') {
+                                return null;
+                            }
+                        }
+                    }
+                }
 
-            // Check for modifier (e.g., group-hover/name)
-            // TODO: handle modifier on compound variants
+                // Validate compound modifier if present
+                if (compound_modifier) |cm| {
+                    // Reject empty modifier and empty bracket modifier []
+                    if (cm.len == 0) return null;
+                    if (std.mem.eql(u8, cm, "[]")) return null;
+                    // Only group-* and peer-* accept /name modifiers
+                    // has-*, not-*, in-* do not
+                    const accepts_modifier = std.mem.eql(u8, prefix, "group-") or std.mem.eql(u8, prefix, "peer-");
+                    if (!accepts_modifier) return null;
+                }
 
-            return Variant{
-                .kind = .compound,
-                .root = prefix[0 .. prefix.len - 1], // strip trailing dash
-                .value = switch (inner_variant.kind) {
-                    .static => Value{
-                        .kind = .named,
-                        .value = inner_variant.root,
-                    },
-                    .functional => Value{
-                        // For functional inner variants (e.g., data-[state=active], aria-checked),
-                        // store the full inner variant string as the value so that
-                        // applyCompoundVariant can reconstruct the correct selector.
-                        .kind = .named,
-                        .value = inner_variant_str,
-                    },
-                    else => null,
-                },
-                .selector = inner_variant.selector,
-            };
-        }
-    }
-
-    // Functional variant (aria-*, data-*, supports-*, nth-*, min-*, max-*, @*)
-    // Try to find a dash and check if the prefix is a known functional variant root
-    if (std.mem.indexOfScalar(u8, input, '-')) |dash_idx| {
-        const root = input[0..dash_idx];
-        const value_part = input[dash_idx + 1 ..];
-
-        // Check if the root is a known functional variant
-        if (variant_exists(root) and value_part.len > 0) {
-            // Arbitrary value: root-[...]
-            if (value_part[0] == '[' and value_part[value_part.len - 1] == ']') {
-                const inner = value_part[1 .. value_part.len - 1];
-                // Reject empty arbitrary value
-                if (inner.len == 0) return null;
                 return Variant{
-                    .kind = .functional,
-                    .root = root,
+                    .kind = .compound,
+                    .root = prefix[0 .. prefix.len - 1], // strip trailing dash
+                    .value = switch (inner_variant.kind) {
+                        .static => Value{
+                            .kind = .named,
+                            .value = if (compound_modifier != null) full_inner else inner_variant.root,
+                        },
+                        .functional => Value{
+                            // For functional inner variants (e.g., data-[state=active], aria-checked),
+                            // store the full inner variant string as the value so that
+                            // applyCompoundVariant can reconstruct the correct selector.
+                            .kind = .named,
+                            .value = full_inner,
+                        },
+                        else => null,
+                    },
+                    .selector = inner_variant.selector,
+                };
+            }
+
+            // Fallback: accept unknown inner variants as custom variant names
+            // Rules:
+            // - group-*, peer-*, has-*: only accept single-word (no dashes) unknown inner
+            //   e.g., group-hocus OK, group-custom-at-rule REJECTED
+            // - not-*: accept unknown inner variants including multi-word (with dashes)
+            //   e.g., not-device-hocus OK, not-hocus OK
+            // - in-*: never accept unknown inner variants
+            if (!std.mem.eql(u8, prefix, "in-") and
+                std.mem.indexOfScalar(u8, inner_variant_str, '[') == null)
+            {
+                const is_not = std.mem.eql(u8, prefix, "not-");
+                if (!is_not and std.mem.indexOfScalar(u8, inner_variant_str, '-') != null) {
+                    // group/peer/has with dashed unknown inner -> reject
+                    continue;
+                }
+                return Variant{
+                    .kind = .compound,
+                    .root = prefix[0 .. prefix.len - 1],
                     .value = Value{
-                        .kind = .arbitrary,
-                        .value = inner,
+                        .kind = .named,
+                        .value = full_inner,
                     },
                 };
             }
 
-            // Named value
-            return Variant{
-                .kind = .functional,
-                .root = root,
-                .value = Value{
-                    .kind = .named,
-                    .value = value_part,
-                },
-            };
+            continue;
+        }
+    }
+
+    // Functional variant (aria-*, data-*, supports-*, nth-*, min-*, max-*, @*)
+    // Try progressively longer prefixes at dash boundaries to find a functional root
+    {
+        // Collect all dash positions
+        var dash_positions: [16]usize = undefined;
+        var dash_count: usize = 0;
+        for (input, 0..) |ch, idx| {
+            if (ch == '-' and dash_count < 16) {
+                dash_positions[dash_count] = idx;
+                dash_count += 1;
+            }
+        }
+        // Try from longest root to shortest
+        var di: usize = dash_count;
+        while (di > 0) {
+            di -= 1;
+            const dash_idx = dash_positions[di];
+            const root = input[0..dash_idx];
+            const value_part = input[dash_idx + 1 ..];
+
+            const is_functional_root = if (variant_is_functional_root) |fn_check| fn_check(root) else false;
+            // Skip @ root — it has its own special handler below
+            if (is_functional_root and !std.mem.eql(u8, root, "@") and value_part.len > 0) {
+                // Arbitrary value: root-[...]
+                if (value_part[0] == '[' and value_part[value_part.len - 1] == ']') {
+                    const inner = value_part[1 .. value_part.len - 1];
+                    if (inner.len == 0) return null;
+                    return Variant{
+                        .kind = .functional,
+                        .root = root,
+                        .value = Value{
+                            .kind = .arbitrary,
+                            .value = inner,
+                        },
+                    };
+                }
+
+                // Named value — validate based on root type
+                // nth-* variants require integer or [arbitrary] values
+                if (std.mem.eql(u8, root, "nth") or std.mem.eql(u8, root, "nth-last") or
+                    std.mem.eql(u8, root, "nth-of-type") or std.mem.eql(u8, root, "nth-last-of-type"))
+                {
+                    var all_digits = value_part.len > 0;
+                    for (value_part) |c| {
+                        if (c < '0' or c > '9') {
+                            all_digits = false;
+                            break;
+                        }
+                    }
+                    if (!all_digits) return null;
+                }
+
+                return Variant{
+                    .kind = .functional,
+                    .root = root,
+                    .value = Value{
+                        .kind = .named,
+                        .value = value_part,
+                    },
+                };
+            }
         }
     }
 
     // @ functional variant (e.g., @lg, @[123px])
     if (input[0] == '@' and input.len > 1) {
         const rest = input[1..];
+        // Reject negative container queries (@-lg, @-min-lg, @-max-lg, @-[123px])
+        if (rest[0] == '-') return null;
 
         // Handle modifier: @lg/name, @[123px]/name
         var at_rest = rest;

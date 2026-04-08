@@ -934,7 +934,6 @@ pub const functional_utility_set = std.StaticStringMap(void).initComptime(.{
     .{ "text-size", {} },
     .{ "leading", {} },
     .{ "tracking", {} },
-    .{ "font-weight", {} },
     // Border
     .{ "rounded", {} },
     .{ "rounded-t", {} },
@@ -1225,6 +1224,13 @@ pub fn supportsModifier(root: []const u8) bool {
     return modifier_support.has(root);
 }
 
+/// Check if a utility root accepts non-numeric named modifiers.
+/// "text" uses modifiers for line-height (/none, /snug, /6)
+/// "bg-linear", "bg-conic", "bg-radial" use modifiers for gradient direction
+pub fn modifierAcceptsNamed(root: []const u8) bool {
+    return std.mem.eql(u8, root, "text");
+}
+
 /// Validate that a named modifier value is numeric (valid for color opacity).
 /// Accepts integers (0-100) and valid decimals (2.5, 0.5, etc.).
 pub fn isValidNamedModifier(value: []const u8) bool {
@@ -1281,8 +1287,6 @@ const modifier_support = std.StaticStringMap(void).initComptime(.{
     .{ "bg-radial", {} },
     .{ "bg-conic", {} },
     .{ "bg-gradient", {} },
-    .{ "-bg-linear", {} },
-    .{ "-bg-conic", {} },
 });
 
 /// Check if a functional utility root supports the negative prefix.
@@ -1387,11 +1391,6 @@ const negative_support = std.StaticStringMap(void).initComptime(.{
     .{ "backdrop-hue-rotate", {} },
     // Underline offset
     .{ "underline-offset", {} },
-    // Gradient direction (supports negative rotation)
-    .{ "bg-linear", {} },
-    .{ "bg-conic", {} },
-    .{ "-bg-linear", {} },
-    .{ "-bg-conic", {} },
     // Space between (reverse)
     .{ "space-x", {} },
     .{ "space-y", {} },
@@ -2155,7 +2154,7 @@ pub fn resolveFunctional(
         .mask_type => resolveSingleProp(alloc, value, "mask-type"),
         .bg_size => resolveSingleProp(alloc, value, "background-size"),
         .bg_position => resolveSingleProp(alloc, value, "background-position"),
-        .font_stretch_fn => resolveSingleProp(alloc, value, "font-stretch"),
+        .font_stretch_fn => resolveFontStretch(alloc, value),
         .border_spacing => resolveBorderSpacing(alloc, root, value, theme),
         .indent => resolveIndent(alloc, value, theme),
     };
@@ -2343,9 +2342,9 @@ fn resolveSpacing(
                 } else {
                     css_value = var_name;
                 }
-            } else if ((std.mem.eql(u8, root, "max-w") or std.mem.eql(u8, root, "max-h")) and !is_neg) {
-                // Named max-width values (container sizes) -> var(--container-*)
-                const max_w_names = std.StaticStringMap(void).initComptime(.{
+            } else if (isSizingRoot(root) and !is_neg) {
+                // Named container/sizing values -> var(--container-*)
+                const size_names = std.StaticStringMap(void).initComptime(.{
                     .{ "xs", {} },
                     .{ "sm", {} },
                     .{ "md", {} },
@@ -2363,7 +2362,7 @@ fn resolveSpacing(
                     .{ "screen-xl", {} },
                     .{ "screen-2xl", {} },
                 });
-                if (max_w_names.has(val.value)) {
+                if (size_names.has(val.value)) {
                     if (std.mem.startsWith(u8, val.value, "screen-")) {
                         // screen-sm -> var(--breakpoint-sm)
                         const bp_name = val.value["screen-".len..];
@@ -2753,7 +2752,29 @@ fn resolveText(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
 
     switch (val.kind) {
         .arbitrary => {
-            // Arbitrary value: font-size
+            // Check if this is a color arbitrary value (has typehint or is a color)
+            if (val.data_type) |dt| {
+                if (std.mem.eql(u8, dt, "color")) {
+                    // Color with opacity modifier
+                    var css_value: []const u8 = val.value;
+                    if (modifier) |mod| {
+                        css_value = try applyColorOpacityWithTheme(alloc, css_value, mod, theme);
+                    }
+                    const decls = try alloc.alloc(Declaration, 1);
+                    decls[0] = Declaration{ .property = "color", .value = css_value };
+                    return decls;
+                }
+            }
+            // Arbitrary value: font-size — validate modifier as line-height
+            if (modifier) |mod| {
+                if (mod.kind == .named) {
+                    _ = std.fmt.parseFloat(f64, mod.value) catch {
+                        if (!isKnownLineHeight(mod.value) and !theme.resolve(mod.value, "--leading")) {
+                            return null;
+                        }
+                    };
+                }
+            }
             const decls = try alloc.alloc(Declaration, 1);
             decls[0] = Declaration{ .property = "font-size", .value = val.value };
             return decls;
@@ -2787,6 +2808,19 @@ fn resolveText(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
 
             // Try font-size theme
             if (theme.resolve(val.value, "--text")) {
+                // Validate line-height modifier if present
+                if (modifier) |mod| {
+                    if (mod.kind == .named) {
+                        // Named modifiers must be valid numbers or known line-height names
+                        _ = std.fmt.parseFloat(f64, mod.value) catch {
+                            // Not a number -- check known line-height keywords
+                            if (!isKnownLineHeight(mod.value) and !theme.resolve(mod.value, "--leading")) {
+                                return null;
+                            }
+                        };
+                    }
+                    // arbitrary modifiers like [4px] are always valid
+                }
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--text-{s}", .{val.value}));
                 const font_size = try std.fmt.allocPrint(alloc, "var(--text-{s})", .{val.value});
                 const line_height = try std.fmt.allocPrint(alloc, "var(--tw-leading,var(--text-{s}--line-height))", .{val.value});
@@ -2816,9 +2850,11 @@ fn resolveFont(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Declara
         },
         .named => {
             // Try font-family first (--font-{value})
-            if (theme.resolve(val.value, "--font")) {
-                theme.markUsed(try std.fmt.allocPrint(alloc, "--font-{s}", .{val.value}));
-                const css_value = try std.fmt.allocPrint(alloc, "var(--font-{s})", .{val.value});
+            // Only match if the value doesn't look like a sub-namespace (no prefix match with weight/etc)
+            const font_var = try std.fmt.allocPrint(alloc, "--font-{s}", .{val.value});
+            if (theme.get(font_var) != null and !std.mem.startsWith(u8, val.value, "weight-")) {
+                theme.markUsed(font_var);
+                const css_value = try std.fmt.allocPrint(alloc, "var({s})", .{font_var});
                 const decls = try alloc.alloc(Declaration, 1);
                 decls[0] = Declaration{ .property = "font-family", .value = css_value };
                 return decls;
@@ -3941,6 +3977,33 @@ fn looksLikeLength(s: []const u8) bool {
         std.mem.endsWith(u8, s, "%");
 }
 
+/// Check if a modifier value is a known line-height keyword
+fn isKnownLineHeight(value: []const u8) bool {
+    const known = std.StaticStringMap(void).initComptime(.{
+        .{ "none", {} },
+        .{ "tight", {} },
+        .{ "snug", {} },
+        .{ "normal", {} },
+        .{ "relaxed", {} },
+        .{ "loose", {} },
+    });
+    return known.has(value);
+}
+
+/// Check if a utility root is a sizing root that accepts container size names (xs, sm, md, lg, xl, etc.)
+fn isSizingRoot(root: []const u8) bool {
+    const sizing_roots = std.StaticStringMap(void).initComptime(.{
+        .{ "w", {} },
+        .{ "h", {} },
+        .{ "min-w", {} },
+        .{ "min-h", {} },
+        .{ "max-w", {} },
+        .{ "max-h", {} },
+        .{ "size", {} },
+    });
+    return sizing_roots.has(root);
+}
+
 fn isPositiveInteger(s: []const u8) bool {
     if (s.len == 0) return false;
     for (s) |c| {
@@ -4690,6 +4753,36 @@ fn resolveFontWeight(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const D
     decls[0] = Declaration{ .property = "--tw-font-weight", .value = custom_prop_value };
     decls[1] = Declaration{ .property = "font-weight", .value = css_value };
     return decls;
+}
+
+// ─── Font Stretch ──────────────────────────────────────────────────────────
+
+fn resolveFontStretch(alloc: Allocator, value: ?Value) !?[]const Declaration {
+    const val = value orelse return null;
+    switch (val.kind) {
+        .arbitrary => {
+            const decls = try alloc.alloc(Declaration, 1);
+            decls[0] = Declaration{ .property = "font-stretch", .value = val.value };
+            return decls;
+        },
+        .named => {
+            // font-stretch only accepts integer percentages from 50% to 200%
+            const s = val.value;
+            if (s.len < 2) return null;
+            if (s[s.len - 1] != '%') return null;
+            const num_str = s[0 .. s.len - 1];
+            if (num_str.len == 0) return null;
+            // Must be a positive integer
+            for (num_str) |c| {
+                if (c < '0' or c > '9') return null;
+            }
+            const num = std.fmt.parseInt(u32, num_str, 10) catch return null;
+            if (num < 50 or num > 200) return null;
+            const decls = try alloc.alloc(Declaration, 1);
+            decls[0] = Declaration{ .property = "font-stretch", .value = s };
+            return decls;
+        },
+    }
 }
 
 // ─── Drop Shadow ───────────────────────────────────────────────────────────
