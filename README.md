@@ -16,17 +16,30 @@ Benchmarked against the official Tailwind CLI v4.2.2 — 10 rounds, each with 10
 
 Zero output differences — every candidate produces byte-identical CSS to the official Tailwind CLI.
 
-## Elixir Usage
+## Installation
 
 Add to your `mix.exs`:
 
 ```elixir
 def deps do
-  [{:tailwind_compiler, github: "BeaconCMS/tailwind_compiler"}]
+  [{:tailwind_compiler, "~> 0.0.1"}]
 end
 ```
 
-Then:
+Precompiled NIF binaries are available for `x86_64-linux`, `aarch64-linux`, `aarch64-macos`, and `x86_64-macos`. The correct binary is downloaded automatically during `mix compile`.
+
+To force compilation from source (requires [Zig 0.15.2+](https://ziglang.org/download/) and the `zigler` dependency):
+
+```elixir
+# Add zigler to your deps
+{:zigler, "~> 0.15.1", runtime: false}
+```
+
+```bash
+TAILWIND_COMPILER_PATH=true mix compile
+```
+
+## Elixir Usage
 
 ```elixir
 TailwindCompiler.compile(["flex", "p-4", "hover:bg-blue-500/50", "sm:text-lg"])

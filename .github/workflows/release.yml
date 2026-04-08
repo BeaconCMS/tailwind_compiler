@@ -1,0 +1,110 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build_nif:
+    name: Build NIF (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-linux
+            runner: ubuntu-22.04
+          - target: aarch64-linux
+            runner: ubuntu-22.04
+            use_qemu: true
+          - target: aarch64-macos
+            runner: macos-14
+          - target: x86_64-macos
+            runner: macos-13
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- Native builds (x86_64-linux, macos) ---
+      - name: Set up Erlang/Elixir
+        if: ${{ !matrix.use_qemu }}
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: "27"
+          elixir-version: "1.17"
+
+      - name: Build NIF (native)
+        if: ${{ !matrix.use_qemu }}
+        env:
+          TAILWIND_COMPILER_PATH: "true"
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get
+          mix compile
+
+      # --- QEMU cross-build (aarch64-linux) ---
+      - name: Set up QEMU
+        if: ${{ matrix.use_qemu }}
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build NIF (aarch64-linux via QEMU)
+        if: ${{ matrix.use_qemu }}
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            -e TAILWIND_COMPILER_PATH=true \
+            -e MIX_ENV=prod \
+            hexpm/elixir:1.17.3-erlang-27.2-ubuntu-noble-20241113 \
+            bash -c "
+              mix local.hex --force &&
+              mix local.rebar --force &&
+              mix deps.get &&
+              mix compile
+            "
+
+      # --- Package ---
+      - name: Package NIF
+        run: |
+          NIF_FILE=$(find _build -name "Elixir.TailwindCompiler.NIF.so" -type f | head -1)
+          if [ -z "$NIF_FILE" ]; then
+            echo "ERROR: Could not find compiled NIF .so file"
+            find _build -name "*NIF*" -type f
+            exit 1
+          fi
+          echo "Found NIF at: $NIF_FILE"
+          mkdir -p release
+          cp "$NIF_FILE" release/Elixir.TailwindCompiler.NIF.so
+          cd release
+          tar czf "tailwind_compiler-nif-${{ matrix.target }}.tar.gz" Elixir.TailwindCompiler.NIF.so
+          shasum -a 256 "tailwind_compiler-nif-${{ matrix.target }}.tar.gz" | tee "tailwind_compiler-nif-${{ matrix.target }}.tar.gz.sha256"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nif-${{ matrix.target }}
+          path: release/tailwind_compiler-nif-*
+
+  release:
+    name: Create Release
+    needs: build_nif
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
