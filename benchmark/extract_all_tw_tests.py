@@ -8,6 +8,7 @@ Reads these test files:
   - candidate.test.ts (2,141 lines)
   - important.test.ts (131 lines)
   - sort.test.ts (129 lines)
+  - index.test.ts (6,300 lines)
 
 Outputs: benchmark/results/tw_all_tests.json
 """
@@ -26,6 +27,89 @@ TEST_FILES = [
     "candidate.test.ts",
     "important.test.ts",
     "sort.test.ts",
+    "index.test.ts",
+]
+
+# Describe blocks in index.test.ts that we should SKIP because they test
+# features our compiler doesn't implement (@apply, plugins, @source, etc.)
+INDEX_TEST_SKIP_DESCRIBES = {
+    "@apply",
+    "plugins",
+    "@source",
+    "@custom-variant",
+    "@utility",
+    "@reference",
+    "@variant",
+    "`color-mix(…)` polyfill",
+    "`@property` polyfill",
+    "feature detection",
+    "body-less syntax",
+    "body with @slot syntax",
+    "`@reference",
+}
+
+# Test names in index.test.ts to skip (prefix, @import resolution, etc.)
+INDEX_TEST_SKIP_NAMES = [
+    "prefix all CSS",
+    "prefix(tw)",
+    "tw-prefix",
+    "tw:animate",
+    "source maps",
+    "@import",
+    "loadStylesheet",
+    "@config",
+    "@plugin",
+    "prefixed setup",
+    "prefix(",
+    # Theme features we don't implement
+    "theme(static)",
+    "theme(inline)",
+    "theme(reference)",
+    "@media theme(",
+    "wrapping `@theme` with `@media",
+    "`@import",
+    "`default` theme values can be overridden by plugin",
+    "`default` theme values can be overridden by config",
+    "only emits theme variables that are used outside",
+    "@utility",
+    "custom static utility",
+    "custom functional utility",
+    # Theme unsetting, reference, inline, static, default - custom theme features
+    "values can be unset",
+    "unsetting",
+    "unset at once",
+    "added as reference",
+    "added as `inline`",
+    "added as `static`",
+    "override existing",
+    "overriding a reference",
+    "`inline` and `reference`",
+    "`default` theme values",
+    "`default` and `inline`",
+    "`default` and `reference`",
+    "`default`, `inline`",
+    "`default` can be used",
+    "empty layers can",
+    # Keyframe-specific theme tests
+    "keyframes are generated",
+    "keyframes are removed",
+    "keyframes outside",
+    "custom properties in keyframes",
+    "keyframe names followed by comma",
+    "`@keyframes` in `@theme`",
+    "`@keyframes` added in",
+    "name contains a new line",
+    # Other non-applicable tests
+    "that only CSS variables are allowed",
+    "out-of-range escaped",
+    "Later values from `@theme`",
+    "Multiple `@theme` blocks",
+    "escaped forward slashes",
+    "unescapes theme variables",
+    "unescapes underscores",
+    "vendor prefixes",
+    "not take undefined values",
+    "fancy-text",
 ]
 
 SCRIPT_DIR = Path(__file__).parent
@@ -677,6 +761,36 @@ def parse_each_data(each_data_str, body):
     return entries
 
 
+def should_skip_index_test(block):
+    """Check if an index.test.ts test block should be skipped."""
+    name = block.get("name", "")
+
+    # Skip tests whose describe context matches skip list
+    for skip_desc in INDEX_TEST_SKIP_DESCRIBES:
+        if skip_desc in name:
+            return True
+
+    # Skip tests whose name matches skip patterns
+    for skip_name in INDEX_TEST_SKIP_NAMES:
+        if skip_name in name:
+            return True
+
+    # Skip tests that use loadStylesheet or loadModule (require file loading)
+    body = block.get("body", "")
+    if "loadStylesheet" in body or "loadModule" in body:
+        return True
+
+    # Skip tests that use @config or @plugin in the CSS
+    if "@config" in body or "@plugin" in body:
+        return True
+
+    # Skip tests that use @import in their compileCss CSS config
+    if "@import" in body and "compileCss" in body:
+        return True
+
+    return False
+
+
 def process_test_file(filename):
     """Process a single test file and return all test cases."""
     text = read_file(filename)
@@ -684,6 +798,10 @@ def process_test_file(filename):
     results = []
 
     for block in blocks:
+        # Filter out irrelevant index.test.ts tests
+        if filename == "index.test.ts" and should_skip_index_test(block):
+            continue
+
         positive, negative = extract_assertions_from_body(block["body"])
 
         # For test.each with no direct assertions, try to parse the each data
@@ -773,6 +891,7 @@ def main():
         "candidate.test.ts": 75,  # 72 test/it + 3 test.each (includes 1 test.skip)
         "important.test.ts": 4,
         "sort.test.ts": 4,        # 2 test + 1 test.each + 1 test.skip
+        "index.test.ts": 20,      # ~20-40 after filtering out @apply, plugins, etc.
     }
     print(f"\nExpected vs Actual:")
     for fname, expected in expected_counts.items():

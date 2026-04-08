@@ -15893,5 +15893,411 @@
       }
     ],
     "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "compiling CSS > `@tailwind utilities` is replaced with the generated utility classes",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "flex",
+          "md:grid",
+          "hover:underline",
+          "dark:bg-black"
+        ],
+        "css": ":root, :host {\n  --color-black: #000;\n}\n\n@layer utilities {\n  .flex {\n    display: flex;\n  }\n\n  @media (hover: hover) {\n    .hover\\\\:underline:hover {\n      text-decoration-line: underline;\n    }\n  }\n\n  @media (min-width: 768px) {\n    .md\\\\:grid {\n      display: grid;\n    }\n  }\n\n  @media (prefers-color-scheme: dark) {\n    .dark\\\\:bg-black {\n      background-color: var(--color-black);\n    }\n  }\n}",
+        "css_config": "@theme {\n  --color-black: #000;\n  --breakpoint-md: 768px;\n}\n\n@layer utilities {\n  @tailwind utilities;\n}"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "compiling CSS > `@tailwind utilities` is only processed once",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "flex",
+          "grid"
+        ],
+        "css": ".flex {\n  display: flex;\n}\n\n.grid {\n  display: grid;\n}",
+        "css_config": "@tailwind utilities;\n@tailwind utilities;"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "compiling CSS > `@tailwind utilities` is replaced by utilities using the default theme",
+    "type": "test",
+    "positive": [],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "arbitrary properties > should generate arbitrary properties",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "[color:red]"
+        ],
+        "css": ".\\\\[color\\\\:red\\\\] {\n  color: red;\n}"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "arbitrary properties > should generate arbitrary properties with modifiers",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "[color:red]/50"
+        ],
+        "css": ".\\\\[color\\\\:red\\\\]\\\\/50 {\n  color: oklab(62.7955% .224 .125 / .5);\n}"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "arbitrary properties > should not generate arbitrary properties with invalid modifiers",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "[color:red]/not-a-percentage"
+        ],
+        "css": ""
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "arbitrary properties > should generate arbitrary properties with variables and with modifiers",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "[color:var(--my-color)]/50"
+        ],
+        "css": ".\\\\[color\\\\:var\\\\(--my-color\\\\)\\\\]\\\\/50 {\n  color: var(--my-color);\n}\n\n@supports (color: color-mix(in lab, red, red)) {\n  .\\\\[color\\\\:var\\\\(--my-color\\\\)\\\\]\\\\/50 {\n    color: color-mix(in oklab, var(--my-color) 50%, transparent);\n  }\n}"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "arbitrary variants > should generate arbitrary variants",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "[&_p]:flex"
+        ],
+        "css": ".\\\\[\\\\&_p\\\\]\\\\:flex p {\n  display: flex;\n}"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "arbitrary variants > should generate arbitrary at-rule variants",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "[@media(width>=123px)]:flex"
+        ],
+        "css": "@media (min-width: 123px) {\n  .\\\\[\\\\@media\\\\(width\\\\>\\\\=123px\\\\)\\\\]\\\\:flex {\n    display: flex;\n  }\n}"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "arbitrary variants > discards arbitrary variants using relative selectors",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [],
+        "assertion": "toBe('')",
+        "expect_content": "await run(['[>img]:flex', '[+img]:flex', '[~img]:flex'])"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "variant stacking > should stack simple variants",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "focus:hover:flex"
+        ],
+        "css": "@media (hover: hover) {\n  .focus\\\\:hover\\\\:flex:focus:hover {\n    display: flex;\n  }\n}"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "variant stacking > should stack arbitrary variants and simple variants",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "[&_p]:hover:flex"
+        ],
+        "css": "@media (hover: hover) {\n  .\\\\[\\\\&_p\\\\]\\\\:hover\\\\:flex p:hover {\n    display: flex;\n  }\n}"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "variant stacking > should stack multiple arbitrary variants",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "[&_p]:[@media(width>=123px)]:flex"
+        ],
+        "css": "@media (min-width: 123px) {\n  .\\\\[\\\\&_p\\\\]\\\\:\\\\[\\\\@media\\\\(width\\\\>\\\\=123px\\\\)\\\\]\\\\:flex p {\n    display: flex;\n  }\n}"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "variant stacking > pseudo element variants are re-ordered",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "before:hover:flex",
+          "hover:before:flex"
+        ],
+        "css": "@layer properties {\n  @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {\n    *, :before, :after, ::backdrop {\n      --tw-content: \"\";\n    }\n  }\n}\n\n.before\\\\:hover\\\\:flex:before {\n  content: var(--tw-content);\n}\n\n@media (hover: hover) {\n  .before\\\\:hover\\\\:flex:before:hover {\n    display: flex;\n  }\n\n  .hover\\\\:before\\\\:flex:hover:before {\n    content: var(--tw-content);\n    display: flex;\n  }\n}\n\n@property --tw-content {\n  syntax: \"*\";\n  inherits: false;\n  initial-value: \"\";\n}"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "important > should generate an important utility",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "underline!"
+        ],
+        "css": ".underline\\\\! {\n  text-decoration-line: underline !important;\n}"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "important > should generate an important utility with legacy syntax",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "!underline"
+        ],
+        "css": ".\\\\!underline {\n  text-decoration-line: underline !important;\n}"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "important > should not mark declarations inside of @keyframes as important",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "animate-spin!"
+        ],
+        "css": ":root, :host {\n  --animate-spin: spin 1s linear infinite;\n}\n\n.animate-spin\\\\! {\n  animation: var(--animate-spin) !important;\n}\n\n@keyframes spin {\n  to {\n    transform: rotate(360deg);\n  }\n}",
+        "css_config": "@theme {\n  --animate-spin: spin 1s linear infinite;\n\n  @keyframes spin {\n    to {\n      transform: rotate(360deg);\n    }\n  }\n}\n@tailwind utilities;"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "important > should generate an important arbitrary property utility",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "[color:red]!"
+        ],
+        "css": ".\\\\[color\\\\:red\\\\]\\\\! {\n  color: red !important;\n}"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "sorting > should sort utilities based on their property order",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "pointer-events-none",
+          "flex",
+          "p-1",
+          "px-1",
+          "pl-1"
+        ],
+        "css": ":root, :host {\n  --spacing-1: .25rem;\n}\n\n.pointer-events-none {\n  pointer-events: none;\n}\n\n.flex {\n  display: flex;\n}\n\n.p-1 {\n  padding: var(--spacing-1);\n}\n\n.px-1 {\n  padding-inline: var(--spacing-1);\n}\n\n.pl-1 {\n  padding-left: var(--spacing-1);\n}",
+        "css_config": "@theme {\n  --spacing-1: 0.25rem;\n}\n@tailwind utilities;"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "sorting > should sort based on amount of properties",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "text-clip",
+          "truncate",
+          "overflow-scroll"
+        ],
+        "css": ".truncate {\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  overflow: hidden;\n}\n\n.overflow-scroll {\n  overflow: scroll;\n}\n\n.text-clip {\n  text-overflow: clip;\n}"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "sorting > should sort utilities with a custom internal --tw-sort correctly",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "mx-0",
+          "gap-4",
+          "space-x-2"
+        ],
+        "css": "@layer properties {\n  @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {\n    *, :before, :after, ::backdrop {\n      --tw-space-x-reverse: 0;\n    }\n  }\n}\n\n:root, :host {\n  --spacing-0: 0px;\n  --spacing-2: .5rem;\n  --spacing-4: 1rem;\n}\n\n.mx-0 {\n  margin-inline: var(--spacing-0);\n}\n\n.gap-4 {\n  gap: var(--spacing-4);\n}\n\n:where(.space-x-2 > :not(:last-child)) {\n  --tw-space-x-reverse: 0;\n  margin-inline-start: calc(var(--spacing-2) * var(--tw-space-x-reverse));\n  margin-inline-end: calc(var(--spacing-2) * calc(1 - var(--tw-space-x-reverse)));\n}\n\n@property --tw-space-x-reverse {\n  syntax: \"*\";\n  inherits: false;\n  initial-value: 0;\n}",
+        "css_config": "@theme {\n  --spacing-0: 0px;\n  --spacing-2: 0.5rem;\n  --spacing-4: 1rem;\n}\n@tailwind utilities;"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "sorting > should sort individual logical properties later than left/right pairs",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "scroll-ms-1",
+          "scroll-me-2",
+          "scroll-mx-3",
+          "scroll-ps-1",
+          "scroll-pe-2",
+          "scroll-px-3",
+          "ms-1",
+          "me-2",
+          "mx-3",
+          "ps-1",
+          "pe-2",
+          "px-3"
+        ],
+        "css": ":root, :host {\n  --spacing-1: 1px;\n  --spacing-2: 2px;\n  --spacing-3: 3px;\n}\n\n.mx-3 {\n  margin-inline: var(--spacing-3);\n}\n\n.ms-1 {\n  margin-inline-start: var(--spacing-1);\n}\n\n.me-2 {\n  margin-inline-end: var(--spacing-2);\n}\n\n.scroll-mx-3 {\n  scroll-margin-inline: var(--spacing-3);\n}\n\n.scroll-ms-1 {\n  scroll-margin-inline-start: var(--spacing-1);\n}\n\n.scroll-me-2 {\n  scroll-margin-inline-end: var(--spacing-2);\n}\n\n.scroll-px-3 {\n  scroll-padding-inline: var(--spacing-3);\n}\n\n.scroll-ps-1 {\n  scroll-padding-inline-start: var(--spacing-1);\n}\n\n.scroll-pe-2 {\n  scroll-padding-inline-end: var(--spacing-2);\n}\n\n.px-3 {\n  padding-inline: var(--spacing-3);\n}\n\n.ps-1 {\n  padding-inline-start: var(--spacing-1);\n}\n\n.pe-2 {\n  padding-inline-end: var(--spacing-2);\n}",
+        "css_config": "@theme {\n  --spacing-1: 1px;\n  --spacing-2: 2px;\n  --spacing-3: 3px;\n}\n@tailwind utilities;"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "sorting > should move variants to the end while sorting",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "pointer-events-none",
+          "flex",
+          "hover:flex",
+          "focus:pointer-events-none"
+        ],
+        "css": ".pointer-events-none {\n  pointer-events: none;\n}\n\n.flex {\n  display: flex;\n}\n\n@media (hover: hover) {\n  .hover\\\\:flex:hover {\n    display: flex;\n  }\n}\n\n.focus\\\\:pointer-events-none:focus {\n  pointer-events: none;\n}"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "sorting > should sort variants and stacked variants by variant position",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "flex",
+          "hover:flex",
+          "focus:flex",
+          "disabled:flex",
+          "hover:focus:flex"
+        ],
+        "css": ".flex {\n  display: flex;\n}\n\n@media (hover: hover) {\n  .hover\\\\:flex:hover {\n    display: flex;\n  }\n}\n\n.focus\\\\:flex:focus {\n  display: flex;\n}\n\n@media (hover: hover) {\n  .hover\\\\:focus\\\\:flex:hover:focus {\n    display: flex;\n  }\n}\n\n.disabled\\\\:flex:disabled {\n  display: flex;\n}"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "sorting > should order group-* and peer-* variants based on the sort order of the group and peer variant but also based on the variant they are wrapping",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "hover:flex",
+          "group-hover:flex",
+          "group-focus:flex",
+          "peer-hover:flex",
+          "peer-focus:flex",
+          "group-hover:peer-hover:flex",
+          "group-hover:peer-focus:flex",
+          "peer-hover:group-hover:flex",
+          "peer-hover:group-focus:flex",
+          "group-focus:peer-hover:flex",
+          "group-focus:peer-focus:flex",
+          "peer-focus:group-hover:flex",
+          "peer-focus:group-focus:flex"
+        ],
+        "css": "@media (hover: hover) {\n  .group-hover\\\\:flex:is(:where(.group):hover *) {\n    display: flex;\n  }\n}\n\n.group-focus\\\\:flex:is(:where(.group):focus *) {\n  display: flex;\n}\n\n@media (hover: hover) {\n  .peer-hover\\\\:flex:is(:where(.peer):hover ~ *) {\n    display: flex;\n  }\n\n  @media (hover: hover) {\n    .group-hover\\\\:peer-hover\\\\:flex:is(:where(.group):hover *):is(:where(.peer):hover ~ *), .peer-hover\\\\:group-hover\\\\:flex:is(:where(.peer):hover ~ *):is(:where(.group):hover *) {\n      display: flex;\n    }\n  }\n\n  .group-focus\\\\:peer-hover\\\\:flex:is(:where(.group):focus *):is(:where(.peer):hover ~ *), .peer-hover\\\\:group-focus\\\\:flex:is(:where(.peer):hover ~ *):is(:where(.group):focus *) {\n    display: flex;\n  }\n}\n\n.peer-focus\\\\:flex:is(:where(.peer):focus ~ *) {\n  display: flex;\n}\n\n@media (hover: hover) {\n  .group-hover\\\\:peer-focus\\\\:flex:is(:where(.group):hover *):is(:where(.peer):focus ~ *), .peer-focus\\\\:group-hover\\\\:flex:is(:where(.peer):focus ~ *):is(:where(.group):hover *) {\n    display: flex;\n  }\n}\n\n.group-focus\\\\:peer-focus\\\\:flex:is(:where(.group):focus *):is(:where(.peer):focus ~ *), .peer-focus\\\\:group-focus\\\\:flex:is(:where(.peer):focus ~ *):is(:where(.group):focus *) {\n  display: flex;\n}\n\n@media (hover: hover) {\n  .hover\\\\:flex:hover {\n    display: flex;\n  }\n}"
+      }
+    ],
+    "negative": []
+  },
+  {
+    "source": "index.test.ts",
+    "name": "Parsing theme values from CSS > Can read values from `@theme`",
+    "type": "test",
+    "positive": [
+      {
+        "candidates": [
+          "accent-red-500"
+        ],
+        "css": ":root, :host {\n  --color-red-500: red;\n}\n\n.accent-red-500 {\n  accent-color: var(--color-red-500);\n}",
+        "css_config": "@theme {\n  --color-red-500: #f00;\n}\n@tailwind utilities;"
+      }
+    ],
+    "negative": []
   }
 ]

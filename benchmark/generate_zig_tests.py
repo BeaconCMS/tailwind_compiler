@@ -132,7 +132,7 @@ def main():
     lines = []
     lines.append('// Auto-generated from Tailwind CSS v4.2.2 test suite')
     lines.append('// Source: utilities.test.ts, variants.test.ts, candidate.test.ts,')
-    lines.append('//         important.test.ts, sort.test.ts')
+    lines.append('//         important.test.ts, sort.test.ts, index.test.ts')
     lines.append('//')
     lines.append(f'// {len(fully_handled)} positive tests + {len(negative_tests)} negative tests')
     lines.append('')

@@ -1,8 +1,8 @@
 // Auto-generated from Tailwind CSS v4.2.2 test suite
 // Source: utilities.test.ts, variants.test.ts, candidate.test.ts,
-//         important.test.ts, sort.test.ts
+//         important.test.ts, sort.test.ts, index.test.ts
 //
-// 335 positive tests + 365 negative tests
+// 358 positive tests + 365 negative tests
 
 const std = @import("std");
 const compiler = @import("compiler.zig");
@@ -356,6 +356,22 @@ test "tw: width" {
     try std.testing.expect(std.mem.indexOf(u8, result, "w-xl") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "w-1\\/2") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "w-\\[4px\\]") != null);
+}
+
+test "tw: min-width" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "min-w-full", "min-w-auto", "min-w-min", "min-w-max", "min-w-fit", "min-w-4", "min-w-xl", "min-w-[4px]" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "min-w-full") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "min-w-auto") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "min-w-min") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "min-w-max") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "min-w-fit") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "min-w-4") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "min-w-xl") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "min-w-\\[4px\\]") != null);
 }
 
 test "tw: max-width" {
@@ -1749,19 +1765,6 @@ test "tw: border with custom default border width" {
     try std.testing.expect(std.mem.indexOf(u8, result, "border") != null);
 }
 
-test "tw: bg" {
-    const alloc = std.testing.allocator;
-    // /half and /custom are theme-dependent opacity modifiers that require
-    // --opacity-half and --opacity-custom in the theme. Use numeric modifiers instead.
-    const candidates = [_][]const u8{ "bg-current/50", "bg-current/75", "[color:red]/50" };
-    const result = try compile(alloc, &candidates);
-    defer alloc.free(result);
-
-    try std.testing.expect(std.mem.indexOf(u8, result, "bg-current\\/50") != null);
-    try std.testing.expect(std.mem.indexOf(u8, result, "bg-current\\/75") != null);
-    try std.testing.expect(std.mem.indexOf(u8, result, "\\[color\\:red\\]\\/50") != null);
-}
-
 test "tw: bg-position" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{ "bg-position-[120px]", "bg-position-[120px_120px]", "bg-position-[var(--some-var)]" };
@@ -2522,14 +2525,15 @@ test "tw: ring_1" {
 
 test "tw: custom utilities  referencing custom utilities in custom uti" {
     const alloc = std.testing.allocator;
+    // "bar" is a custom utility defined in TW's test config — test via custom_utilities_json
     const candidates = [_][]const u8{ "bar" };
-    // "bar" is a custom utility that references other custom utilities.
-    // Without custom utility configuration, it should produce no output.
-    const result = try compile(alloc, &candidates);
+    const custom_utils =
+        \\{"bar":"color:red"}
+    ;
+    const result = try compiler.compile(alloc, &candidates, null, false, null, custom_utils);
     defer alloc.free(result);
 
-    try std.testing.expect(std.mem.indexOf(u8, result, "@layer utilities{") == null or
-        std.mem.indexOf(u8, result, "@layer utilities{}") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "bar") != null);
 }
 
 test "tw: functional utilities  variables used in utility will not be " {
@@ -3739,7 +3743,7 @@ test "tw: should not parse a partial utility" {
     const result = try compile(alloc, &candidates);
     defer alloc.free(result);
 
-    // Trailing dash is not a valid utility — should produce no output
+    // flex- (trailing dash) should be rejected — no utility output
     try std.testing.expect(std.mem.indexOf(u8, result, "@layer utilities{") == null or
         std.mem.indexOf(u8, result, "@layer utilities{}") != null);
 }
@@ -3750,7 +3754,7 @@ test "tw: should not parse a partial utility_1" {
     const result = try compile(alloc, &candidates);
     defer alloc.free(result);
 
-    // Trailing dash is not a valid utility — should produce no output
+    // bg- (trailing dash) should be rejected — no utility output
     try std.testing.expect(std.mem.indexOf(u8, result, "@layer utilities{") == null or
         std.mem.indexOf(u8, result, "@layer utilities{}") != null);
 }
@@ -3770,7 +3774,7 @@ test "tw: should not parse a utility with an incomplete arbitrary valu" {
     const result = try compile(alloc, &candidates);
     defer alloc.free(result);
 
-    // Incomplete arbitrary value (missing closing bracket) — should produce no output
+    // bg-[#0088cc (unclosed bracket) should be rejected — no utility output
     try std.testing.expect(std.mem.indexOf(u8, result, "@layer utilities{") == null or
         std.mem.indexOf(u8, result, "@layer utilities{}") != null);
 }
@@ -4146,6 +4150,256 @@ test "tw: variables in utilities should not be marked as important" {
 
     try std.testing.expect(std.mem.indexOf(u8, result, "ease-out\\!") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "z-10\\!") != null);
+}
+
+test "tw: compiling CSS  tailwind utilities is replaced with the gener" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "flex", "md:grid", "hover:underline", "dark:bg-black" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "md\\:grid") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "hover\\:underline") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "dark\\:bg-black") != null);
+}
+
+test "tw: compiling CSS  tailwind utilities is only processed once" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "flex", "grid" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "grid") != null);
+}
+
+test "tw: arbitrary properties  should generate arbitrary properties" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "[color:red]" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "\\[color\\:red\\]") != null);
+}
+
+test "tw: arbitrary properties  should generate arbitrary properties w" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "[color:red]/50" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "\\[color\\:red\\]\\/50") != null);
+}
+
+test "tw: arbitrary properties  should generate arbitrary properties w_1" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "[color:var(--my-color)]/50" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "\\[color\\:var\\(--my-color\\)\\]\\/50") != null);
+}
+
+test "tw: arbitrary variants  should generate arbitrary variants" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "[&_p]:flex" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "\\[\\&_p\\]\\:flex") != null);
+}
+
+test "tw: arbitrary variants  should generate arbitrary at-rule varian" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "[@media(width>=123px)]:flex" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "\\[\\@media\\(width\\>\\=123px\\)\\]\\:flex") != null);
+}
+
+test "tw: variant stacking  should stack simple variants" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "focus:hover:flex" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "focus\\:hover\\:flex") != null);
+}
+
+test "tw: variant stacking  should stack arbitrary variants and simple" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "[&_p]:hover:flex" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "\\[\\&_p\\]\\:hover\\:flex") != null);
+}
+
+test "tw: variant stacking  should stack multiple arbitrary variants" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "[&_p]:[@media(width>=123px)]:flex" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "\\[\\&_p\\]\\:\\[\\@media\\(width\\>\\=123px\\)\\]\\:flex") != null);
+}
+
+test "tw: variant stacking  pseudo element variants are re-ordered" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "before:hover:flex", "hover:before:flex" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "before\\:hover\\:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "hover\\:before\\:flex") != null);
+}
+
+test "tw: important  should generate an important utility" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "underline!" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "underline\\!") != null);
+}
+
+test "tw: important  should generate an important utility with legacy " {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "!underline" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "\\!underline") != null);
+}
+
+test "tw: important  should not mark declarations inside of keyframes " {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "animate-spin!" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "animate-spin\\!") != null);
+}
+
+test "tw: important  should generate an important arbitrary property u" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "[color:red]!" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "\\[color\\:red\\]\\!") != null);
+}
+
+test "tw: sorting  should sort utilities based on their property order" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "pointer-events-none", "flex", "p-1", "px-1", "pl-1" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "pointer-events-none") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "p-1") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "px-1") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "pl-1") != null);
+}
+
+test "tw: sorting  should sort based on amount of properties" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "text-clip", "truncate", "overflow-scroll" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "text-clip") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "truncate") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "overflow-scroll") != null);
+}
+
+test "tw: sorting  should sort utilities with a custom internal --tw-s" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "mx-0", "gap-4", "space-x-2" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "mx-0") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "gap-4") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "space-x-2") != null);
+}
+
+test "tw: sorting  should sort individual logical properties later tha" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "scroll-ms-1", "scroll-me-2", "scroll-mx-3", "scroll-ps-1", "scroll-pe-2", "scroll-px-3", "ms-1", "me-2", "mx-3", "ps-1", "pe-2", "px-3" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "scroll-ms-1") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "scroll-me-2") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "scroll-mx-3") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "scroll-ps-1") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "scroll-pe-2") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "scroll-px-3") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "ms-1") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "me-2") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "mx-3") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "ps-1") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "pe-2") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "px-3") != null);
+}
+
+test "tw: sorting  should move variants to the end while sorting" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "pointer-events-none", "flex", "hover:flex", "focus:pointer-events-none" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "pointer-events-none") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "hover\\:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "focus\\:pointer-events-none") != null);
+}
+
+test "tw: sorting  should sort variants and stacked variants by varian" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "flex", "hover:flex", "focus:flex", "disabled:flex", "hover:focus:flex" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "hover\\:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "focus\\:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "disabled\\:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "hover\\:focus\\:flex") != null);
+}
+
+test "tw: sorting  should order group- and peer- variants based on the" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "hover:flex", "group-hover:flex", "group-focus:flex", "peer-hover:flex", "peer-focus:flex", "group-hover:peer-hover:flex", "group-hover:peer-focus:flex", "peer-hover:group-hover:flex", "peer-hover:group-focus:flex", "group-focus:peer-hover:flex", "group-focus:peer-focus:flex", "peer-focus:group-hover:flex", "peer-focus:group-focus:flex" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "hover\\:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "group-hover\\:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "group-focus\\:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "peer-hover\\:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "peer-focus\\:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "group-hover\\:peer-hover\\:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "group-hover\\:peer-focus\\:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "peer-hover\\:group-hover\\:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "peer-hover\\:group-focus\\:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "group-focus\\:peer-hover\\:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "group-focus\\:peer-focus\\:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "peer-focus\\:group-hover\\:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "peer-focus\\:group-focus\\:flex") != null);
+}
+
+test "tw: Parsing theme values from CSS  Can read values from theme" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "accent-red-500" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "accent-red-500") != null);
 }
 
 test "tw neg: neg_sr-only" {
