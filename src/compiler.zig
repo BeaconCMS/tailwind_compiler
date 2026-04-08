@@ -113,21 +113,65 @@ pub const Context = struct {
             &isStaticWrapper,
             &isFunctionalWrapper,
             &isVariantWrapper,
+            &isFunctionalVariantRootWrapper,
         ) orelse {
             // Not a known Tailwind utility — check custom utilities
             try self.processCustomUtility(raw);
             return;
         };
 
+        // Reject bare functional utilities without a value (unless they have defaults)
+        if (parsed.kind == .functional and parsed.value == null) {
+            if (!utilities.hasDefaultValue(parsed.root)) return;
+        }
+
         // Reject modifiers on utilities that don't support them
         if (parsed.modifier != null) {
-            switch (parsed.kind) {
-                .static => return, // Static utilities never accept modifiers
-                .functional => {
-                    // Only color/gradient utilities accept modifiers
-                    if (!utilities.supportsModifier(parsed.root)) return;
-                },
-                .arbitrary => {}, // Arbitrary properties accept modifiers
+            // Allow fractions: when value is named, modifier is named, and
+            // the denominator is a positive integer, this is a fraction (e.g. w-1/2)
+            const is_fraction = blk: {
+                if (parsed.value) |val| {
+                    if (val.fraction != null and parsed.modifier.?.kind == .named) {
+                        // Only allow fractions for utilities that support them
+                        if (!utilities.supportsFraction(parsed.root)) break :blk false;
+                        // Validate both numerator and denominator are valid
+                        // Numerator: positive integer or valid decimal (e.g., 8.5)
+                        var num_valid = val.value.len > 0;
+                        var num_has_dot = false;
+                        for (val.value) |c| {
+                            if (c == '.') {
+                                if (num_has_dot) { num_valid = false; break; }
+                                num_has_dot = true;
+                            } else if (c < '0' or c > '9') {
+                                num_valid = false;
+                                break;
+                            }
+                        }
+                        if (!num_valid) break :blk false;
+                        // Denominator: positive integer
+                        const denom = parsed.modifier.?.value;
+                        var all_digits = denom.len > 0;
+                        for (denom) |c| {
+                            if (c < '0' or c > '9') {
+                                all_digits = false;
+                                break;
+                            }
+                        }
+                        break :blk all_digits;
+                    }
+                }
+                break :blk false;
+            };
+
+            if (!is_fraction) {
+                switch (parsed.kind) {
+                    .static => return, // Static utilities never accept modifiers
+                    .functional => {
+                        // Only color/gradient utilities accept modifiers
+                        if (!utilities.supportsModifier(parsed.root)) return;
+                    },
+                    .arbitrary => {}, // Arbitrary properties accept modifiers
+                }
             }
         }
 
@@ -394,6 +438,10 @@ fn isFunctionalWrapper(name: []const u8) bool {
 
 fn isVariantWrapper(name: []const u8) bool {
     return variants_mod.isVariant(name);
+}
+
+fn isFunctionalVariantRootWrapper(name: []const u8) bool {
+    return variants_mod.isFunctionalVariantRoot(name);
 }
 
 // ─── Public API ────────────────────────────────────────────────────────────

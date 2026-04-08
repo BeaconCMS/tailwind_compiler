@@ -444,6 +444,7 @@ pub fn parseCandidate(
     utility_exists_static: *const fn ([]const u8) bool,
     utility_exists_functional: *const fn ([]const u8) bool,
     variant_exists: *const fn ([]const u8) bool,
+    variant_is_functional_root: ?*const fn ([]const u8) bool,
 ) !?Candidate {
     if (raw.len == 0) return null;
 
@@ -471,7 +472,7 @@ pub fn parseCandidate(
         var i: usize = variant_segments.len;
         while (i > 0) {
             i -= 1;
-            const v = parseVariantSegment(alloc, variant_segments[i], variant_exists) orelse return null;
+            const v = parseVariantSegment(alloc, variant_segments[i], variant_exists, variant_is_functional_root) orelse return null;
             if (variant_count >= 16) return null;
             variant_buf[variant_count] = v;
             variant_count += 1;
@@ -703,8 +704,17 @@ fn parseVariantSegment(
     alloc: Allocator,
     input: []const u8,
     variant_exists: *const fn ([]const u8) bool,
+    variant_is_functional_root: ?*const fn ([]const u8) bool,
 ) ?Variant {
     if (input.len == 0) return null;
+
+    // Reject variant segments with `/` modifier on known static/compound/functional variants.
+    // e.g., "first-letter/foo" -> "first-letter" is a known variant, reject.
+    // This prevents static variants from accepting modifiers.
+    if (std.mem.indexOfScalar(u8, input, '/')) |slash_idx| {
+        const base = input[0..slash_idx];
+        if (variant_exists(base)) return null;
+    }
 
     // Arbitrary variant: [...]
     if (input[0] == '[' and input.len > 1 and input[input.len - 1] == ']') {
@@ -741,6 +751,7 @@ fn parseVariantSegment(
                 alloc,
                 inner_variant_str,
                 variant_exists,
+                variant_is_functional_root,
             ) orelse continue;
 
             // Check for modifier (e.g., group-hover/name)
@@ -779,6 +790,8 @@ fn parseVariantSegment(
             // Arbitrary value: root-[...]
             if (value_part[0] == '[' and value_part[value_part.len - 1] == ']') {
                 const inner = value_part[1 .. value_part.len - 1];
+                // Reject empty arbitrary value
+                if (inner.len == 0) return null;
                 return Variant{
                     .kind = .functional,
                     .root = root,
@@ -804,14 +817,27 @@ fn parseVariantSegment(
     // @ functional variant (e.g., @lg, @[123px])
     if (input[0] == '@' and input.len > 1) {
         const rest = input[1..];
-        if (rest[0] == '[' and rest[rest.len - 1] == ']') {
+
+        // Handle modifier: @lg/name, @[123px]/name
+        var at_rest = rest;
+        var at_modifier: ?Modifier = null;
+        if (std.mem.indexOfScalar(u8, rest, '/')) |at_slash| {
+            at_rest = rest[0..at_slash];
+            const mod_part = rest[at_slash + 1 ..];
+            if (mod_part.len > 0) {
+                at_modifier = parseModifier(alloc, mod_part) catch null;
+            }
+        }
+
+        if (at_rest[0] == '[' and at_rest[at_rest.len - 1] == ']') {
             return Variant{
                 .kind = .functional,
                 .root = "@",
                 .value = Value{
                     .kind = .arbitrary,
-                    .value = rest[1 .. rest.len - 1],
+                    .value = at_rest[1 .. at_rest.len - 1],
                 },
+                .modifier = at_modifier,
             };
         }
         return Variant{
@@ -819,8 +845,9 @@ fn parseVariantSegment(
             .root = "@",
             .value = Value{
                 .kind = .named,
-                .value = rest,
+                .value = at_rest,
             },
+            .modifier = at_modifier,
         };
     }
 

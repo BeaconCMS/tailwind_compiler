@@ -1124,12 +1124,123 @@ pub const functional_utility_set = std.StaticStringMap(void).initComptime(.{
     .{ "-indent", {} },
 });
 
+// ─── Default Value Roots ───────────────────────────────────────────────────
+
+/// Check if a functional utility root has a default value when used bare (no value).
+/// e.g. `ring` -> 1px, `blur` -> 8px, `border` -> 1px, `shadow` -> default shadow.
+pub fn hasDefaultValue(root: []const u8) bool {
+    return default_value_roots.has(root);
+}
+
+const default_value_roots = std.StaticStringMap(void).initComptime(.{
+    .{ "ring", {} },
+    .{ "blur", {} },
+    .{ "shadow", {} },
+    .{ "border", {} },
+    .{ "border-x", {} },
+    .{ "border-y", {} },
+    .{ "border-t", {} },
+    .{ "border-r", {} },
+    .{ "border-b", {} },
+    .{ "border-l", {} },
+    .{ "border-s", {} },
+    .{ "border-e", {} },
+    .{ "outline", {} },
+    .{ "drop-shadow", {} },
+    .{ "divide-x", {} },
+    .{ "divide-y", {} },
+    .{ "inset-ring", {} },
+    .{ "grayscale", {} },
+    .{ "invert", {} },
+    .{ "sepia", {} },
+    .{ "backdrop-grayscale", {} },
+    .{ "backdrop-invert", {} },
+    .{ "backdrop-sepia", {} },
+    .{ "backdrop-blur", {} },
+    .{ "inset-shadow", {} },
+    .{ "container", {} },
+});
+
+// ─── Fraction Support ──────────────────────────────────────────────────────
+
+/// Check if a functional utility root supports fraction values (e.g. w-1/2, aspect-4/3).
+pub fn supportsFraction(root: []const u8) bool {
+    return fraction_support.has(root);
+}
+
+const fraction_support = std.StaticStringMap(void).initComptime(.{
+    // Sizing
+    .{ "w", {} },
+    .{ "h", {} },
+    .{ "size", {} },
+    .{ "min-w", {} },
+    .{ "min-h", {} },
+    .{ "max-w", {} },
+    .{ "max-h", {} },
+    // Logical sizing
+    .{ "inline", {} },
+    .{ "block", {} },
+    .{ "min-inline", {} },
+    .{ "min-block", {} },
+    .{ "max-inline", {} },
+    .{ "max-block", {} },
+    // Aspect ratio
+    .{ "aspect", {} },
+    // Translate
+    .{ "translate-x", {} },
+    .{ "translate-y", {} },
+    .{ "-translate-x", {} },
+    .{ "-translate-y", {} },
+    // Inset / position
+    .{ "inset", {} },
+    .{ "inset-x", {} },
+    .{ "inset-y", {} },
+    .{ "top", {} },
+    .{ "right", {} },
+    .{ "bottom", {} },
+    .{ "left", {} },
+    .{ "inset-s", {} },
+    .{ "inset-e", {} },
+    .{ "-inset", {} },
+    .{ "-inset-x", {} },
+    .{ "-inset-y", {} },
+    .{ "-top", {} },
+    .{ "-right", {} },
+    .{ "-bottom", {} },
+    .{ "-left", {} },
+    .{ "-inset-s", {} },
+    .{ "-inset-e", {} },
+    // Grid spans
+    .{ "col-span", {} },
+    .{ "row-span", {} },
+    // Basis
+    .{ "basis", {} },
+});
+
 // ─── Modifier & Negative Support ───────────────────────────────────────────
 
 /// Check if a functional utility root supports modifiers (e.g., opacity via /50).
 /// Only color utilities, gradient stops, and a few others accept modifiers.
 pub fn supportsModifier(root: []const u8) bool {
     return modifier_support.has(root);
+}
+
+/// Validate that a named modifier value is numeric (valid for color opacity).
+/// Accepts integers (0-100) and valid decimals (2.5, 0.5, etc.).
+pub fn isValidNamedModifier(value: []const u8) bool {
+    if (value.len == 0) return false;
+    var has_dot = false;
+    for (value) |c| {
+        if (c == '.') {
+            if (has_dot) return false;
+            has_dot = true;
+        } else if (c < '0' or c > '9') {
+            return false;
+        }
+    }
+    // Reject trailing dot: "25."
+    if (value[value.len - 1] == '.') return false;
+    return true;
 }
 
 const modifier_support = std.StaticStringMap(void).initComptime(.{
@@ -2179,6 +2290,8 @@ fn resolveSpacing(
         .named => {
             // Check for special keywords
             if (std.mem.eql(u8, val.value, "auto")) {
+                // max-w, max-h, max-inline, max-block don't support auto
+                if (std.mem.startsWith(u8, root, "max-")) return null;
                 css_value = "auto";
             } else if (std.mem.eql(u8, val.value, "full")) {
                 css_value = if (is_neg) "-100%" else "100%";
@@ -2355,6 +2468,7 @@ fn resolveZIndex(alloc: Allocator, value: ?Value, negative: bool) !?[]const Decl
         },
         .named => {
             if (std.mem.eql(u8, val.value, "auto")) {
+                if (negative) return null; // -z-auto is invalid
                 css_value = "auto";
             } else if (isPositiveInteger(val.value)) {
                 if (negative) {
@@ -2431,10 +2545,13 @@ fn resolveOrder(alloc: Allocator, value: ?Value, negative: bool) !?[]const Decla
         },
         .named => {
             if (std.mem.eql(u8, val.value, "first")) {
-                css_value = if (negative) "9999" else "-9999";
+                if (negative) return null; // -order-first is invalid
+                css_value = "-9999";
             } else if (std.mem.eql(u8, val.value, "last")) {
-                css_value = if (negative) "-9999" else "9999";
+                if (negative) return null; // -order-last is invalid
+                css_value = "9999";
             } else if (std.mem.eql(u8, val.value, "none")) {
+                if (negative) return null; // -order-none is invalid
                 css_value = "0";
             } else if (isPositiveInteger(val.value)) {
                 if (negative) {
@@ -2985,7 +3102,7 @@ fn resolveGridTemplate(alloc: Allocator, value: ?Value, property: []const u8, th
                 css_value = "none";
             } else if (std.mem.eql(u8, val.value, "subgrid")) {
                 css_value = "subgrid";
-            } else if (isPositiveInteger(val.value)) {
+            } else if (isPositiveInteger(val.value) and !std.mem.eql(u8, val.value, "0")) {
                 css_value = try std.fmt.allocPrint(alloc, "repeat({s},minmax(0,1fr))", .{val.value});
             } else if (theme.resolve(val.value, theme_ns)) {
                 // Theme lookup: grid-cols-blog → var(--grid-cols-blog)
@@ -3341,9 +3458,8 @@ fn resolveTranslateZ(alloc: Allocator, root: []const u8, value: ?Value, negative
             }
         },
         .named => {
-            if (std.mem.eql(u8, val.value, "full")) {
-                inner = if (is_neg) "-100%" else "100%";
-            } else if (std.mem.eql(u8, val.value, "px")) {
+            // translate-z only accepts px and spacing values, not full/keywords
+            if (std.mem.eql(u8, val.value, "px")) {
                 inner = if (is_neg) "-1px" else "1px";
             } else if (isValidSpacingMultiplier(val.value)) {
                 theme.markUsed("--spacing");
@@ -3457,7 +3573,8 @@ fn resolveRing(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
     const COMPOSABLE_BOX_SHADOW = "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)";
 
     const val = value orelse {
-        // ring with no value = 1px ring
+        // ring with no value = 1px ring, but reject modifiers on bare ring
+        if (modifier != null) return null;
         const ring_val = "var(--tw-ring-inset,) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color,currentcolor)";
         const decls = try alloc.alloc(Declaration, 2);
         decls[0] = Declaration{ .property = "--tw-ring-shadow", .value = ring_val };
@@ -3467,8 +3584,13 @@ fn resolveRing(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
 
     switch (val.kind) {
         .arbitrary => {
-            // Could be color or width - check for numeric
-            if (isPositiveInteger(val.value) or std.mem.endsWith(u8, val.value, "px") or std.mem.endsWith(u8, val.value, "rem")) {
+            // Could be color or width - check for numeric or length typehint
+            const is_width = isPositiveInteger(val.value) or
+                std.mem.endsWith(u8, val.value, "px") or
+                std.mem.endsWith(u8, val.value, "rem") or
+                (val.data_type != null and std.mem.eql(u8, val.data_type.?, "length"));
+            if (is_width) {
+                if (modifier != null) return null; // Width mode doesn't accept modifiers
                 const ring_val = try std.fmt.allocPrint(alloc, "var(--tw-ring-inset,) 0 0 0 calc({s} + var(--tw-ring-offset-width)) var(--tw-ring-color,currentcolor)", .{val.value});
                 const decls = try alloc.alloc(Declaration, 2);
                 decls[0] = Declaration{ .property = "--tw-ring-shadow", .value = ring_val };
@@ -3506,8 +3628,9 @@ fn resolveRing(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
                 return decls;
             }
 
-            // Try as width
+            // Try as width — modifiers not allowed in width mode
             if (isPositiveInteger(val.value)) {
+                if (modifier != null) return null;
                 const ring_val = try std.fmt.allocPrint(alloc, "var(--tw-ring-inset,) 0 0 0 calc({s}px + var(--tw-ring-offset-width)) var(--tw-ring-color,currentcolor)", .{val.value});
                 const decls = try alloc.alloc(Declaration, 2);
                 decls[0] = Declaration{ .property = "--tw-ring-shadow", .value = ring_val };
@@ -4143,8 +4266,8 @@ fn resolveGradientStop(alloc: Allocator, root: []const u8, value: ?Value, modifi
             } else if (theme.resolve(val.value, "--color")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--color-{s}", .{val.value}));
                 css_value = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
-            } else if (std.mem.endsWith(u8, val.value, "%")) {
-                // Gradient position: from-0%, via-50%, to-100%
+            } else if (std.mem.endsWith(u8, val.value, "%") and val.value.len > 1 and isPositiveInteger(val.value[0 .. val.value.len - 1])) {
+                // Gradient position: from-0%, via-50%, to-100% (must be non-negative integer%)
                 const pos_prop: []const u8 = if (is_from)
                     "--tw-gradient-from-position"
                 else if (is_via)
@@ -4390,7 +4513,8 @@ fn resolveGrowShrink(alloc: Allocator, value: ?Value, property: []const u8) !?[]
             css_value = val.value;
         },
         .named => {
-            if (isValidSpacingMultiplier(val.value)) {
+            // Only accept non-negative integers (no decimals)
+            if (isPositiveInteger(val.value)) {
                 css_value = val.value;
             } else {
                 return null;

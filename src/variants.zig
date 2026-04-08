@@ -17,6 +17,11 @@ pub fn isVariant(name: []const u8) bool {
     return false;
 }
 
+/// Check if a name is a registered functional variant root (e.g., aria, data, supports).
+pub fn isFunctionalVariantRoot(name: []const u8) bool {
+    return functional_variant_roots.has(name);
+}
+
 /// Get the sort order for a variant.
 pub fn variantOrder(name: []const u8) u16 {
     return variant_order_map.get(name) orelse 999;
