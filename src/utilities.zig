@@ -1766,8 +1766,8 @@ pub fn resolveFunctional(
         .duration => resolveDuration(alloc, value),
         .delay => resolveDelay(alloc, value),
         .aspect => resolveAspect(alloc, value, theme),
-        .grid_template_cols => resolveGridTemplate(alloc, value, "grid-template-columns"),
-        .grid_template_rows => resolveGridTemplate(alloc, value, "grid-template-rows"),
+        .grid_template_cols => resolveGridTemplate(alloc, value, "grid-template-columns", theme),
+        .grid_template_rows => resolveGridTemplate(alloc, value, "grid-template-rows", theme),
         .grid_col => resolveGridPlacement(alloc, value, "grid-column"),
         .grid_col_span => resolveGridSpan(alloc, value, "grid-column"),
         .grid_col_start => resolveGridStartEnd(alloc, value, "grid-column-start"),
@@ -2803,14 +2803,19 @@ fn resolveAspect(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decla
 
 // ─── Grid Template Columns/Rows ────────────────────────────────────────────
 
-fn resolveGridTemplate(alloc: Allocator, value: ?Value, property: []const u8) !?[]const Declaration {
+fn resolveGridTemplate(alloc: Allocator, value: ?Value, property: []const u8, theme: *Theme) !?[]const Declaration {
     const val = value orelse return null;
 
     var css_value: []const u8 = undefined;
 
+    // Determine the theme namespace from the property
+    const theme_ns: []const u8 = if (std.mem.eql(u8, property, "grid-template-columns"))
+        "--grid-cols"
+    else
+        "--grid-rows";
+
     switch (val.kind) {
         .arbitrary => {
-            // Replace underscores with spaces in arbitrary values
             css_value = try replaceUnderscores(alloc, val.value);
         },
         .named => {
@@ -2820,6 +2825,12 @@ fn resolveGridTemplate(alloc: Allocator, value: ?Value, property: []const u8) !?
                 css_value = "subgrid";
             } else if (isPositiveInteger(val.value)) {
                 css_value = try std.fmt.allocPrint(alloc, "repeat({s},minmax(0,1fr))", .{val.value});
+            } else if (theme.resolve(val.value, theme_ns)) {
+                // Theme lookup: grid-cols-blog → var(--grid-cols-blog)
+                var buf: [128]u8 = undefined;
+                const var_name = std.fmt.bufPrint(&buf, "{s}-{s}", .{ theme_ns, val.value }) catch return null;
+                theme.markUsed(var_name);
+                css_value = try std.fmt.allocPrint(alloc, "var({s}-{s})", .{ theme_ns, val.value });
             } else {
                 return null;
             }
@@ -3232,8 +3243,20 @@ fn resolveSkew(alloc: Allocator, value: ?Value, comptime axis: []const u8, negat
 // ─── Shadow ────────────────────────────────────────────────────────────────
 
 fn resolveShadow(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Declaration {
-    const val = value orelse return null;
     const COMPOSABLE_BOX_SHADOW = "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)";
+
+    const val = value orelse {
+        // Bare shadow = default shadow (--shadow-sm equivalent)
+        if (theme.get("--shadow-sm")) |raw_val| {
+            theme.markUsed("--shadow-sm");
+            const shadow_value = try convertShadowColors(alloc, raw_val);
+            const decls = try alloc.alloc(Declaration, 2);
+            decls[0] = Declaration{ .property = "--tw-shadow", .value = shadow_value };
+            decls[1] = Declaration{ .property = "box-shadow", .value = COMPOSABLE_BOX_SHADOW };
+            return decls;
+        }
+        return null;
+    };
 
     var shadow_value: []const u8 = undefined;
 
@@ -3357,7 +3380,10 @@ fn buildFilterDecls(alloc: Allocator, fn_value: []const u8, comptime is_backdrop
 }
 
 fn resolveFilterBlur(alloc: Allocator, value: ?Value, comptime is_backdrop: bool, comptime theme_ns: []const u8, theme: *Theme) !?[]const Declaration {
-    const val = value orelse return null;
+    const val = value orelse {
+        // Bare blur/backdrop-blur = default 8px
+        return buildFilterDecls(alloc, "blur(8px)", is_backdrop, "blur");
+    };
 
     var css_value: []const u8 = undefined;
 

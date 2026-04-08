@@ -173,20 +173,42 @@ pub const Theme = struct {
                 }
             } else if (std.mem.eql(u8, key, "colors")) {
                 if (val == .object) {
-                    var c_iter = val.object.iterator();
-                    while (c_iter.next()) |c| {
-                        if (c.value_ptr.* == .string) {
-                            const var_name = try std.fmt.allocPrint(self.alloc, "--color-{s}", .{c.key_ptr.*});
-                            const var_val = try self.alloc.dupe(u8, c.value_ptr.*.string);
-                            try self.variables.put(var_name, var_val);
-                        }
-                    }
+                    try self.loadNestedThemeValues(val.object, "--color");
                 }
             } else {
-                // Generic: store as-is
-                if (val == .string) {
-                    const var_name = try std.fmt.allocPrint(self.alloc, "--{s}", .{key});
+                // Map known JSON keys to CSS custom property prefixes
+                const prefix = jsonKeyToPrefix(key);
+                if (val == .object) {
+                    try self.loadNestedThemeValues(val.object, prefix);
+                } else if (val == .string) {
+                    const var_name = try std.fmt.allocPrint(self.alloc, "{s}", .{prefix});
                     try self.variables.put(var_name, try self.alloc.dupe(u8, val.string));
+                }
+            }
+        }
+    }
+
+    /// Load nested theme values from a JSON object into variables with a given prefix.
+    /// E.g., {"heading": "Manrope, sans-serif"} with prefix "--font" → --font-heading = "Manrope, sans-serif"
+    /// Handles one level of nesting (for color palettes like {"gray": {"50": "#F0F5F9"}}).
+    fn loadNestedThemeValues(self: *Theme, obj: std.json.ObjectMap, prefix: []const u8) !void {
+        var obj_iter = obj.iterator();
+        while (obj_iter.next()) |entry| {
+            const k = entry.key_ptr.*;
+            const v = entry.value_ptr.*;
+            if (v == .string) {
+                const var_name = try std.fmt.allocPrint(self.alloc, "{s}-{s}", .{ prefix, k });
+                const var_val = try self.alloc.dupe(u8, v.string);
+                try self.variables.put(var_name, var_val);
+            } else if (v == .object) {
+                // One level deeper (e.g., colors.gray.50)
+                var inner_iter = v.object.iterator();
+                while (inner_iter.next()) |inner| {
+                    if (inner.value_ptr.* == .string) {
+                        const var_name = try std.fmt.allocPrint(self.alloc, "{s}-{s}-{s}", .{ prefix, k, inner.key_ptr.* });
+                        const var_val = try self.alloc.dupe(u8, inner.value_ptr.*.string);
+                        try self.variables.put(var_name, var_val);
+                    }
                 }
             }
         }
@@ -235,6 +257,28 @@ pub const Theme = struct {
 };
 
 // ─── Tests ─────────────────────────────────────────────────────────────────
+
+/// Map JSON theme key names to CSS custom property prefixes.
+fn jsonKeyToPrefix(key: []const u8) []const u8 {
+    const map = std.StaticStringMap([]const u8).initComptime(.{
+        .{ "fontFamily", "--font" },
+        .{ "fontSize", "--text" },
+        .{ "fontWeight", "--font-weight" },
+        .{ "letterSpacing", "--tracking" },
+        .{ "lineHeight", "--leading" },
+        .{ "borderRadius", "--radius" },
+        .{ "maxWidth", "--max-width" },
+        .{ "height", "--height" },
+        .{ "boxShadow", "--shadow" },
+        .{ "transitionDuration", "--duration" },
+        .{ "transitionProperty", "--transition-property" },
+        .{ "gridTemplateColumns", "--grid-template-columns" },
+        .{ "gridTemplateRows", "--grid-template-rows" },
+        .{ "aspectRatio", "--aspect" },
+        .{ "spacing", "--spacing" },
+    });
+    return map.get(key) orelse "--unknown";
+}
 
 test "Theme: init and basic operations" {
     const alloc = std.testing.allocator;

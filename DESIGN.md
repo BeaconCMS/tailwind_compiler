@@ -1,435 +1,300 @@
-# TailwindCompiler — Zig NIF Design Document
+# TailwindCompiler — Remaining Work
 
-## What This Is
+## Current State
 
-A Tailwind CSS v4-compatible compiler written in Zig, callable from Elixir as a NIF via Zigler. It accepts a list of CSS class candidate strings and returns minified production CSS. Everything happens in memory — no filesystem, no external processes, no CLI binary.
+9,092 lines of Zig. 526 static utilities, 62 functional resolvers, 50+ variants.
+Generates 425 unique selectors for the DockYard homepage. Production Tailwind CLI
+generates 1,282 selectors for the full site. We're at ~33% selector coverage against
+the full site, but much higher for the homepage specifically since most missing
+selectors are from pages that haven't been loaded yet.
+
+The 886 missing selectors break down as:
+
+- **116 custom CSS classes** (not Tailwind — `.alert`, `.btn`, `.link-*`, `.form-*`, `.highlight`, `.phx-*`, `.featured-*`) — these come from Beacon's custom stylesheets and are passed through as `custom_css`. Not a compiler issue.
+- **770 Tailwind utility classes** the compiler doesn't generate, broken down below.
+
+## Missing Tailwind Utilities
+
+### 1. Missing Static Utilities
+
+These are fixed class→declaration mappings we don't have yet:
+
+```
+antialiased          → -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale
+blur                 → filter: blur(8px)
+filter               → (legacy, no-op in v4)
+transform            → (legacy, no-op in v4)
+border-collapse      → border-collapse: collapse  (HAVE IT — may be extraction issue)
+border-solid         → border-style: solid  (HAVE IT — may be extraction issue)
+border-none          → border-style: none  (HAVE IT — may be extraction issue)
+capitalize           → text-transform: capitalize
+lowercase            → text-transform: lowercase
+normal-case          → text-transform: none
+truncate             → overflow: hidden; text-overflow: ellipsis; white-space: nowrap
+isolate              → isolation: isolate
+static               → position: static
+contents             → display: contents
+list-item            → display: list-item
+list-decimal         → list-style-type: decimal
+collapse             → visibility: collapse
+cursor-pointer       → cursor: pointer
+resize               → resize: both
+object-contain       → object-fit: contain
+bg-center            → background-position: center
+bg-cover             → background-size: cover
+bg-gradient-to-br    → background-image: linear-gradient(to bottom right, ...)
+place-content-center → place-content: center
+outline              → outline-style: solid
+outline-none         → outline: 2px solid transparent; outline-offset: 2px
+invert               → filter: invert(100%)
+grayscale            → filter: grayscale(100%)
+ring                 → box-shadow ring (3px default)
+shadow               → box-shadow (default shadow)
+transition-colors    → transition-property: color, background-color, border-color, ...
+tracking-normal      → letter-spacing: 0em
+leading-normal       → line-height: 1.5 (HAVE as theme var — may not resolve)
+leading-5            → line-height: 1.25rem
+decoration-clone     → box-decoration-break: clone
+overflow-x-auto      → overflow-x: auto
+overflow-x-scroll    → overflow-x: scroll
+```
+
+**Status:** Most of these ARE in our static map (526 entries). The issue is likely
+that the **candidate extractor** isn't finding them in templates, OR the templates
+containing them haven't been loaded yet (lazy loading — only requested pages get
+their candidates extracted).
+
+### 2. Missing Color Values
+
+163 missing color-related selectors. Our theme has the colors defined but many
+specific shade+utility combinations aren't being generated:
+
+```
+bg-blue-400, bg-cyan-200, bg-dy-green, bg-dy-purple, bg-gray-500,
+bg-green-400, bg-green-500, bg-indigo-200, bg-indigo-400, bg-lime-100,
+bg-orange-200, bg-pink-200, bg-red-400, bg-red-500, bg-slate-100,
+bg-slate-400, bg-slate-800, bg-yellow-300, bg-white/10
+```
+
+**Root cause:** These appear on non-homepage pages that haven't been loaded.
+The candidate extractor only runs on pages that have been requested. Since we
+only loaded the homepage, these colors from other pages are missing.
+
+**Fix:** This is a Beacon integration issue, not a compiler issue. Beacon needs
+to extract candidates from ALL published pages at boot time (or at least at first
+CSS compile time), not just the ones that have been requested.
+
+### 3. Missing Arbitrary Values (47 selectors)
+
+```
+bg-[#00a8e8]
+from-[#0077b6]
+from-[#00a8e8]
+to-[#0077b6]
+to-[#00a8e8]
+z-[-1]
+max-w-[1464px]
+max-w-[200px]
+max-w-[250px]
+max-w-[300px]
+max-w-[calc(100%_+_2rem)]
+min-h-[100dvh]
+lg:h-[43px]
+lg:w-[56px]
+md:h-[72px]
+md:w-[72px]
+md:w-[90%]
+xl:max-w-[calc(100%_+_2.5rem)]
+xl:-bottom-[53px]
+mb-[1.625rem]
+md:my-[60px]
+md:max-w-[810px]
+md:right-[5%]
+md:right-[calc(5%_+_1rem)]
+p-[0.5]
+2xl:max-w-[calc(100%_+_5rem)]
+2xl:rounded-2.5xl
+[text-shadow:_0.4px_0_0_#2D49D7]
+lg:[text-shadow:_0.6px_0_0_#2D49D7]
+w-[25%]
+w-[50%]
+```
+
+**Root cause:** Two issues:
+1. Many are on non-homepage pages (extraction issue)
+2. Some arbitrary value formats may not be handled by the Zig compiler's
+   candidate parser (particularly `_` as space replacement: `calc(100%_+_2rem)`)
+
+**Fix in compiler:** Ensure the candidate parser handles `_` → space conversion
+inside arbitrary values. Tailwind v4 uses `_` as a space stand-in inside `[]`.
+
+### 4. Missing Custom Theme Utilities
+
+```
+aspect-blog            → aspect-ratio: 36 / 13 (from theme)
+grid-rows-blog         → grid-template-rows: repeat(3, auto) (from theme)
+grid-rows-featured-*   → grid-template-rows from theme
+grid-cols-blog         → grid-template-columns from theme
+grid-cols-intro        → grid-template-columns from theme
+grid-cols-cta          → grid-template-columns from theme
+max-w-720              → max-width: 45rem (from theme)
+max-w-1360             → max-width: 85rem (from theme)
+max-w-sm               → max-width: 24rem (default theme)
+max-w-screen-lg        → max-width: 64rem (from breakpoints)
+scroll-mt-21           → scroll-margin-top from theme spacing
+rounded-2.5xl          → border-radius from theme
+rounded-4xl            → border-radius from theme
+tracking-widestXl      → letter-spacing: 0.3em (from theme)
+text-eyebrow           → font-size from theme
+w-0.5                  → width: 0.125rem (decimal spacing)
+shadow-featured-*      → box-shadow from theme
+transition-link        → transition-property from theme
+```
+
+**Root cause:** The Zig compiler's functional utility resolvers look up values in
+the theme, but the theme variable naming may not match. For example:
+
+- `aspect-blog` looks for `--aspect-blog` ✓ (theme has it)
+- `grid-cols-blog` looks for `--grid-template-columns-blog` but theme key might
+  not match the prefix the resolver uses
+- `max-w-720` looks for `--max-width-720` but theme stores it differently
+
+**Fix in compiler:** Audit each functional resolver's theme namespace against
+what `theme.parseJson` actually stores. Ensure the prefixes match.
+
+### 5. Missing Responsive/Variant Combinations
+
+Many responsive variants of utilities we DO have are missing. For example we
+generate `.flex` but not `.lg:flex`, `.md:flex`, `.sm:flex`, `.xl:flex`.
+
+**Root cause:** The candidates `lg:flex`, `md:flex`, etc. aren't being extracted
+because they appear in templates of pages that haven't been loaded yet.
+
+**This is NOT a compiler issue.** The compiler correctly generates responsive
+variants when given the candidates. The extractor just isn't seeing them.
+
+### 6. Complex Variant Selectors
+
+Some selectors use advanced Tailwind features:
+
+```
+lg:[&>.career-perk]:text-base>.career-perk
+lg:[&>li]:leading-loose>li
+xl:[&>li]:leading-loose>li
+md:[&>.work-snapshot:nth-child(odd)]:border-gray-200>.work-snapshot:nth-child(odd)
+first-of-type:lg:leading-loose:first-of-type
+first-of-type:lg:mb-6:first-of-type
+xl:active:ring-offset-[12px]:active
+xl:focus-within:ring-offset-[12px]:focus-within
+xl:hover:ring-offset-[16px]:hover
+block!
+```
+
+**Root cause:** These use arbitrary variant selectors `[&>...]` which the Zig
+compiler may not fully support yet. Also `block!` uses the trailing `!` for
+important (Tailwind v4 syntax) — need to verify this is handled.
+
+**Fix in compiler:**
+- Support `[&>...]` arbitrary variant selectors
+- Verify trailing `!` important flag works (we support leading `!`)
+- Support stacked variants with first-of-type, last-child, etc.
+
+## Root Cause Summary
+
+The missing selectors fall into two categories:
+
+### A. Beacon extraction issue (majority — ~600 of 770)
+
+Candidates from non-homepage pages aren't extracted because Beacon uses lazy
+loading. Only the homepage template + layout + components are scanned. The
+remaining ~900 pages' templates are never scanned for candidates.
+
+**Fix in Beacon (not this repo):** At CSS compile time, scan ALL published page
+templates for candidates, not just the ones loaded in ETS. The
+`RuntimeCSS.collect_all_candidates` function already scans layouts and components
+from the database — it should also scan all page templates from snapshots.
+
+### B. Compiler gaps (~170 of 770)
+
+Genuine missing functionality in the Zig compiler:
+
+1. **Underscore-to-space in arbitrary values** (`calc(100%_+_2rem)` → `calc(100% + 2rem)`)
+2. **Arbitrary variant selectors** (`[&>.career-perk]:text-base`)
+3. **Theme prefix mismatches** for grid-template-*, max-width, aspect-ratio
+4. **Some missing static utilities** (antialiased, blur, ring default, transition-colors)
+5. **Decimal spacing values** (`w-0.5`, `p-4.5`, `mb-2.5`, `top-2.5`)
+6. **Trailing `!` important** (`block!` — Tailwind v4 syntax)
+7. **`min-[...]` arbitrary breakpoint variants** (`min-[400px]:gap-3`)
+8. **`2xl:` responsive variant** (need to verify it's registered)
+
+## Implementation Plan
+
+### Phase 1: Fix Beacon extraction (Beacon repo)
+
+Update `RuntimeCSS.collect_all_candidates` to scan ALL published page templates
+from `beacon_page_snapshots`, not just pages loaded in ETS. This fixes ~600 of
+the 770 missing selectors with zero compiler changes.
 
 ```elixir
-TailwindCompiler.compile(["flex", "p-4", "hover:bg-blue-500/50", "sm:text-lg"])
-#=> {:ok, "@layer theme{:root{--color-blue-500:oklch(...)}}@layer utilities{.flex{display:flex}...}"}
+# In collect_all_candidates, add:
+page_template_candidates =
+  Beacon.Content.list_published_pages_snapshot_data(site)
+  |> Enum.reduce(MapSet.new(), fn page, acc ->
+    template = Beacon.Lifecycle.Template.load_template(page)
+    MapSet.union(acc, CandidateExtractor.extract(template))
+  end)
 ```
 
-## Why This Exists
-
-Beacon CMS builds pages at runtime. It cannot pre-compile CSS at deploy time because content authors create pages dynamically. The previous approach shelled out to the Tailwind CLI binary — this caused:
-
-- OOM kills on Fly.io (CLI + blocked requests exceeded 8GB)
-- Hanging processes (Erlang ports can't signal EOF on stdin)
-- Disk I/O in production (temp files, FIFOs)
-- 30-second timeouts on first request while CSS compiled
-
-This compiler eliminates all of that. CSS generation is a single NIF call on a dirty CPU scheduler, returning in <5ms for typical sites.
-
-## Architecture
-
-```
-Elixir (BEAM)                              Zig (NIF, dirty CPU scheduler)
-─────────────                              ────────────────────────────────
-
-CandidateExtractor.extract(template)
-  → MapSet of class candidates
-  → deduplicate across all pages
-  → MapSet.to_list()
-        │
-        ▼
-TailwindCompiler.compile(candidates)  ──►  Arena allocator (one alloc, one free)
-                                               │
-                                           for each candidate:
-                                               │
-                                           1. Parse candidate string
-                                              "hover:sm:bg-blue-500/50"
-                                              → variants: [hover, sm]
-                                              → root: bg
-                                              → value: blue-500
-                                              → modifier: 50
-                                               │
-                                           2. Look up utility
-                                              → static: hash map (526 entries)
-                                              → functional: 62 resolver functions
-                                              → skip if unknown (no error)
-                                               │
-                                           3. Resolve value against theme
-                                              → blue-500 → var(--color-blue-500)
-                                              → 4 → calc(var(--spacing) * 4)
-                                              → 1/2 → 50%
-                                              → [#ff0000] → #ff0000
-                                               │
-                                           4. Apply variants
-                                              → hover: selector + @media(hover:hover)
-                                              → sm: @media(width>=40rem)
-                                               │
-                                           5. Emit minified CSS
-                                              → already tight, no post-processing
-                                               │
-                                           arena.deinit() (all memory freed)
-                            ◄──────────────────┘
-                                           returns CSS binary to BEAM
-```
-
-## NIF Interface
-
-### Elixir API
-
-```elixir
-TailwindCompiler.compile(candidates, opts \\ [])
-```
-
-**Arguments:**
-- `candidates` — list of class name strings (`["flex", "p-4", "hover:bg-blue-500"]`)
-- `opts` — keyword list:
-  - `:theme` — JSON string with theme overrides (optional, default: nil = use defaults)
-  - `:preflight` — include base CSS reset (optional, default: true)
-
-**Returns:**
-- `{:ok, css}` — minified CSS string
-- `{:error, reason}` — error description
-
-### NIF module
-
-```elixir
-defmodule TailwindCompiler.NIF do
-  use Zig,
-    otp_app: :tailwind_compiler,
-    nifs: [compile: [:dirty_cpu]],
-    leak_check: false
-
-  # Zig function: compile(candidates, theme_json, preflight) -> []u8
-end
-```
-
-The NIF runs on a dirty CPU scheduler. For 500 candidates, expected latency is <5ms. The arena allocator means zero individual frees — one bulk deallocation when the NIF returns.
-
-### Error handling
-
-The compiler skips candidates it can't parse rather than crashing:
-
-```zig
-for (candidates) |candidate| {
-    ctx.process(candidate) catch continue;
-}
-```
-
-This is essential because the Elixir candidate extractor is permissive — it may pass tokens that aren't valid Tailwind classes (e.g., SVG path fragments, HTML attribute values). The compiler ignores them.
-
-## Current Implementation Status
-
-### Source files (9,092 lines of Zig)
-
-| File | Lines | Purpose |
-|------|-------|---------|
-| `utilities.zig` | 4,481 | Static + functional utility registry |
-| `variants.zig` | 1,084 | Variant definitions + application |
-| `candidate.zig` | 955 | Candidate string parser |
-| `color.zig` | 552 | Color parsing + color-mix |
-| `compiler.zig` | 547 | Core context, dedup, orchestration |
-| `default_theme.zig` | 532 | Default Tailwind v4 theme values |
-| `emitter.zig` | 468 | Minified CSS string builder |
-| `theme.zig` | 274 | Theme data structure + JSON parser |
-| `main.zig` | 164 | NIF entry point |
-| `root.zig` | 35 | Module root |
-
-### What's implemented
-
-**Static utilities (526 entries):** display, position, visibility, overflow, float, clear, box-sizing, isolation, object-fit, flex direction/wrap, grid flow, justify, align, place, text alignment/decoration/transform/wrap, list style, border style, table layout, appearance, cursor (36 values), pointer-events, resize, scroll behavior, snap, touch action, user-select, will-change, sr-only, transitions, mix-blend, bg-blend, background properties, vertical-align, hyphens, break-before/after/inside, margin auto/0, padding 0, width/height keywords, shadow/opacity statics, filter statics, color-scheme, and more.
-
-**Functional utilities (62 resolvers):**
-- **Spacing:** p, px, py, ps, pe, pt, pr, pb, pl, m (all directions), gap, gap-x, gap-y, space-x, space-y, w, h, min-w, min-h, max-w, max-h, size, inset (all directions), top, right, bottom, left, basis, scroll-m (all), scroll-p (all), indent, border-spacing
-- **Colors:** bg, text, border (all sides), ring, outline, accent, caret, fill, stroke, shadow color, divide color, decoration color, placeholder color
-- **Typography:** text (size), font (family), font-weight, leading, tracking, decoration-thickness, underline-offset
-- **Borders:** border (width, all sides), rounded (all corners), outline, outline-offset, ring, ring-offset, inset-ring, inset-shadow, divide
-- **Effects:** shadow, opacity, drop-shadow, blur, brightness, contrast, saturate, grayscale, invert, sepia, hue-rotate, backdrop-blur, backdrop-brightness, backdrop-contrast, backdrop-saturate, backdrop-grayscale, backdrop-invert, backdrop-sepia, backdrop-opacity
-- **Transforms:** rotate (all axes), scale (all axes), skew (x, y), translate (all axes), perspective, origin
-- **Layout:** z-index, order, columns, grid-cols, grid-rows, grid-span, col-start, col-end, row-start, row-end, auto-cols, auto-rows, line-clamp, aspect
-- **Transitions:** duration, delay, ease
-- **Gradients:** bg-linear, bg-radial, bg-conic, from, via, to (gradient stops)
-- **Other:** content, animate, list-style-type
-
-**Variants (50+):**
-- Pseudo-classes: hover, focus, focus-within, focus-visible, active, visited, target, enabled, disabled, checked, indeterminate, default, required, valid, invalid, placeholder-shown, autofill, read-only, empty, open, first, last, only, odd, even, first-of-type, last-of-type, only-of-type
-- Pseudo-elements: before, after, placeholder, file, marker, selection, first-line, first-letter, backdrop, details-content
-- Responsive: sm (40rem), md (48rem), lg (64rem), xl (80rem), 2xl (96rem)
-- Preference: dark, print, motion-safe, motion-reduce, contrast-more, contrast-less, portrait, landscape, forced-colors
-- Compound: group-*, peer-*, has-*, not-*, in-*
-- Functional: aria-*, data-*, supports-*, min-*, max-*, @container variants
-- Other: ltr, rtl, *, **
-
-**Theme system:**
-- Default Tailwind v4 theme (colors, spacing, breakpoints, fonts, etc.)
-- JSON theme override support
-- CSS custom property output (`var(--color-blue-500)`)
-- Spacing multiplier (`calc(var(--spacing) * 4)`)
-- Only used theme variables are emitted in `@layer theme`
-
-**CSS output:**
-- `@layer theme { :root { ... } }` — only referenced variables
-- `@layer base { ... }` — Tailwind preflight (optional)
-- `@layer utilities { ... }` — generated rules, sorted by variant order
-- `@property` declarations for composable utilities (shadow, ring, translate)
-- `@keyframes` for animate utilities
-- Already minified (no whitespace, no trailing semicolons, no comments)
-
-**Selector escaping:**
-- `:` → `\:`
-- `/` → `\/`
-- `[` → `\[`
-- `]` → `\]`
-- `.` → `\.`
-- `#` → `\#`
-- `%` → `\%`
-- `!` → `\!`
-
-## What's Missing (Gap Analysis vs Tailwind v4)
-
-### Critical gaps (cause visible broken styles)
-
-**1. Custom theme colors**
-DockYard's site uses `text-dy-red`, `bg-dy-blue`, etc. These are custom colors defined in their Tailwind config. The Zig compiler only knows the default Tailwind palette. Custom theme loading from the user's config is stubbed out (`load_theme_json` returns nil in Beacon).
-
-**Fix:** The `tailwind_config` points to a JavaScript file. We need to either:
-- Parse a subset of the JS config (extract color/spacing/font definitions)
-- Define a JSON schema for Beacon theme config that users fill in instead of tailwind.config.js
-- Accept a JSON theme file alongside or instead of the JS config
-
-**2. Custom/plugin utilities**
-Classes like `link-default--purple`, `cta:`, `grid-rows-blog` are custom utilities defined in the site's CSS or Tailwind plugins. The Zig compiler has no mechanism for user-defined utilities.
-
-**Fix:** Accept additional static utility definitions as NIF input, or accept raw CSS to prepend/append to the output.
-
-**3. Logical properties**
-Tailwind v4 added logical property support: `inline`, `block`, `min-inline`, `max-block`, `inset-s`, `inset-e`, `mbs`, `mbe`, `pbs`, `pbe`. These are not implemented.
-
-**Fix:** Add to spacing resolver — same pattern as physical properties but with logical CSS properties.
-
-**4. Mask utilities**
-Entirely missing: `mask-*`, `mask-clip-*`, `mask-origin-*`, `mask-mode-*`, `mask-type-*`, `mask-composite-*`.
-
-**Fix:** ~20 static utilities + a few functional resolvers.
-
-**5. Field sizing**
-`field-sizing-content`, `field-sizing-fixed` — not implemented.
-
-**Fix:** 2 static utilities.
-
-**6. Missing static sizing keywords**
-`svw`, `lvw`, `dvw`, `svh`, `lvh`, `dvh`, `lh` viewport/line-height units for w/h/min/max.
-
-**Fix:** Add to sizing static values.
-
-**7. `@starting-style` variant**
-The `starting:` variant for CSS `@starting-style` — not implemented.
-
-**Fix:** One new variant that wraps in `@starting-style { }`.
-
-### Medium gaps (affect some layouts)
-
-**8. Space between reverse**
-`space-x-reverse`, `space-y-reverse` — not implemented. These use custom properties to reverse margin direction.
-
-**9. Divide reverse**
-`divide-x-reverse`, `divide-y-reverse` — same pattern as space reverse.
-
-**10. Container queries**
-`@sm:`, `@md:`, `@lg:` etc. — container query variants are partially implemented but may not cover all cases.
-
-**11. Gradient positions**
-`from-{percent}`, `via-{percent}`, `to-{percent}` — gradient stop positions. Currently only gradient stop colors are implemented.
-
-**12. 3D transforms**
-`translate-3d`, `scale-3d`, `rotate-x`, `rotate-y`, `rotate-z` — partially implemented.
-
-**13. Touch action composition**
-`touch-pan-x`, `touch-pan-y`, `touch-pinch-zoom` use custom properties for composition. Currently implemented as simple static values.
-
-### Low priority gaps
-
-**14. `columns` functional utility** — partially implemented
-**15. `list-image` functional utility** — not implemented
-**16. Scroll snap type composition** — uses `--tw-scroll-snap-strictness`
-**17. `wrap-anywhere`, `wrap-break-word`, `wrap-normal`** — new in v4
-**18. `caption-top`, `caption-bottom`** — table captions
-**19. `inline-table`, `table-caption`** — uncommon display values
-
-## Theme Architecture
-
-### Current state
-
-The default Tailwind v4 theme is compiled into `default_theme.zig` as `comptime` data. The theme struct supports:
-
-```zig
-const Theme = struct {
-    colors: StringHashMap([]const u8),       // "red-500" → "oklch(63.7% 0.237 25.331)"
-    spacing: ?[]const u8,                    // "0.25rem" (base multiplier)
-    named_spacing: StringHashMap([]const u8), // "px" → "1px", "0.5" → "0.125rem"
-    breakpoints: StringHashMap([]const u8),  // "sm" → "40rem"
-    fonts: StringHashMap([]const u8),
-    font_weights: StringHashMap([]const u8),
-    // ... etc
-};
-```
-
-### What's needed
-
-Users configure themes via `@theme` in their CSS or `tailwind.config.js`. Beacon needs to extract these values and pass them as JSON to the NIF. The NIF already supports JSON theme parsing via `theme.parseJson()` — the gap is on the Beacon side (extracting theme values from the user's config).
-
-**Proposed solution:**
-
-Add a Beacon config option `theme_overrides` that accepts a JSON-compatible map:
-
-```elixir
-config :beacon, :my_site,
-  theme: %{
-    colors: %{
-      "dy-red" => "#e74c3c",
-      "dy-blue" => "#3498db"
-    },
-    spacing: "0.25rem",
-    fonts: %{
-      "heading" => "Cal Sans, sans-serif"
-    }
-  }
-```
-
-Beacon serializes this to JSON and passes it to the NIF. The NIF merges it with defaults.
-
-## CSS Output Structure
-
-```css
-@property --tw-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}
-@property --tw-shadow-color{syntax:"*";inherits:false}
-@keyframes spin{to{transform:rotate(360deg)}}
-@layer theme{:root{--color-red-500:oklch(63.7% 0.237 25.331);--spacing:0.25rem}}
-@layer base{*,::after,::before{box-sizing:border-box;border:0 solid}...}
-@layer utilities{
-  .flex{display:flex}
-  .p-4{padding:calc(var(--spacing)*4)}
-  .bg-red-500{background-color:var(--color-red-500)}
-  @media(hover:hover){.hover\:bg-blue-500:hover{background-color:var(--color-blue-500)}}
-  @media(width>=40rem){.sm\:text-lg{font-size:var(--text-lg);line-height:var(--text-lg--line-height)}}
-}
-```
-
-Only theme variables actually referenced by generated utilities are emitted in `@layer theme`. This is automatic — the theme tracks which keys were accessed during resolution.
-
-## Testing Strategy
-
-### Zig tests (run via `zig build test`)
-
-Unit tests for each module:
-- `candidate.zig` — parser tests for all input formats
-- `utilities.zig` — lookup + resolver tests
-- `variants.zig` — variant application tests
-- `emitter.zig` — CSS output format tests
-- `compiler.zig` — end-to-end integration tests
-
-### Elixir tests (run via `mix test`)
-
-12 tests covering:
-- Basic compilation (static + functional utilities)
-- Variant application (hover, dark, responsive)
-- Deduplication
-- Important flag
-- Color utilities with opacity modifiers
-- Spacing utilities (numeric, keyword, fraction)
-- Arbitrary values
-- Negative values
-- Theme variable emission
-- Preflight inclusion/exclusion
-- Error resilience (bad input doesn't crash)
-
-### Correctness validation (TODO)
-
-Compare output against Tailwind v4 CLI for a large set of test candidates:
-1. Generate candidates from a real site (DockYard's 2,800+ candidates)
-2. Compile with both Tailwind CLI and this compiler
-3. Parse both CSS outputs and diff rule-by-rule
-4. Track coverage percentage
-
-## Build & Distribution
-
-### Development
-
-```bash
-# Run Zig tests
-cd native/beacon_css  # or project root
-zig build test
-
-# Run Elixir tests
-mix test
-
-# Rebuild NIF after Zig changes
-mix deps.compile tailwind_compiler --force
-```
-
-### Precompilation
-
-Zigler supports precompiled NIFs. Targets:
-- `aarch64-macos` (Apple Silicon dev)
-- `x86_64-linux-gnu` (Fly.io, most CI)
-- `aarch64-linux-gnu` (ARM servers)
-- `x86_64-linux-musl` (Alpine Docker)
-
-### Dependencies
-
-- Zig 0.15.x (via Zigler, auto-installed)
-- No C dependencies
-- No system libraries
-- No npm/Node.js
-
-## Performance
-
-| Operation | Time | Notes |
-|-----------|------|-------|
-| Parse 500 candidates | < 1ms | String splitting, hash map lookups |
-| Resolve utilities | < 2ms | Theme resolution, string formatting |
-| Apply variants | < 1ms | Selector/media query wrapping |
-| Emit minified CSS | < 1ms | Single-pass string builder |
-| **Total (500 candidates)** | **< 5ms** | Typical site |
-| **Total (2,800 candidates)** | **< 15ms** | Large site (DockYard) |
-| **Total (5,000 candidates)** | **< 30ms** | Very large site |
-
-Arena allocator: one init, one deinit. No per-object frees. No GC.
-
-## Integration with Beacon
-
-Beacon extracts candidates from templates at publish time using a pure Elixir regex, stores them per-page in ETS, maintains a site-wide union, and only calls the NIF when new classes appear. The compiled CSS is cached in ETS (hot), S3 (warm/durable), and recompiled from scratch only when neither cache has it.
-
-See the Beacon project's `DESIGN_ZIG_CSS_COMPILER.md` for the full integration architecture including the three-tier storage system and warming flow.
-
-## Roadmap
-
-### Phase 1: Core ✅
-- Static utility registry (526 entries)
-- Functional utility resolvers (62 handlers)
-- Variant system (50+ variants)
-- Candidate parser (full Tailwind grammar)
-- Theme system with defaults
-- Minified CSS emitter
-- Zigler NIF integration
-- Error resilience (skip bad candidates)
-
-### Phase 2: Theme customization
-- JSON theme override support (working in Zig, needs Beacon integration)
-- Parse user's Tailwind config and extract theme values
-- Custom color palettes
-- Custom spacing scales
-- Custom font stacks
-
-### Phase 3: Full parity
-- Logical properties (inline, block, mbs, mbe, pbs, pbe)
-- Mask utilities
-- Field sizing
-- Container query variants
-- 3D transforms
-- Space/divide reverse
-- Gradient stop positions
-- All missing static sizing keywords
-
-### Phase 4: Custom utilities
-- Accept additional utility definitions from Beacon
-- Support raw CSS passthrough (user stylesheets)
-- Plugin-like extensibility
-
-### Phase 5: Validation
-- Side-by-side comparison with Tailwind CLI output
-- Coverage percentage tracking
-- Automated regression testing against real sites
+### Phase 2: Fix compiler gaps (this repo)
+
+#### 2a. Underscore-to-space in arbitrary values
+In `candidate.zig`, when parsing arbitrary values inside `[...]`, replace `_`
+with space. This is a Tailwind v4 convention.
+
+#### 2b. Decimal spacing values
+In the spacing resolver, handle values like `0.5`, `2.5`, `4.5` — multiply by
+the spacing base. Currently the parser may reject these because they contain `.`.
+
+#### 2c. Missing static utilities
+Add to the static utility map:
+- `antialiased`
+- `subpixel-antialiased`
+- `transition-colors`
+- `ring` (default ring)
+- `blur` (default blur)
+- `filter` (legacy no-op)
+- `transform` (legacy no-op)
+
+#### 2d. Theme prefix alignment
+Audit and fix the namespace mapping in `theme.zig`:
+- `gridTemplateColumns` → `--grid-cols-*` or `--grid-template-columns-*`?
+  Check what `resolveGridTemplate` in `utilities.zig` expects.
+- `maxWidth` → `--max-width-*` or `--max-w-*`?
+  Check what `resolveSpacing` with `max-w` root expects.
+- Same for `aspectRatio`, `height`, `borderRadius`, `letterSpacing`
+
+#### 2e. Arbitrary variant selectors
+Support `[&>...]` syntax in `variants.zig`. When a variant starts with `[`,
+it's an arbitrary selector that wraps the rule.
+
+#### 2f. `min-[...]` breakpoints
+Support `min-[400px]` as a variant that produces `@media (width>=400px)`.
+
+#### 2g. Trailing `!` important
+The Zig candidate parser supports leading `!` (`!flex`). Tailwind v4 also
+supports trailing `!` (`flex!`). Verify and fix.
+
+#### 2h. `2xl:` breakpoint
+Verify `2xl` is registered as a breakpoint variant at 96rem.
+
+### Phase 3: Validation
+
+Build a test harness that:
+1. Takes the DockYard production CSS selectors as the reference
+2. Runs the compiler with all extracted candidates
+3. Diffs the output selectors against the reference
+4. Reports coverage percentage and specific gaps
+
+Target: 100% of Tailwind utility selectors that appear in the production CSS
+should be generated by the compiler. Custom CSS classes (`.alert`, `.btn`, etc.)
+are handled by the `custom_css` passthrough and don't count.
