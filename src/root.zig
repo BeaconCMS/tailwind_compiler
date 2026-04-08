@@ -33,6 +33,8 @@ pub fn compile(
     return compiler.compile(alloc, candidates, theme_json, include_preflight, custom_css, custom_utilities_json);
 }
 
+pub const tw_tests = @import("tw_tests.zig");
+
 test {
     // Run all tests from submodules
     std.testing.refAllDeclsRecursive(@This());

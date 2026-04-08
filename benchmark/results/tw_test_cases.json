@@ -1,0 +1,1014 @@
+[
+  {
+    "candidates": [
+      "sr-only"
+    ],
+    "css": ".sr-only {\n      clip-path: inset(50%);\n      white-space: nowrap;\n      border-width: 0;\n      width: 1px;\n      height: 1px;\n      margin: -1px;\n      padding: 0;\n      position: absolute;\n      overflow: hidden;\n    }"
+  },
+  {
+    "candidates": [
+      "not-sr-only"
+    ],
+    "css": ".not-sr-only {\n      clip-path: none;\n      white-space: normal;\n      width: auto;\n      height: auto;\n      margin: 0;\n      padding: 0;\n      position: static;\n      overflow: visible;\n    }"
+  },
+  {
+    "candidates": [
+      "pointer-events-none",
+      "pointer-events-auto"
+    ],
+    "css": ".pointer-events-auto {\n      pointer-events: auto;\n    }\n\n    .pointer-events-none {\n      pointer-events: none;\n    }"
+  },
+  {
+    "candidates": [
+      "visible",
+      "invisible",
+      "collapse"
+    ],
+    "css": ".collapse {\n      visibility: collapse;\n    }\n\n    .invisible {\n      visibility: hidden;\n    }\n\n    .visible {\n      visibility: visible;\n    }"
+  },
+  {
+    "candidates": [
+      "static",
+      "fixed",
+      "absolute",
+      "relative",
+      "sticky"
+    ],
+    "css": ".absolute {\n      position: absolute;\n    }\n\n    .fixed {\n      position: fixed;\n    }\n\n    .relative {\n      position: relative;\n    }\n\n    .static {\n      position: static;\n    }\n\n    .sticky {\n      position: sticky;\n    }"
+  },
+  {
+    "candidates": [
+      "isolate",
+      "isolation-auto"
+    ],
+    "css": ".isolate {\n      isolation: isolate;\n    }\n\n    .isolation-auto {\n      isolation: auto;\n    }"
+  },
+  {
+    "candidates": [
+      "float-start",
+      "float-end",
+      "float-right",
+      "float-left",
+      "float-none"
+    ],
+    "css": ".float-end {\n        float: inline-end;\n      }\n\n      .float-left {\n        float: left;\n      }\n\n      .float-none {\n        float: none;\n      }\n\n      .float-right {\n        float: right;\n      }\n\n      .float-start {\n        float: inline-start;\n      }"
+  },
+  {
+    "candidates": [
+      "box-border",
+      "box-content"
+    ],
+    "css": ".box-border {\n      box-sizing: border-box;\n    }\n\n    .box-content {\n      box-sizing: content-box;\n    }"
+  },
+  {
+    "candidates": [
+      "field-sizing-content",
+      "field-sizing-fixed"
+    ],
+    "css": ".field-sizing-content {\n      field-sizing: content;\n    }\n\n    .field-sizing-fixed {\n      field-sizing: fixed;\n    }"
+  },
+  {
+    "candidates": [
+      "table-auto",
+      "table-fixed"
+    ],
+    "css": ".table-auto {\n      table-layout: auto;\n    }\n\n    .table-fixed {\n      table-layout: fixed;\n    }"
+  },
+  {
+    "candidates": [
+      "caption-top",
+      "caption-bottom"
+    ],
+    "css": ".caption-bottom {\n      caption-side: bottom;\n    }\n\n    .caption-top {\n      caption-side: top;\n    }"
+  },
+  {
+    "candidates": [
+      "border-collapse",
+      "border-separate"
+    ],
+    "css": ".border-collapse {\n      border-collapse: collapse;\n    }\n\n    .border-separate {\n      border-collapse: separate;\n    }"
+  },
+  {
+    "candidates": [
+      "translate-3d"
+    ],
+    "css": "@layer properties {\n      @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {\n        *, :before, :after, ::backdrop {\n          --tw-translate-x: 0;\n          --tw-translate-y: 0;\n          --tw-translate-z: 0;\n        }\n      }\n    }\n\n    .translate-3d {\n      translate: var(--tw-translate-x) var(--tw-translate-y) var(--tw-translate-z);\n    }\n\n    @property --tw-translate-x {\n      syntax: \"*\";\n      inherits: false;\n      initial-value: 0;\n    }\n\n    @property --tw-translate-y {\n      syntax: \"*\";\n      inherits: false;\n      initial-value: 0;\n    }\n\n    @property --tw-translate-z {\n      syntax: \"*\";\n      inherits: false;\n      initial-value: 0;\n    }"
+  },
+  {
+    "candidates": [
+      "scale-3d"
+    ],
+    "css": "@layer properties {\n      @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {\n        *, :before, :after, ::backdrop {\n          --tw-scale-x: 1;\n          --tw-scale-y: 1;\n          --tw-scale-z: 1;\n        }\n      }\n    }\n\n    .scale-3d {\n      scale: var(--tw-scale-x) var(--tw-scale-y) var(--tw-scale-z);\n    }\n\n    @property --tw-scale-x {\n      syntax: \"*\";\n      inherits: false;\n      initial-value: 1;\n    }\n\n    @property --tw-scale-y {\n      syntax: \"*\";\n      inherits: false;\n      initial-value: 1;\n    }\n\n    @property --tw-scale-z {\n      syntax: \"*\";\n      inherits: false;\n      initial-value: 1;\n    }"
+  },
+  {
+    "candidates": [
+      "scale-200",
+      "scale-x-400"
+    ],
+    "css": "@layer properties {\n      @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {\n        *, :before, :after, ::backdrop {\n          --tw-scale-x: 1;\n          --tw-scale-y: 1;\n          --tw-scale-z: 1;\n        }\n      }\n    }\n\n    .scale-200 {\n      --tw-scale-x: 200%;\n      --tw-scale-y: 200%;\n      --tw-scale-z: 200%;\n      scale: var(--tw-scale-x) var(--tw-scale-y);\n    }\n\n    .scale-x-400 {\n      --tw-scale-x: 400%;\n      scale: var(--tw-scale-x) var(--tw-scale-y);\n    }\n\n    @property --tw-scale-x {\n      syntax: \"*\";\n      inherits: false;\n      initial-value: 1;\n    }\n\n    @property --tw-scale-y {\n      syntax: \"*\";\n      inherits: false;\n      initial-value: 1;\n    }\n\n    @property --tw-scale-z {\n      syntax: \"*\";\n      inherits: false;\n      initial-value: 1;\n    }"
+  },
+  {
+    "candidates": [
+      "touch-auto",
+      "touch-none",
+      "touch-manipulation"
+    ],
+    "css": ".touch-auto {\n      touch-action: auto;\n    }\n\n    .touch-manipulation {\n      touch-action: manipulation;\n    }\n\n    .touch-none {\n      touch-action: none;\n    }"
+  },
+  {
+    "candidates": [
+      "touch-pinch-zoom"
+    ],
+    "css": "@layer properties {\n      @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {\n        *, :before, :after, ::backdrop {\n          --tw-pan-x: initial;\n          --tw-pan-y: initial;\n          --tw-pinch-zoom: initial;\n        }\n      }\n    }\n\n    .touch-pinch-zoom {\n      --tw-pinch-zoom: pinch-zoom;\n      touch-action: var(--tw-pan-x, ) var(--tw-pan-y, ) var(--tw-pinch-zoom, );\n    }\n\n    @property --tw-pan-x {\n      syntax: \"*\";\n      inherits: false\n    }\n\n    @property --tw-pan-y {\n      syntax: \"*\";\n      inherits: false\n    }\n\n    @property --tw-pinch-zoom {\n      syntax: \"*\";\n      inherits: false\n    }"
+  },
+  {
+    "candidates": [
+      "select-none",
+      "select-text",
+      "select-all",
+      "select-auto"
+    ],
+    "css": ".select-all {\n        -webkit-user-select: all;\n        user-select: all;\n      }\n\n      .select-auto {\n        -webkit-user-select: auto;\n        user-select: auto;\n      }\n\n      .select-none {\n        -webkit-user-select: none;\n        user-select: none;\n      }\n\n      .select-text {\n        -webkit-user-select: text;\n        user-select: text;\n      }"
+  },
+  {
+    "candidates": [
+      "resize-none",
+      "resize",
+      "resize-x",
+      "resize-y"
+    ],
+    "css": ".resize {\n      resize: both;\n    }\n\n    .resize-none {\n      resize: none;\n    }\n\n    .resize-x {\n      resize: horizontal;\n    }\n\n    .resize-y {\n      resize: vertical;\n    }"
+  },
+  {
+    "candidates": [
+      "snap-none",
+      "snap-x",
+      "snap-y",
+      "snap-both"
+    ],
+    "css": "@layer properties {\n      @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {\n        *, :before, :after, ::backdrop {\n          --tw-scroll-snap-strictness: proximity;\n        }\n      }\n    }\n\n    .snap-both {\n      scroll-snap-type: both var(--tw-scroll-snap-strictness);\n    }\n\n    .snap-none {\n      scroll-snap-type: none;\n    }\n\n    .snap-x {\n      scroll-snap-type: x var(--tw-scroll-snap-strictness);\n    }\n\n    .snap-y {\n      scroll-snap-type: y var(--tw-scroll-snap-strictness);\n    }\n\n    @property --tw-scroll-snap-strictness {\n      syntax: \"*\";\n      inherits: false;\n      initial-value: proximity;\n    }"
+  },
+  {
+    "candidates": [
+      "snap-mandatory",
+      "snap-proximity"
+    ],
+    "css": "@layer properties {\n      @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {\n        *, :before, :after, ::backdrop {\n          --tw-scroll-snap-strictness: proximity;\n        }\n      }\n    }\n\n    .snap-mandatory {\n      --tw-scroll-snap-strictness: mandatory;\n    }\n\n    .snap-proximity {\n      --tw-scroll-snap-strictness: proximity;\n    }\n\n    @property --tw-scroll-snap-strictness {\n      syntax: \"*\";\n      inherits: false;\n      initial-value: proximity;\n    }"
+  },
+  {
+    "candidates": [
+      "snap-align-none",
+      "snap-start",
+      "snap-end",
+      "snap-center"
+    ],
+    "css": ".snap-align-none {\n        scroll-snap-align: none;\n      }\n\n      .snap-center {\n        scroll-snap-align: center;\n      }\n\n      .snap-end {\n        scroll-snap-align: end;\n      }\n\n      .snap-start {\n        scroll-snap-align: start;\n      }"
+  },
+  {
+    "candidates": [
+      "snap-normal",
+      "snap-always"
+    ],
+    "css": ".snap-always {\n      scroll-snap-stop: always;\n    }\n\n    .snap-normal {\n      scroll-snap-stop: normal;\n    }"
+  },
+  {
+    "candidates": [
+      "list-inside",
+      "list-outside"
+    ],
+    "css": ".list-inside {\n      list-style-position: inside;\n    }\n\n    .list-outside {\n      list-style-position: outside;\n    }"
+  },
+  {
+    "candidates": [
+      "appearance-none",
+      "appearance-auto"
+    ],
+    "css": ".appearance-auto {\n      appearance: auto;\n    }\n\n    .appearance-none {\n      appearance: none;\n    }"
+  },
+  {
+    "candidates": [
+      "flex-row",
+      "flex-row-reverse",
+      "flex-col",
+      "flex-col-reverse"
+    ],
+    "css": ".flex-col {\n        flex-direction: column;\n      }\n\n      .flex-col-reverse {\n        flex-direction: column-reverse;\n      }\n\n      .flex-row {\n        flex-direction: row;\n      }\n\n      .flex-row-reverse {\n        flex-direction: row-reverse;\n      }"
+  },
+  {
+    "candidates": [
+      "flex-wrap",
+      "flex-wrap-reverse",
+      "flex-nowrap"
+    ],
+    "css": ".flex-nowrap {\n      flex-wrap: nowrap;\n    }\n\n    .flex-wrap {\n      flex-wrap: wrap;\n    }\n\n    .flex-wrap-reverse {\n      flex-wrap: wrap-reverse;\n    }"
+  },
+  {
+    "candidates": [
+      "space-x-reverse"
+    ],
+    "css": "@layer properties {\n      @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {\n        *, :before, :after, ::backdrop {\n          --tw-space-x-reverse: 0;\n        }\n      }\n    }\n\n    :where(.space-x-reverse > :not(:last-child)) {\n      --tw-space-x-reverse: 1;\n    }\n\n    @property --tw-space-x-reverse {\n      syntax: \"*\";\n      inherits: false;\n      initial-value: 0;\n    }"
+  },
+  {
+    "candidates": [
+      "space-y-reverse"
+    ],
+    "css": "@layer properties {\n      @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {\n        *, :before, :after, ::backdrop {\n          --tw-space-y-reverse: 0;\n        }\n      }\n    }\n\n    :where(.space-y-reverse > :not(:last-child)) {\n      --tw-space-y-reverse: 1;\n    }\n\n    @property --tw-space-y-reverse {\n      syntax: \"*\";\n      inherits: false;\n      initial-value: 0;\n    }"
+  },
+  {
+    "candidates": [
+      "divide-x-reverse"
+    ],
+    "css": "@layer properties {\n      @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {\n        *, :before, :after, ::backdrop {\n          --tw-divide-x-reverse: 0;\n        }\n      }\n    }\n\n    :where(.divide-x-reverse > :not(:last-child)) {\n      --tw-divide-x-reverse: 1;\n    }\n\n    @property --tw-divide-x-reverse {\n      syntax: \"*\";\n      inherits: false;\n      initial-value: 0;\n    }"
+  },
+  {
+    "candidates": [
+      "divide-y-reverse"
+    ],
+    "css": "@layer properties {\n      @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {\n        *, :before, :after, ::backdrop {\n          --tw-divide-y-reverse: 0;\n        }\n      }\n    }\n\n    :where(.divide-y-reverse > :not(:last-child)) {\n      --tw-divide-y-reverse: 1;\n    }\n\n    @property --tw-divide-y-reverse {\n      syntax: \"*\";\n      inherits: false;\n      initial-value: 0;\n    }"
+  },
+  {
+    "candidates": [
+      "overscroll-auto",
+      "overscroll-contain",
+      "overscroll-none"
+    ],
+    "css": ".overscroll-auto {\n        overscroll-behavior: auto;\n      }\n\n      .overscroll-contain {\n        overscroll-behavior: contain;\n      }\n\n      .overscroll-none {\n        overscroll-behavior: none;\n      }"
+  },
+  {
+    "candidates": [
+      "overscroll-x-auto",
+      "overscroll-x-contain",
+      "overscroll-x-none"
+    ],
+    "css": ".overscroll-x-auto {\n        overscroll-behavior-x: auto;\n      }\n\n      .overscroll-x-contain {\n        overscroll-behavior-x: contain;\n      }\n\n      .overscroll-x-none {\n        overscroll-behavior-x: none;\n      }"
+  },
+  {
+    "candidates": [
+      "overscroll-y-auto",
+      "overscroll-y-contain",
+      "overscroll-y-none"
+    ],
+    "css": ".overscroll-y-auto {\n        overscroll-behavior-y: auto;\n      }\n\n      .overscroll-y-contain {\n        overscroll-behavior-y: contain;\n      }\n\n      .overscroll-y-none {\n        overscroll-behavior-y: none;\n      }"
+  },
+  {
+    "candidates": [
+      "scroll-auto",
+      "scroll-smooth"
+    ],
+    "css": ".scroll-auto {\n      scroll-behavior: auto;\n    }\n\n    .scroll-smooth {\n      scroll-behavior: smooth;\n    }"
+  },
+  {
+    "candidates": [
+      "truncate"
+    ],
+    "css": ".truncate {\n      text-overflow: ellipsis;\n      white-space: nowrap;\n      overflow: hidden;\n    }"
+  },
+  {
+    "candidates": [
+      "text-ellipsis",
+      "text-clip"
+    ],
+    "css": ".text-clip {\n      text-overflow: clip;\n    }\n\n    .text-ellipsis {\n      text-overflow: ellipsis;\n    }"
+  },
+  {
+    "candidates": [
+      "hyphens-none",
+      "hyphens-manual",
+      "hyphens-auto"
+    ],
+    "css": ".hyphens-auto {\n      -webkit-hyphens: auto;\n      hyphens: auto;\n    }\n\n    .hyphens-manual {\n      -webkit-hyphens: manual;\n      hyphens: manual;\n    }\n\n    .hyphens-none {\n      -webkit-hyphens: none;\n      hyphens: none;\n    }"
+  },
+  {
+    "candidates": [
+      "text-wrap",
+      "text-nowrap",
+      "text-balance",
+      "text-pretty"
+    ],
+    "css": ".text-balance {\n        text-wrap: balance;\n      }\n\n      .text-nowrap {\n        text-wrap: nowrap;\n      }\n\n      .text-pretty {\n        text-wrap: pretty;\n      }\n\n      .text-wrap {\n        text-wrap: wrap;\n      }"
+  },
+  {
+    "candidates": [
+      "break-normal",
+      "break-words",
+      "break-all",
+      "break-keep"
+    ],
+    "css": ".break-normal {\n        overflow-wrap: normal;\n        word-break: normal;\n      }\n\n      .break-words {\n        overflow-wrap: break-word;\n      }\n\n      .break-all {\n        word-break: break-all;\n      }\n\n      .break-keep {\n        word-break: keep-all;\n      }"
+  },
+  {
+    "candidates": [
+      "wrap-anywhere",
+      "wrap-break-word",
+      "wrap-normal"
+    ],
+    "css": ".wrap-anywhere {\n      overflow-wrap: anywhere;\n    }\n\n    .wrap-break-word {\n      overflow-wrap: break-word;\n    }\n\n    .wrap-normal {\n      overflow-wrap: normal;\n    }"
+  },
+  {
+    "candidates": [
+      "box-decoration-slice",
+      "box-decoration-clone"
+    ],
+    "css": ".box-decoration-clone {\n      -webkit-box-decoration-break: clone;\n      box-decoration-break: clone;\n    }\n\n    .box-decoration-slice {\n      -webkit-box-decoration-break: slice;\n      box-decoration-break: slice;\n    }"
+  },
+  {
+    "candidates": [
+      "bg-clip-border",
+      "bg-clip-padding",
+      "bg-clip-content",
+      "bg-clip-text"
+    ],
+    "css": ".bg-clip-border {\n        background-clip: border-box;\n      }\n\n      .bg-clip-content {\n        background-clip: content-box;\n      }\n\n      .bg-clip-padding {\n        background-clip: padding-box;\n      }\n\n      .bg-clip-text {\n        -webkit-background-clip: text;\n        background-clip: text;\n      }"
+  },
+  {
+    "candidates": [
+      "bg-origin-border",
+      "bg-origin-padding",
+      "bg-origin-content"
+    ],
+    "css": ".bg-origin-border {\n        background-origin: border-box;\n      }\n\n      .bg-origin-content {\n        background-origin: content-box;\n      }\n\n      .bg-origin-padding {\n        background-origin: padding-box;\n      }"
+  },
+  {
+    "candidates": [
+      "uppercase",
+      "lowercase",
+      "capitalize",
+      "normal-case"
+    ],
+    "css": ".capitalize {\n      text-transform: capitalize;\n    }\n\n    .lowercase {\n      text-transform: lowercase;\n    }\n\n    .normal-case {\n      text-transform: none;\n    }\n\n    .uppercase {\n      text-transform: uppercase;\n    }"
+  },
+  {
+    "candidates": [
+      "italic",
+      "not-italic"
+    ],
+    "css": ".italic {\n      font-style: italic;\n    }\n\n    .not-italic {\n      font-style: normal;\n    }"
+  },
+  {
+    "candidates": [
+      "font-stretch-ultra-expanded",
+      "font-stretch-50%",
+      "font-stretch-200%"
+    ],
+    "css": ".font-stretch-50\\\\% {\n        font-stretch: 50%;\n      }\n\n      .font-stretch-200\\\\% {\n        font-stretch: 200%;\n      }\n\n      .font-stretch-ultra-expanded {\n        font-stretch: ultra-expanded;\n      }"
+  },
+  {
+    "candidates": [
+      "underline",
+      "overline",
+      "line-through",
+      "no-underline"
+    ],
+    "css": ".line-through {\n        text-decoration-line: line-through;\n      }\n\n      .no-underline {\n        text-decoration-line: none;\n      }\n\n      .overline {\n        text-decoration-line: overline;\n      }\n\n      .underline {\n        text-decoration-line: underline;\n      }"
+  },
+  {
+    "candidates": [
+      "transition-discrete",
+      "transition-normal"
+    ],
+    "css": ".transition-discrete {\n      transition-behavior: allow-discrete;\n    }\n\n    .transition-normal {\n      transition-behavior: normal;\n    }"
+  },
+  {
+    "candidates": [
+      "forced-color-adjust-none",
+      "forced-color-adjust-auto"
+    ],
+    "css": ".forced-color-adjust-auto {\n        forced-color-adjust: auto;\n      }\n\n      .forced-color-adjust-none {\n        forced-color-adjust: none;\n      }"
+  },
+  {
+    "candidates": [
+      "antialiased",
+      "subpixel-antialiased"
+    ],
+    "css": ".antialiased {\n      -webkit-font-smoothing: antialiased;\n      -moz-osx-font-smoothing: grayscale;\n    }\n\n    .subpixel-antialiased {\n      -webkit-font-smoothing: auto;\n      -moz-osx-font-smoothing: auto;\n    }"
+  },
+  {
+    "candidates": [
+      "tab-1",
+      "tab-2",
+      "tab-4",
+      "tab-github"
+    ],
+    "css": ".tab-1 {\n            tab-size: var(--tab-size-1, 1);\n          }\n\n          .tab-2 {\n            tab-size: var(--tab-size-2, 2);\n          }\n\n          .tab-4 {\n            tab-size: var(--tab-size-4, 4);\n          }\n\n          .tab-github {\n            tab-size: var(--tab-size-github, 8);\n          }"
+  },
+  {
+    "candidates": [
+      "border--0",
+      "border--1",
+      "border--2"
+    ],
+    "css": ".border--0 {\n            border-color: var(--color-border-0, #e5e7eb);\n          }\n\n          .border--1 {\n            border-color: var(--color-border-1, #d1d5db);\n          }\n\n          .border--2 {\n            border-color: var(--color-border-2, #9ca3af);\n          }"
+  },
+  {
+    "candidates": [
+      "tab-1",
+      "tab-2",
+      "tab-4",
+      "tab-github"
+    ],
+    "css": ".tab-1 {\n            tab-size: var(--tab-size-1, 1);\n          }\n\n          .tab-2 {\n            tab-size: var(--tab-size-2, 2);\n          }\n\n          .tab-4 {\n            tab-size: var(--tab-size-4, 4);\n          }\n\n          .tab-github {\n            tab-size: var(--tab-size-github, 8);\n          }"
+  },
+  {
+    "candidates": [
+      "tab-1",
+      "tab-2",
+      "tab-4",
+      "tab-github"
+    ],
+    "css": ".tab-1 {\n            tab-size: var(--tab-size-1, 1);\n          }\n\n          .tab-2 {\n            tab-size: var(--tab-size-2, 2);\n          }\n\n          .tab-4 {\n            tab-size: var(--tab-size-4, 4);\n          }\n\n          .tab-github {\n            tab-size: var(--tab-size-github, 8);\n          }"
+  },
+  {
+    "candidates": [
+      "tab-1",
+      "tab-76",
+      "tab-971"
+    ],
+    "css": ".tab-1 {\n          tab-size: 1;\n        }\n\n        .tab-76 {\n          tab-size: 76;\n        }\n\n        .tab-971 {\n          tab-size: 971;\n        }"
+  },
+  {
+    "candidates": [
+      "tab-revert"
+    ],
+    "css": ".tab-revert {\n          tab-size: revert;\n        }"
+  },
+  {
+    "candidates": [
+      "example-1",
+      "example-0.5",
+      "example-20%",
+      "example-2/3"
+    ],
+    "css": ".example-0\\\\.5 {\n            --value-as-number: .5;\n          }\n\n          .example-1 {\n            --value-as-number: 1;\n          }\n\n          .example-2\\\\/3 {\n            --value-as-ratio: 2 / 3;\n          }\n\n          .example-20\\\\% {\n            --value-as-percentage: 20%;\n          }"
+  },
+  {
+    "candidates": [
+      "example-12"
+    ],
+    "css": ".example-12 {\n          --value: calc(var(--spacing) * 12) calc(var(--spacing) * 12);\n        }"
+  },
+  {
+    "candidates": [
+      "example-12"
+    ],
+    "css": ":root, :host {\n          --spacing: 4px;\n        }\n\n        .example-12 {\n          margin: calc(var(--spacing) * 12);\n        }"
+  },
+  {
+    "candidates": [
+      "example-12"
+    ],
+    "css": ".example-12 {\n          margin: 48px;\n        }"
+  },
+  {
+    "candidates": [
+      "example-xs",
+      "example-xs/6"
+    ],
+    "css": ".example-xs\\\\/6 {\n          font-size: var(--text-xs, .75rem);\n          line-height: var(--text-xs--line-height, calc(1 / .75));\n          line-height: 6;\n        }\n\n        .example-xs {\n          font-size: var(--text-xs, .75rem);\n          line-height: var(--text-xs--line-height, calc(1 / .75));\n        }"
+  },
+  {
+    "candidates": [
+      "example-xs",
+      "example-xs/6"
+    ],
+    "css": ".example-xs\\\\/6 {\n          font-size: var(--text-xs, .75rem);\n          line-height: var(--text-xs--line-height, calc(1 / .75));\n          line-height: 6;\n        }\n\n        .example-xs {\n          font-size: var(--text-xs, .75rem);\n          line-height: var(--text-xs--line-height, calc(1 / .75));\n        }"
+  },
+  {
+    "candidates": [
+      "example-xs",
+      "example-xs/6"
+    ],
+    "css": ".example-xs\\\\/6 {\n          font-size: var(--text-xs, .75rem);\n          line-height: var(--text-xs--line-height, calc(1 / .75));\n          line-height: 6;\n        }\n\n        .example-xs {\n          font-size: var(--text-xs, .75rem);\n          line-height: var(--text-xs--line-height, calc(1 / .75));\n        }"
+  },
+  {
+    "candidates": [
+      "example-xs",
+      "example-xs/6"
+    ],
+    "css": ".example-xs\\\\/6 {\n          font-size: var(--text-xs, .75rem);\n          line-height: var(--text-xs--line-height, calc(1 / .75));\n          line-height: 6;\n        }\n\n        .example-xs {\n          font-size: var(--text-xs, .75rem);\n          line-height: var(--text-xs--line-height, calc(1 / .75));\n        }"
+  },
+  {
+    "candidates": [
+      "flex"
+    ],
+    "css": ".flex {\n          display: flex;\n        }"
+  },
+  {
+    "candidates": [
+      "example-foo"
+    ],
+    "css": ":root, :host {\n          --example-foo: red;\n          --color-red-500: red;\n        }\n\n        .example-foo {\n          color: var(--color-red-500);\n          background-color: var(--example-foo);\n        }"
+  },
+  {
+    "candidates": [
+      "mask-r-20%"
+    ],
+    "css": ".mask-r-20\\\\% {\n          --mask-right: linear-gradient(to left, transparent, black 20%);\n          -webkit-mask-image: var(--mask-linear), var(--mask-radial), var(--mask-conic);\n          -webkit-mask-image: var(--mask-linear), var(--mask-radial), var(--mask-conic);\n          mask-image: var(--mask-linear), var(--mask-radial), var(--mask-conic);\n        }"
+  },
+  {
+    "candidates": [
+      "tab-github"
+    ],
+    "css": ":root, :host {\n        --tab-size-github: 8;\n      }\n\n      .tab-github {\n        tab-size: var(--tab-size-github);\n      }"
+  },
+  {
+    "candidates": [
+      "tab-github"
+    ],
+    "css": ".tab-github {\n        tab-size: var(--tab-size-github, 8);\n      }"
+  },
+  {
+    "candidates": [
+      "tab-github"
+    ],
+    "css": ".tab-github {\n        tab-size: 8;\n      }"
+  },
+  {
+    "candidates": [
+      "tab-github"
+    ],
+    "css": ".tab-github {\n        tab-size: 8;\n      }"
+  },
+  {
+    "candidates": [
+      "example-xs"
+    ],
+    "css": ".example-xs {\n        font-size: var(--text-xs, .75rem);\n        line-height: 1.33333;\n      }"
+  },
+  {
+    "candidates": [
+      "example-xs"
+    ],
+    "css": ".example-xs {\n        font-size: .75rem;\n        line-height: var(--text-xs--line-height, calc(1 / .75));\n      }"
+  },
+  {
+    "candidates": [
+      "*:flex"
+    ],
+    "css": ":is(.\\\\*\\\\:flex > *) {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "**:flex"
+    ],
+    "css": ":is(.\\\\*\\\\*\\\\:flex *) {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "first-letter:flex"
+    ],
+    "css": ".first-letter\\\\:flex:first-letter {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "first-line:flex"
+    ],
+    "css": ".first-line\\\\:flex:first-line {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "marker:flex"
+    ],
+    "css": ".marker\\\\:flex ::marker {\n      display: flex;\n    }\n\n    .marker\\\\:flex::marker {\n      display: flex;\n    }\n\n    .marker\\\\:flex ::-webkit-details-marker {\n      display: flex;\n    }\n\n    .marker\\\\:flex::-webkit-details-marker {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "selection:flex"
+    ],
+    "css": ".selection\\\\:flex ::selection {\n      display: flex;\n    }\n\n    .selection\\\\:flex::selection {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "file:flex"
+    ],
+    "css": ".file\\\\:flex::file-selector-button {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "placeholder:flex"
+    ],
+    "css": ".placeholder\\\\:flex::placeholder {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "backdrop:flex"
+    ],
+    "css": ".backdrop\\\\:flex::backdrop {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "details-content:flex"
+    ],
+    "css": ".details-content\\\\:flex::details-content {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "before:flex"
+    ],
+    "css": "@layer properties {\n      @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {\n        *, :before, :after, ::backdrop {\n          --tw-content: \"\";\n        }\n      }\n    }\n\n    .before\\\\:flex:before {\n      content: var(--tw-content);\n      display: flex;\n    }\n\n    @property --tw-content {\n      syntax: \"*\";\n      inherits: false;\n      initial-value: \"\";\n    }"
+  },
+  {
+    "candidates": [
+      "after:flex"
+    ],
+    "css": "@layer properties {\n      @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {\n        *, :before, :after, ::backdrop {\n          --tw-content: \"\";\n        }\n      }\n    }\n\n    .after\\\\:flex:after {\n      content: var(--tw-content);\n      display: flex;\n    }\n\n    @property --tw-content {\n      syntax: \"*\";\n      inherits: false;\n      initial-value: \"\";\n    }"
+  },
+  {
+    "candidates": [
+      "first:flex",
+      "group-first:flex",
+      "peer-first:flex"
+    ],
+    "css": ".group-first\\\\:flex:is(:where(.group):first-child *), .peer-first\\\\:flex:is(:where(.peer):first-child ~ *), .first\\\\:flex:first-child {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "last:flex",
+      "group-last:flex",
+      "peer-last:flex"
+    ],
+    "css": ".group-last\\\\:flex:is(:where(.group):last-child *), .peer-last\\\\:flex:is(:where(.peer):last-child ~ *), .last\\\\:flex:last-child {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "only:flex",
+      "group-only:flex",
+      "peer-only:flex"
+    ],
+    "css": ".group-only\\\\:flex:is(:where(.group):only-child *), .peer-only\\\\:flex:is(:where(.peer):only-child ~ *), .only\\\\:flex:only-child {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "odd:flex",
+      "group-odd:flex",
+      "peer-odd:flex"
+    ],
+    "css": ".group-odd\\\\:flex:is(:where(.group):nth-child(odd) *), .peer-odd\\\\:flex:is(:where(.peer):nth-child(odd) ~ *), .odd\\\\:flex:nth-child(odd) {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "even:flex",
+      "group-even:flex",
+      "peer-even:flex"
+    ],
+    "css": ".group-even\\\\:flex:is(:where(.group):nth-child(2n) *), .peer-even\\\\:flex:is(:where(.peer):nth-child(2n) ~ *), .even\\\\:flex:nth-child(2n) {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "first-of-type:flex",
+      "group-first-of-type:flex",
+      "peer-first-of-type:flex"
+    ],
+    "css": ".group-first-of-type\\\\:flex:is(:where(.group):first-of-type *), .peer-first-of-type\\\\:flex:is(:where(.peer):first-of-type ~ *), .first-of-type\\\\:flex:first-of-type {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "last-of-type:flex",
+      "group-last-of-type:flex",
+      "peer-last-of-type:flex"
+    ],
+    "css": ".group-last-of-type\\\\:flex:is(:where(.group):last-of-type *), .peer-last-of-type\\\\:flex:is(:where(.peer):last-of-type ~ *), .last-of-type\\\\:flex:last-of-type {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "only-of-type:flex",
+      "group-only-of-type:flex",
+      "peer-only-of-type:flex"
+    ],
+    "css": ".group-only-of-type\\\\:flex:is(:where(.group):only-of-type *), .peer-only-of-type\\\\:flex:is(:where(.peer):only-of-type ~ *), .only-of-type\\\\:flex:only-of-type {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "visited:flex",
+      "group-visited:flex",
+      "peer-visited:flex"
+    ],
+    "css": ".group-visited\\\\:flex:is(:where(.group):visited *), .peer-visited\\\\:flex:is(:where(.peer):visited ~ *), .visited\\\\:flex:visited {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "target:flex",
+      "group-target:flex",
+      "peer-target:flex"
+    ],
+    "css": ".group-target\\\\:flex:is(:where(.group):target *), .peer-target\\\\:flex:is(:where(.peer):target ~ *), .target\\\\:flex:target {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "open:flex",
+      "group-open:flex",
+      "peer-open:flex",
+      "not-open:flex"
+    ],
+    "css": ".not-open\\\\:flex:not(:is([open], :popover-open, :open)), .group-open\\\\:flex:is(:where(.group):is([open], :popover-open, :open) *), .peer-open\\\\:flex:is(:where(.peer):is([open], :popover-open, :open) ~ *), .open\\\\:flex:is([open], :popover-open, :open) {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "default:flex",
+      "group-default:flex",
+      "peer-default:flex"
+    ],
+    "css": ".group-default\\\\:flex:is(:where(.group):default *), .peer-default\\\\:flex:is(:where(.peer):default ~ *), .default\\\\:flex:default {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "checked:flex",
+      "group-checked:flex",
+      "peer-checked:flex"
+    ],
+    "css": ".group-checked\\\\:flex:is(:where(.group):checked *), .peer-checked\\\\:flex:is(:where(.peer):checked ~ *), .checked\\\\:flex:checked {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "indeterminate:flex",
+      "group-indeterminate:flex",
+      "peer-indeterminate:flex"
+    ],
+    "css": ".group-indeterminate\\\\:flex:is(:where(.group):indeterminate *), .peer-indeterminate\\\\:flex:is(:where(.peer):indeterminate ~ *), .indeterminate\\\\:flex:indeterminate {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "autofill:flex",
+      "group-autofill:flex",
+      "peer-autofill:flex"
+    ],
+    "css": ".group-autofill\\\\:flex:is(:where(.group):autofill *), .peer-autofill\\\\:flex:is(:where(.peer):autofill ~ *) {\n        display: flex;\n      }\n\n      .autofill\\\\:flex:autofill {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "optional:flex",
+      "group-optional:flex",
+      "peer-optional:flex"
+    ],
+    "css": ".group-optional\\\\:flex:is(:where(.group):optional *), .peer-optional\\\\:flex:is(:where(.peer):optional ~ *), .optional\\\\:flex:optional {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "required:flex",
+      "group-required:flex",
+      "peer-required:flex"
+    ],
+    "css": ".group-required\\\\:flex:is(:where(.group):required *), .peer-required\\\\:flex:is(:where(.peer):required ~ *), .required\\\\:flex:required {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "valid:flex",
+      "group-valid:flex",
+      "peer-valid:flex"
+    ],
+    "css": ".group-valid\\\\:flex:is(:where(.group):valid *), .peer-valid\\\\:flex:is(:where(.peer):valid ~ *), .valid\\\\:flex:valid {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "invalid:flex",
+      "group-invalid:flex",
+      "peer-invalid:flex"
+    ],
+    "css": ".group-invalid\\\\:flex:is(:where(.group):invalid *), .peer-invalid\\\\:flex:is(:where(.peer):invalid ~ *), .invalid\\\\:flex:invalid {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "user-valid:flex",
+      "group-user-valid:flex",
+      "peer-user-valid:flex"
+    ],
+    "css": ".group-user-valid\\\\:flex:is(:where(.group):user-valid *), .peer-user-valid\\\\:flex:is(:where(.peer):user-valid ~ *) {\n        display: flex;\n      }\n\n      .user-valid\\\\:flex:user-valid {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "user-invalid:flex",
+      "group-user-invalid:flex",
+      "peer-user-invalid:flex"
+    ],
+    "css": ".group-user-invalid\\\\:flex:is(:where(.group):user-invalid *), .peer-user-invalid\\\\:flex:is(:where(.peer):user-invalid ~ *) {\n        display: flex;\n      }\n\n      .user-invalid\\\\:flex:user-invalid {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "in-range:flex",
+      "group-in-range:flex",
+      "peer-in-range:flex"
+    ],
+    "css": ".group-in-range\\\\:flex:is(:where(.group):in-range *), .peer-in-range\\\\:flex:is(:where(.peer):in-range ~ *), .in-range\\\\:flex:in-range {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "out-of-range:flex",
+      "group-out-of-range:flex",
+      "peer-out-of-range:flex"
+    ],
+    "css": ".group-out-of-range\\\\:flex:is(:where(.group):out-of-range *), .peer-out-of-range\\\\:flex:is(:where(.peer):out-of-range ~ *), .out-of-range\\\\:flex:out-of-range {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "read-only:flex",
+      "group-read-only:flex",
+      "peer-read-only:flex"
+    ],
+    "css": ".group-read-only\\\\:flex:is(:where(.group):read-only *), .peer-read-only\\\\:flex:is(:where(.peer):read-only ~ *), .read-only\\\\:flex:read-only {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "empty:flex",
+      "group-empty:flex",
+      "peer-empty:flex"
+    ],
+    "css": ".group-empty\\\\:flex:is(:where(.group):empty *), .peer-empty\\\\:flex:is(:where(.peer):empty ~ *), .empty\\\\:flex:empty {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "focus-within:flex",
+      "group-focus-within:flex",
+      "peer-focus-within:flex"
+    ],
+    "css": ".group-focus-within\\\\:flex:is(:where(.group):focus-within *), .peer-focus-within\\\\:flex:is(:where(.peer):focus-within ~ *), .focus-within\\\\:flex:focus-within {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "hover:flex",
+      "group-hover:flex",
+      "peer-hover:flex"
+    ],
+    "css": "@media (hover: hover) {\n      .group-hover\\\\:flex:is(:where(.group):hover *), .peer-hover\\\\:flex:is(:where(.peer):hover ~ *), .hover\\\\:flex:hover {\n        display: flex;\n      }\n    }"
+  },
+  {
+    "candidates": [
+      "focus:flex",
+      "group-focus:flex",
+      "peer-focus:flex"
+    ],
+    "css": ".group-focus\\\\:flex:is(:where(.group):focus *), .peer-focus\\\\:flex:is(:where(.peer):focus ~ *), .focus\\\\:flex:focus {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "group-hover:flex",
+      "group-focus:flex"
+    ],
+    "css": "@media (hover: hover) {\n      .group-hover\\\\:flex:is(:where(.group):hover *) {\n        display: flex;\n      }\n    }\n\n    .group-focus\\\\:flex:is(:where(.group):focus *) {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "group-focus:flex",
+      "group-hover:flex"
+    ],
+    "css": "@media (hover: hover) {\n      .group-hover\\\\:flex:is(:where(.group):hover *) {\n        display: flex;\n      }\n    }\n\n    .group-focus\\\\:flex:is(:where(.group):focus *) {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "focus-visible:flex",
+      "group-focus-visible:flex",
+      "peer-focus-visible:flex"
+    ],
+    "css": ".group-focus-visible\\\\:flex:is(:where(.group):focus-visible *), .peer-focus-visible\\\\:flex:is(:where(.peer):focus-visible ~ *), .focus-visible\\\\:flex:focus-visible {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "active:flex",
+      "group-active:flex",
+      "peer-active:flex"
+    ],
+    "css": ".group-active\\\\:flex:is(:where(.group):active *), .peer-active\\\\:flex:is(:where(.peer):active ~ *), .active\\\\:flex:active {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "enabled:flex",
+      "group-enabled:flex",
+      "peer-enabled:flex"
+    ],
+    "css": ".group-enabled\\\\:flex:is(:where(.group):enabled *), .peer-enabled\\\\:flex:is(:where(.peer):enabled ~ *), .enabled\\\\:flex:enabled {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "disabled:flex",
+      "group-disabled:flex",
+      "peer-disabled:flex"
+    ],
+    "css": ".group-disabled\\\\:flex:is(:where(.group):disabled *), .peer-disabled\\\\:flex:is(:where(.peer):disabled ~ *), .disabled\\\\:flex:disabled {\n        display: flex;\n      }"
+  },
+  {
+    "candidates": [
+      "inert:flex",
+      "group-inert:flex",
+      "peer-inert:flex"
+    ],
+    "css": ".group-inert\\\\:flex:is(:where(.group):is([inert], [inert] *) *), .peer-inert\\\\:flex:is(:where(.peer):is([inert], [inert] *) ~ *), .inert\\\\:flex:is([inert], [inert] *) {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "ltr:flex"
+    ],
+    "css": ".ltr\\\\:flex:where(:dir(ltr), [dir=\"ltr\"], [dir=\"ltr\"] *) {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "rtl:flex"
+    ],
+    "css": ".rtl\\\\:flex:where(:dir(rtl), [dir=\"rtl\"], [dir=\"rtl\"] *) {\n      display: flex;\n    }"
+  },
+  {
+    "candidates": [
+      "motion-safe:flex"
+    ],
+    "css": "@media (prefers-reduced-motion: no-preference) {\n      .motion-safe\\\\:flex {\n        display: flex;\n      }\n    }"
+  },
+  {
+    "candidates": [
+      "motion-reduce:flex"
+    ],
+    "css": "@media (prefers-reduced-motion: reduce) {\n      .motion-reduce\\\\:flex {\n        display: flex;\n      }\n    }"
+  },
+  {
+    "candidates": [
+      "dark:flex"
+    ],
+    "css": "@media (prefers-color-scheme: dark) {\n      .dark\\\\:flex {\n        display: flex;\n      }\n    }"
+  },
+  {
+    "candidates": [
+      "starting:opacity-0"
+    ],
+    "css": "@starting-style {\n      .starting\\\\:opacity-0 {\n        opacity: 0;\n      }\n    }"
+  },
+  {
+    "candidates": [
+      "print:flex"
+    ],
+    "css": "@media print {\n      .print\\\\:flex {\n        display: flex;\n      }\n    }"
+  },
+  {
+    "candidates": [
+      "portrait:flex"
+    ],
+    "css": "@media (orientation: portrait) {\n      .portrait\\\\:flex {\n        display: flex;\n      }\n    }"
+  },
+  {
+    "candidates": [
+      "landscape:flex"
+    ],
+    "css": "@media (orientation: landscape) {\n      .landscape\\\\:flex {\n        display: flex;\n      }\n    }"
+  },
+  {
+    "candidates": [
+      "contrast-more:flex"
+    ],
+    "css": "@media (prefers-contrast: more) {\n      .contrast-more\\\\:flex {\n        display: flex;\n      }\n    }"
+  },
+  {
+    "candidates": [
+      "contrast-less:flex"
+    ],
+    "css": "@media (prefers-contrast: less) {\n      .contrast-less\\\\:flex {\n        display: flex;\n      }\n    }"
+  },
+  {
+    "candidates": [
+      "forced-colors:flex"
+    ],
+    "css": "@media (forced-colors: active) {\n      .forced-colors\\\\:flex {\n        display: flex;\n      }\n    }"
+  },
+  {
+    "candidates": [
+      "inverted-colors:flex"
+    ],
+    "css": "@media (inverted-colors: inverted) {\n      .inverted-colors\\\\:flex {\n        display: flex;\n      }\n    }"
+  },
+  {
+    "candidates": [
+      "pointer-none:flex"
+    ],
+    "css": "@media (pointer: none) {\n      .pointer-none\\\\:flex {\n        display: flex;\n      }\n    }"
+  },
+  {
+    "candidates": [
+      "pointer-coarse:flex"
+    ],
+    "css": "@media (pointer: coarse) {\n      .pointer-coarse\\\\:flex {\n        display: flex;\n      }\n    }"
+  },
+  {
+    "candidates": [
+      "pointer-fine:flex"
+    ],
+    "css": "@media (pointer: fine) {\n      .pointer-fine\\\\:flex {\n        display: flex;\n      }\n    }"
+  },
+  {
+    "candidates": [
+      "any-pointer-none:flex"
+    ],
+    "css": "@media (any-pointer: none) {\n      .any-pointer-none\\\\:flex {\n        display: flex;\n      }\n    }"
+  },
+  {
+    "candidates": [
+      "any-pointer-coarse:flex"
+    ],
+    "css": "@media (any-pointer: coarse) {\n      .any-pointer-coarse\\\\:flex {\n        display: flex;\n      }\n    }"
+  },
+  {
+    "candidates": [
+      "any-pointer-fine:flex"
+    ],
+    "css": "@media (any-pointer: fine) {\n      .any-pointer-fine\\\\:flex {\n        display: flex;\n      }\n    }"
+  },
+  {
+    "candidates": [
+      "noscript:flex"
+    ],
+    "css": "@media (scripting: none) {\n      .noscript\\\\:flex {\n        display: flex;\n      }\n    }"
+  }
+]
