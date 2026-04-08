@@ -9,14 +9,21 @@ permissions:
   contents: write
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-22.04
+  ci:
+    name: CI (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - target: x86_64-linux
+            runner: ubuntu-22.04
+          - target: aarch64-macos
+            runner: macos-15
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Zig
-        uses: mlugg/setup-zig@v2
+      - uses: mlugg/setup-zig@v2
         with:
           version: 0.15.2
 
@@ -43,7 +50,7 @@ jobs:
 
   build_nif:
     name: Build NIF (${{ matrix.target }})
-    needs: test
+    needs: ci
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: true
@@ -134,7 +141,7 @@ jobs:
 
   release:
     name: Create Release
-    needs: [test, build_nif]
+    needs: build_nif
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts

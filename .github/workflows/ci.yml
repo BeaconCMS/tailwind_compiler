@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+
+      - name: Build Zig library
+        run: zig build -Doptimize=ReleaseFast
+
+      - name: Run Zig tests
+        run: zig build test
+
+      - name: Set up Erlang/Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: "27"
+          elixir-version: "1.17"
+
+      - name: Run Elixir tests
+        env:
+          TAILWIND_COMPILER_PATH: "true"
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get
+          mix test
