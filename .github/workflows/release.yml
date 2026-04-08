@@ -13,7 +13,7 @@ jobs:
     name: Build NIF (${{ matrix.target }})
     runs-on: ${{ matrix.runner }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - target: x86_64-linux
