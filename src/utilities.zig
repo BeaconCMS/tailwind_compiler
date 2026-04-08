@@ -1124,6 +1124,168 @@ pub const functional_utility_set = std.StaticStringMap(void).initComptime(.{
     .{ "-indent", {} },
 });
 
+// ─── Modifier & Negative Support ───────────────────────────────────────────
+
+/// Check if a functional utility root supports modifiers (e.g., opacity via /50).
+/// Only color utilities, gradient stops, and a few others accept modifiers.
+pub fn supportsModifier(root: []const u8) bool {
+    return modifier_support.has(root);
+}
+
+const modifier_support = std.StaticStringMap(void).initComptime(.{
+    // Color utilities (accept opacity modifier)
+    .{ "bg", {} },
+    .{ "text", {} },
+    .{ "border", {} },
+    .{ "border-x", {} },
+    .{ "border-y", {} },
+    .{ "border-s", {} },
+    .{ "border-e", {} },
+    .{ "border-t", {} },
+    .{ "border-r", {} },
+    .{ "border-b", {} },
+    .{ "border-l", {} },
+    .{ "accent", {} },
+    .{ "caret", {} },
+    .{ "fill", {} },
+    .{ "stroke", {} },
+    .{ "outline-color", {} },
+    .{ "outline", {} },
+    .{ "decoration", {} },
+    .{ "shadow-color", {} },
+    .{ "shadow", {} },
+    .{ "divide", {} },
+    .{ "placeholder", {} },
+    .{ "ring", {} },
+    .{ "ring-offset", {} },
+    .{ "inset-ring", {} },
+    .{ "inset-shadow", {} },
+    .{ "text-shadow", {} },
+    .{ "from", {} },
+    .{ "via", {} },
+    .{ "to", {} },
+    .{ "drop-shadow", {} },
+    // Gradient utilities with position modifiers
+    .{ "bg-linear", {} },
+    .{ "bg-radial", {} },
+    .{ "bg-conic", {} },
+    .{ "bg-gradient", {} },
+    .{ "-bg-linear", {} },
+    .{ "-bg-conic", {} },
+});
+
+/// Check if a functional utility root supports the negative prefix.
+/// Only spacing (margin, inset), transforms, z-index, order, and a few others.
+pub fn supportsNegative(root: []const u8) bool {
+    return negative_support.has(root);
+}
+
+const negative_support = std.StaticStringMap(void).initComptime(.{
+    // Margin
+    .{ "m", {} },
+    .{ "mx", {} },
+    .{ "my", {} },
+    .{ "ms", {} },
+    .{ "me", {} },
+    .{ "mt", {} },
+    .{ "mr", {} },
+    .{ "mb", {} },
+    .{ "ml", {} },
+    .{ "-m", {} },
+    .{ "-mx", {} },
+    .{ "-my", {} },
+    .{ "-ms", {} },
+    .{ "-me", {} },
+    .{ "-mt", {} },
+    .{ "-mr", {} },
+    .{ "-mb", {} },
+    .{ "-ml", {} },
+    // Logical margin
+    .{ "mbs", {} },
+    .{ "mbe", {} },
+    .{ "mis", {} },
+    .{ "mie", {} },
+    .{ "-mbs", {} },
+    .{ "-mbe", {} },
+    .{ "-mis", {} },
+    .{ "-mie", {} },
+    // Inset / position
+    .{ "inset", {} },
+    .{ "inset-x", {} },
+    .{ "inset-y", {} },
+    .{ "inset-s", {} },
+    .{ "inset-e", {} },
+    .{ "top", {} },
+    .{ "right", {} },
+    .{ "bottom", {} },
+    .{ "left", {} },
+    .{ "-inset", {} },
+    .{ "-inset-x", {} },
+    .{ "-inset-y", {} },
+    .{ "-inset-s", {} },
+    .{ "-inset-e", {} },
+    .{ "-top", {} },
+    .{ "-right", {} },
+    .{ "-bottom", {} },
+    .{ "-left", {} },
+    // Transforms
+    .{ "rotate", {} },
+    .{ "rotate-x", {} },
+    .{ "rotate-y", {} },
+    .{ "rotate-z", {} },
+    .{ "-rotate", {} },
+    .{ "-rotate-x", {} },
+    .{ "-rotate-y", {} },
+    .{ "-rotate-z", {} },
+    .{ "translate-x", {} },
+    .{ "translate-y", {} },
+    .{ "translate-z", {} },
+    .{ "-translate-x", {} },
+    .{ "-translate-y", {} },
+    .{ "-translate-z", {} },
+    .{ "skew-x", {} },
+    .{ "skew-y", {} },
+    .{ "-skew-x", {} },
+    .{ "-skew-y", {} },
+    .{ "scale", {} },
+    .{ "scale-x", {} },
+    .{ "scale-y", {} },
+    .{ "scale-z", {} },
+    // Z-index, order
+    .{ "z", {} },
+    .{ "-z", {} },
+    .{ "order", {} },
+    .{ "-order", {} },
+    // Scroll margin
+    .{ "scroll-m", {} },
+    .{ "scroll-mx", {} },
+    .{ "scroll-my", {} },
+    .{ "scroll-ms", {} },
+    .{ "scroll-me", {} },
+    .{ "scroll-mt", {} },
+    .{ "scroll-mr", {} },
+    .{ "scroll-mb", {} },
+    .{ "scroll-ml", {} },
+    // Text indent
+    .{ "indent", {} },
+    .{ "-indent", {} },
+    // Outline offset
+    .{ "outline-offset", {} },
+    // Hue rotate
+    .{ "hue-rotate", {} },
+    .{ "backdrop-hue-rotate", {} },
+    // Underline offset
+    .{ "underline-offset", {} },
+    // Gradient direction (supports negative rotation)
+    .{ "bg-linear", {} },
+    .{ "bg-conic", {} },
+    .{ "-bg-linear", {} },
+    .{ "-bg-conic", {} },
+    // Space between (reverse)
+    .{ "space-x", {} },
+    .{ "space-y", {} },
+});
+
 // ─── @property Registration ────────────────────────────────────────────────
 
 /// Return any @property declarations needed for a given utility root.

@@ -119,6 +119,23 @@ pub const Context = struct {
             return;
         };
 
+        // Reject modifiers on utilities that don't support them
+        if (parsed.modifier != null) {
+            switch (parsed.kind) {
+                .static => return, // Static utilities never accept modifiers
+                .functional => {
+                    // Only color/gradient utilities accept modifiers
+                    if (!utilities.supportsModifier(parsed.root)) return;
+                },
+                .arbitrary => {}, // Arbitrary properties accept modifiers
+            }
+        }
+
+        // Reject negative prefix on utilities that don't support it
+        if (parsed.negative) {
+            if (!utilities.supportsNegative(parsed.root)) return;
+        }
+
         // Resolve to CSS declarations
         const declarations = try self.resolveDeclarations(&parsed) orelse return;
 
