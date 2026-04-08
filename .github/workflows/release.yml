@@ -62,7 +62,7 @@ jobs:
             -w /workspace \
             -e TAILWIND_COMPILER_PATH=true \
             -e MIX_ENV=prod \
-            hexpm/elixir:1.17.3-erlang-27.2-ubuntu-noble-20241113 \
+            hexpm/elixir:1.17.3-erlang-26.2.1-debian-bookworm-20260406-slim \
             bash -c "
               mix local.hex --force &&
               mix local.rebar --force &&
