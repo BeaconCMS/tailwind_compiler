@@ -3,7 +3,7 @@ defmodule TailwindCompiler.NIF do
 
   use Zig,
     otp_app: :tailwind_compiler,
-    nifs: [compile: [:dirty_cpu]],
+    nifs: [compile: [:dirty_cpu], validate: [:dirty_cpu]],
     leak_check: false,
     extra_modules: [
       compiler: {"../../src/compiler.zig", []},
@@ -50,6 +50,44 @@ defmodule TailwindCompiler.NIF do
 
       // Return owned slice (Zigler auto-marshals []u8 to binary)
       return try beam.allocator.dupe(u8, css);
+  }
+
+  /// Validate a list of token strings, returning only valid Tailwind utilities.
+  /// Returns the valid tokens as a newline-separated binary string.
+  pub fn validate(tokens_term: beam.term) ![]u8 {
+      var arena = std.heap.ArenaAllocator.init(beam.allocator);
+      defer arena.deinit();
+      const alloc = arena.allocator();
+
+      // Marshal tokens: list of binaries -> [][]const u8
+      const tokens = try beam.get([][]const u8, tokens_term, .{ .allocator = alloc });
+
+      // Call the Zig validator
+      const valid = try compiler.validate(alloc, tokens);
+
+      // Join valid tokens with newlines
+      var total_len: usize = 0;
+      for (valid) |v| {
+          total_len += v.len + 1; // +1 for newline
+      }
+      if (total_len > 0) total_len -= 1; // no trailing newline
+
+      if (total_len == 0) {
+          return try beam.allocator.dupe(u8, "");
+      }
+
+      var result = try beam.allocator.alloc(u8, total_len);
+      var pos: usize = 0;
+      for (valid, 0..) |v, i| {
+          @memcpy(result[pos .. pos + v.len], v);
+          pos += v.len;
+          if (i < valid.len - 1) {
+              result[pos] = '\n';
+              pos += 1;
+          }
+      }
+
+      return result;
   }
   """
 end

@@ -178,6 +178,31 @@ pub const CssEmitter = struct {
         // @layer theme
         try self.emitThemeLayer(theme);
 
+        // Initialize --tw-* custom properties that utilities depend on.
+        // Tailwind v4 uses @property declarations for these, but for
+        // browser compatibility we set them on the universal selector.
+        // Only include properties that have safe, non-destructive defaults.
+        try self.buf.appendSlice(self.alloc,
+            "@layer properties{*,:before,:after,::backdrop{" ++
+            "--tw-border-style:solid;" ++
+            "--tw-content:\"\";" ++
+            "--tw-outline-style:solid;" ++
+            "--tw-ring-shadow:0 0 #0000;" ++
+            "--tw-inset-ring-shadow:0 0 #0000;" ++
+            "--tw-ring-offset-width:0px;" ++
+            "--tw-ring-offset-color:#fff;" ++
+            "--tw-ring-offset-shadow:0 0 #0000;" ++
+            "--tw-shadow:0 0 #0000;" ++
+            "--tw-inset-shadow:0 0 #0000;" ++
+            "--tw-shadow-alpha:100%;" ++
+            "--tw-inset-shadow-alpha:100%;" ++
+            "--tw-divide-x-reverse:0;" ++
+            "--tw-divide-y-reverse:0;" ++
+            "--tw-space-x-reverse:0;" ++
+            "--tw-space-y-reverse:0" ++
+            "}}"
+        );
+
         // @layer base (preflight)
         if (include_preflight) {
             try self.emitBaseLayer();
@@ -211,6 +236,21 @@ pub const CssEmitter = struct {
         while (iter.next()) |entry| {
             if (theme.get(entry.key_ptr.*)) |value| {
                 try used_vars.append(self.alloc, .{ .name = entry.key_ptr.*, .value = value });
+            }
+        }
+
+        // Also emit companion variables (--line-height, --letter-spacing, --font-weight)
+        // for any used --text-* variables. These companion vars may not be in used_variables
+        // because they're referenced indirectly via var() fallback chains.
+        var vars_iter = theme.variables.iterator();
+        while (vars_iter.next()) |entry| {
+            const name = entry.key_ptr.*;
+            if (std.mem.startsWith(u8, name, "--text-") and std.mem.endsWith(u8, name, "--line-height")) {
+                const base_end = std.mem.lastIndexOf(u8, name, "--line-height") orelse continue;
+                const base_name = name[0..base_end];
+                if (theme.used_variables.contains(base_name) and !theme.used_variables.contains(name)) {
+                    try used_vars.append(self.alloc, .{ .name = name, .value = entry.value_ptr.* });
+                }
             }
         }
 

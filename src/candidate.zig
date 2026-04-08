@@ -232,18 +232,27 @@ pub fn isValidArbitrary(input: []const u8) bool {
 // ─── Arbitrary Value Decoding ──────────────────────────────────────────────
 
 /// Decode arbitrary values: underscores become spaces (except in url(), var() first arg).
-/// Escaped underscores (\\_) become literal underscores.
+/// Escaped underscores (\\_) become literal underscores. Backslash-escaped characters
+/// (e.g. \. \[ \]) are unescaped to their literal form.
 pub fn decodeArbitraryValue(alloc: Allocator, input: []const u8) ![]const u8 {
-    // Fast path: no underscores at all
-    if (std.mem.indexOfScalar(u8, input, '_') == null) return input;
+    // Fast path: no underscores or backslashes at all
+    if (std.mem.indexOfScalar(u8, input, '_') == null and
+        std.mem.indexOfScalar(u8, input, '\\') == null) return input;
 
     var result = try std.ArrayList(u8).initCapacity(alloc, input.len);
     var i: usize = 0;
 
     while (i < input.len) {
-        if (input[i] == '\\' and i + 1 < input.len and input[i + 1] == '_') {
-            // Escaped underscore: literal _
-            try result.append(alloc, '_');
+        if (input[i] == '\\' and i + 1 < input.len) {
+            const next = input[i + 1];
+            if (next == '_') {
+                // Escaped underscore: literal _
+                try result.append(alloc, '_');
+                i += 2;
+                continue;
+            }
+            // Unescape any other backslash-escaped character (e.g. \. \[ \])
+            try result.append(alloc, next);
             i += 2;
             continue;
         }

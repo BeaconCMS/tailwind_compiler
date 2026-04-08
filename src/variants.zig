@@ -92,6 +92,31 @@ fn applyStaticVariant(
 
     // Simple pseudo-class variants
     if (pseudo_class_map.get(name)) |pseudo| {
+        // If inner is a non-style rule (media, container, supports), apply pseudo to children
+        if (inner.kind != .style and inner.children.len > 0) {
+            var new_children = try alloc.alloc(Rule, inner.children.len);
+            for (inner.children, 0..) |child, ci| {
+                if (child.kind == .style) {
+                    new_children[ci] = Rule{
+                        .kind = .style,
+                        .selector = try appendPseudo(alloc, child.selector orelse "", pseudo),
+                        .declarations = child.declarations,
+                        .children = child.children,
+                        .variant_order = child.variant_order,
+                    };
+                } else {
+                    new_children[ci] = child;
+                }
+            }
+            return Rule{
+                .kind = inner.kind,
+                .at_rule = inner.at_rule,
+                .selector = inner.selector,
+                .declarations = inner.declarations,
+                .children = new_children,
+                .variant_order = inner.variant_order,
+            };
+        }
         return Rule{
             .kind = .style,
             .selector = try appendPseudo(alloc, inner.selector orelse "", pseudo),
@@ -1041,30 +1066,30 @@ const variant_order_map = std.StaticStringMap(u16).initComptime(.{
     .{ "contrast-less", 62 },
     .{ "max", 63 },
     .{ "sm", 64 },
-    .{ "md", 64 },
-    .{ "lg", 64 },
-    .{ "xl", 64 },
-    .{ "2xl", 64 },
-    .{ "min", 64 },
-    .{ "@max", 65 },
-    .{ "@", 66 },
-    .{ "@min", 66 },
-    .{ "portrait", 67 },
-    .{ "landscape", 68 },
-    .{ "ltr", 69 },
-    .{ "rtl", 70 },
-    .{ "dark", 71 },
-    .{ "starting", 72 },
-    .{ "print", 73 },
-    .{ "forced-colors", 74 },
-    .{ "inverted-colors", 75 },
-    .{ "pointer-none", 76 },
-    .{ "pointer-coarse", 77 },
-    .{ "pointer-fine", 78 },
-    .{ "any-pointer-none", 79 },
-    .{ "any-pointer-coarse", 80 },
-    .{ "any-pointer-fine", 81 },
-    .{ "noscript", 82 },
+    .{ "md", 65 },
+    .{ "lg", 66 },
+    .{ "xl", 67 },
+    .{ "2xl", 68 },
+    .{ "min", 69 },
+    .{ "@max", 70 },
+    .{ "@", 71 },
+    .{ "@min", 71 },
+    .{ "portrait", 72 },
+    .{ "landscape", 73 },
+    .{ "ltr", 74 },
+    .{ "rtl", 75 },
+    .{ "dark", 76 },
+    .{ "starting", 77 },
+    .{ "print", 78 },
+    .{ "forced-colors", 79 },
+    .{ "inverted-colors", 80 },
+    .{ "pointer-none", 81 },
+    .{ "pointer-coarse", 82 },
+    .{ "pointer-fine", 83 },
+    .{ "any-pointer-none", 84 },
+    .{ "any-pointer-coarse", 85 },
+    .{ "any-pointer-fine", 86 },
+    .{ "noscript", 87 },
 });
 
 // ─── Tests ─────────────────────────────────────────────────────────────────
@@ -1086,4 +1111,9 @@ test "variantOrder: ordering" {
     try std.testing.expect(variantOrder("hover") < variantOrder("dark"));
     try std.testing.expect(variantOrder("focus") < variantOrder("sm"));
     try std.testing.expect(variantOrder("*") < variantOrder("hover"));
+    // Responsive breakpoints must be in ascending order (mobile-first)
+    try std.testing.expect(variantOrder("sm") < variantOrder("md"));
+    try std.testing.expect(variantOrder("md") < variantOrder("lg"));
+    try std.testing.expect(variantOrder("lg") < variantOrder("xl"));
+    try std.testing.expect(variantOrder("xl") < variantOrder("2xl"));
 }

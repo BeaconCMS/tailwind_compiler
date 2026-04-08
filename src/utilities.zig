@@ -221,6 +221,8 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "grow-0", &[_]Declaration{.{ .property = "flex-grow", .value = "0" }} },
     .{ "shrink", &[_]Declaration{.{ .property = "flex-shrink", .value = "1" }} },
     .{ "shrink-0", &[_]Declaration{.{ .property = "flex-shrink", .value = "0" }} },
+    .{ "flex-shrink", &[_]Declaration{.{ .property = "flex-shrink", .value = "1" }} },
+    .{ "flex-shrink-0", &[_]Declaration{.{ .property = "flex-shrink", .value = "0" }} },
     .{ "flex-1", &[_]Declaration{.{ .property = "flex", .value = "1" }} },
     .{ "flex-auto", &[_]Declaration{.{ .property = "flex", .value = "auto" }} },
     .{ "flex-initial", &[_]Declaration{.{ .property = "flex", .value = "0 1 auto" }} },
@@ -494,8 +496,8 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     } },
 
     // ─── Outline Style ───
-    .{ "outline-none", &[_]Declaration{ .{ .property = "outline", .value = "2px solid #0000" }, .{ .property = "outline-offset", .value = "2px" } } },
-    .{ "outline", &[_]Declaration{.{ .property = "outline-style", .value = "solid" }} },
+    .{ "outline-none", &[_]Declaration{ .{ .property = "--tw-outline-style", .value = "none" }, .{ .property = "outline-style", .value = "none" } } },
+    .{ "outline", &[_]Declaration{ .{ .property = "outline-style", .value = "var(--tw-outline-style)" }, .{ .property = "outline-width", .value = "1px" } } },
     .{ "outline-dashed", &[_]Declaration{.{ .property = "outline-style", .value = "dashed" }} },
     .{ "outline-dotted", &[_]Declaration{.{ .property = "outline-style", .value = "dotted" }} },
     .{ "outline-double", &[_]Declaration{.{ .property = "outline-style", .value = "double" }} },
@@ -680,8 +682,10 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "break-inside-avoid-column", &[_]Declaration{.{ .property = "break-inside", .value = "avoid-column" }} },
 
     // ─── Box Decoration Break ───
-    .{ "box-decoration-clone", &[_]Declaration{.{ .property = "box-decoration-break", .value = "clone" }} },
-    .{ "box-decoration-slice", &[_]Declaration{.{ .property = "box-decoration-break", .value = "slice" }} },
+    .{ "box-decoration-clone", &[_]Declaration{ .{ .property = "-webkit-box-decoration-break", .value = "clone" }, .{ .property = "box-decoration-break", .value = "clone" } } },
+    .{ "box-decoration-slice", &[_]Declaration{ .{ .property = "-webkit-box-decoration-break", .value = "slice" }, .{ .property = "box-decoration-break", .value = "slice" } } },
+    .{ "decoration-clone", &[_]Declaration{ .{ .property = "-webkit-box-decoration-break", .value = "clone" }, .{ .property = "box-decoration-break", .value = "clone" } } },
+    .{ "decoration-slice", &[_]Declaration{ .{ .property = "-webkit-box-decoration-break", .value = "slice" }, .{ .property = "box-decoration-break", .value = "slice" } } },
 
     // ─── Content Visibility ───
     .{ "content-visibility-auto", &[_]Declaration{.{ .property = "content-visibility", .value = "auto" }} },
@@ -696,7 +700,7 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "scheme-dark-light", &[_]Declaration{.{ .property = "color-scheme", .value = "dark light" }} },
 
     // ─── Container ───
-    .{ "container", &[_]Declaration{ .{ .property = "width", .value = "100%" }, .{ .property = "max-width", .value = "100%" } } },
+    .{ "container", &[_]Declaration{.{ .property = "width", .value = "100%" }} },
 
     // ─── Inset Auto ───
     .{ "inset-auto", &[_]Declaration{.{ .property = "inset", .value = "auto" }} },
@@ -741,7 +745,7 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "ring-inset", &[_]Declaration{.{ .property = "--tw-ring-inset", .value = "inset" }} },
 
     // ─── Outline ───
-    .{ "outline-hidden", &[_]Declaration{.{ .property = "outline-color", .value = "#0000" }} },
+    .{ "outline-hidden", &[_]Declaration{ .{ .property = "outline", .value = "2px solid transparent" }, .{ .property = "outline-offset", .value = "2px" } } },
 
     // ─── Divide Style ───
     .{ "divide-solid", &[_]Declaration{.{ .property = "border-style", .value = "solid" }} },
@@ -1121,6 +1125,7 @@ pub const functional_utility_set = std.StaticStringMap(void).initComptime(.{
     // Text indent
     .{ "indent", {} },
     .{ "-indent", {} },
+    .{ "transition", {} },
 });
 
 // ─── Default Value Roots ───────────────────────────────────────────────────
@@ -1158,6 +1163,21 @@ const default_value_roots = std.StaticStringMap(void).initComptime(.{
     .{ "backdrop-blur", {} },
     .{ "inset-shadow", {} },
     .{ "container", {} },
+    .{ "rounded", {} },
+    .{ "rounded-t", {} },
+    .{ "rounded-r", {} },
+    .{ "rounded-b", {} },
+    .{ "rounded-l", {} },
+    .{ "rounded-tl", {} },
+    .{ "rounded-tr", {} },
+    .{ "rounded-br", {} },
+    .{ "rounded-bl", {} },
+    .{ "rounded-s", {} },
+    .{ "rounded-e", {} },
+    .{ "rounded-ss", {} },
+    .{ "rounded-se", {} },
+    .{ "rounded-es", {} },
+    .{ "rounded-ee", {} },
 });
 
 // ─── Fraction Support ──────────────────────────────────────────────────────
@@ -1696,6 +1716,7 @@ const ResolverTag = enum {
     font_stretch_fn,
     border_spacing,
     indent,
+    transition,
 };
 
 const functional_dispatch = std.StaticStringMap(ResolverTag).initComptime(.{
@@ -1995,6 +2016,7 @@ const functional_dispatch = std.StaticStringMap(ResolverTag).initComptime(.{
     .{ "border-spacing-y", .border_spacing },
     // ── Text indent ──
     .{ "indent", .indent },
+    .{ "transition", .transition },
     .{ "-indent", .indent },
 });
 
@@ -2157,6 +2179,7 @@ pub fn resolveFunctional(
         .font_stretch_fn => resolveFontStretch(alloc, value),
         .border_spacing => resolveBorderSpacing(alloc, root, value, theme),
         .indent => resolveIndent(alloc, value, theme),
+        .transition => resolveTransition(alloc, value, theme),
     };
 }
 
@@ -2326,6 +2349,11 @@ fn resolveSpacing(
             } else if (val.fraction) |frac| {
                 // Fraction: e.g. 1/2 -> 50%
                 css_value = try resolveFraction(alloc, frac, is_neg);
+            } else if (isSizingRoot(root) and !is_neg and theme.resolve(val.value, "--max-width")) {
+                // Theme has a --max-width-{value} variable (e.g., --max-width-720)
+                const var_name = try std.fmt.allocPrint(alloc, "--max-width-{s}", .{val.value});
+                theme.markUsed(var_name);
+                css_value = try std.fmt.allocPrint(alloc, "var(--max-width-{s})", .{val.value});
             } else if (isValidSpacingMultiplier(val.value)) {
                 // Bare number: multiply by spacing
                 theme.markUsed("--spacing");
@@ -2345,6 +2373,8 @@ fn resolveSpacing(
             } else if (isSizingRoot(root) and !is_neg) {
                 // Named container/sizing values -> var(--container-*)
                 const size_names = std.StaticStringMap(void).initComptime(.{
+                    .{ "3xs", {} },
+                    .{ "2xs", {} },
                     .{ "xs", {} },
                     .{ "sm", {} },
                     .{ "md", {} },
@@ -2366,8 +2396,12 @@ fn resolveSpacing(
                     if (std.mem.startsWith(u8, val.value, "screen-")) {
                         // screen-sm -> var(--breakpoint-sm)
                         const bp_name = val.value["screen-".len..];
+                        const bp_var = try std.fmt.allocPrint(alloc, "--breakpoint-{s}", .{bp_name});
+                        theme.markUsed(bp_var);
                         css_value = try std.fmt.allocPrint(alloc, "var(--breakpoint-{s})", .{bp_name});
                     } else {
+                        const container_var = try std.fmt.allocPrint(alloc, "--container-{s}", .{val.value});
+                        theme.markUsed(container_var);
                         css_value = try std.fmt.allocPrint(alloc, "var(--container-{s})", .{val.value});
                     }
                 } else {
@@ -2570,9 +2604,6 @@ fn resolveOrder(alloc: Allocator, value: ?Value, negative: bool) !?[]const Decla
 }
 
 fn resolveRounded(alloc: Allocator, root: []const u8, value: ?Value, theme: *Theme) !?[]const Declaration {
-    _ = theme;
-    const val = value orelse return null;
-
     const property_map = std.StaticStringMap([]const []const u8).initComptime(.{
         .{ "rounded", &[_][]const u8{"border-radius"} },
         .{ "rounded-t", &[_][]const u8{ "border-top-left-radius", "border-top-right-radius" } },
@@ -2594,6 +2625,16 @@ fn resolveRounded(alloc: Allocator, root: []const u8, value: ?Value, theme: *The
     const properties = property_map.get(root) orelse return null;
     var css_value: []const u8 = undefined;
 
+    const val = value orelse {
+        // Bare rounded/rounded-t/etc → default 0.25rem
+        css_value = "0.25rem";
+        var decls = try alloc.alloc(Declaration, properties.len);
+        for (properties, 0..) |prop, i| {
+            decls[i] = Declaration{ .property = prop, .value = css_value };
+        }
+        return decls;
+    };
+
     switch (val.kind) {
         .arbitrary => {
             css_value = val.value;
@@ -2605,7 +2646,9 @@ fn resolveRounded(alloc: Allocator, root: []const u8, value: ?Value, theme: *The
                 css_value = "3.40282e38px";
             } else {
                 // Look up in theme --radius-{value}
-                css_value = try std.fmt.allocPrint(alloc, "var(--radius-{s})", .{val.value});
+                const radius_var = try std.fmt.allocPrint(alloc, "--radius-{s}", .{val.value});
+                theme.markUsed(radius_var);
+                css_value = try std.fmt.allocPrint(alloc, "var({s})", .{radius_var});
             }
         },
     }
@@ -2822,6 +2865,7 @@ fn resolveText(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
                     // arbitrary modifiers like [4px] are always valid
                 }
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--text-{s}", .{val.value}));
+                theme.markUsed(try std.fmt.allocPrint(alloc, "--text-{s}--line-height", .{val.value}));
                 const font_size = try std.fmt.allocPrint(alloc, "var(--text-{s})", .{val.value});
                 const line_height = try std.fmt.allocPrint(alloc, "var(--tw-leading,var(--text-{s}--line-height))", .{val.value});
                 const decls = try alloc.alloc(Declaration, 2);
@@ -3125,9 +3169,9 @@ fn resolveGridTemplate(alloc: Allocator, value: ?Value, property: []const u8, th
 
     // Determine the theme namespace from the property
     const theme_ns: []const u8 = if (std.mem.eql(u8, property, "grid-template-columns"))
-        "--grid-cols"
+        "--grid-template-columns"
     else
-        "--grid-rows";
+        "--grid-template-rows";
 
     switch (val.kind) {
         .arbitrary => {
@@ -4096,8 +4140,13 @@ fn resolveFractionCalc(alloc: Allocator, fraction: []const u8, negative: bool) !
 // ─── Space Between (gap-based) ─────────────────────────────────────────────
 
 fn resolveSpaceBetween(alloc: Allocator, value: ?Value, property: []const u8, theme: *Theme) !?[]const Declaration {
+    _ = property;
     const val = value orelse return null;
     var css_value: []const u8 = undefined;
+
+    // Determine axis: space-y uses margin-block, space-x uses margin-inline
+    // The `property` param was "row-gap"/"column-gap" — we ignore it and use margins instead
+    // to match Tailwind v4's actual output: :where(& > :not(:last-child)) { margin-block-* }
 
     switch (val.kind) {
         .arbitrary => {
@@ -4122,14 +4171,17 @@ fn resolveSpaceBetween(alloc: Allocator, value: ?Value, property: []const u8, th
         },
     }
 
+    // Return as row-gap/column-gap for now — the compiler will wrap in child selector
+    // We use a marker property that the emitter recognizes
     const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = property, .value = css_value };
+    decls[0] = Declaration{ .property = "__space_value", .value = css_value };
     return decls;
 }
 
 // ─── Divide Width ──────────────────────────────────────────────────────────
 
 fn resolveDivide(alloc: Allocator, value: ?Value, property: []const u8) !?[]const Declaration {
+    _ = property;
     var css_value: []const u8 = undefined;
 
     if (value) |val| {
@@ -4152,8 +4204,9 @@ fn resolveDivide(alloc: Allocator, value: ?Value, property: []const u8) !?[]cons
         css_value = "1px";
     }
 
+    // Return marker — the compiler will rewrite to child selectors
     const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = property, .value = css_value };
+    decls[0] = Declaration{ .property = "__divide_value", .value = css_value };
     return decls;
 }
 
@@ -4467,6 +4520,7 @@ fn resolveColumns(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decl
                     .{ "7xl", {} },
                 });
                 if (size_names.has(val.value)) {
+                    theme.markUsed(try std.fmt.allocPrint(alloc, "--container-{s}", .{val.value}));
                     css_value = try std.fmt.allocPrint(alloc, "var(--container-{s})", .{val.value});
                 } else {
                     return null;
@@ -4912,6 +4966,28 @@ fn resolveIndent(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decla
     return decls;
 }
 
+// ─── Transition (custom theme values) ─────────────────────────────────────
+
+fn resolveTransition(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Declaration {
+    const val = value orelse return null;
+    if (val.kind != .named) return null;
+
+    // Look up --transition-property-{name} in theme
+    var buf: [256]u8 = undefined;
+    const var_name = std.fmt.bufPrint(&buf, "--transition-property-{s}", .{val.value}) catch return null;
+
+    if (theme.get(var_name)) |prop_value| {
+        theme.markUsed(var_name);
+        const decls = try alloc.alloc(Declaration, 3);
+        decls[0] = Declaration{ .property = "transition-property", .value = prop_value };
+        decls[1] = Declaration{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" };
+        decls[2] = Declaration{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" };
+        return decls;
+    }
+
+    return null;
+}
+
 // ─── Decoration Thickness ──────────────────────────────────────────────────
 
 fn resolveDecorationThickness(alloc: Allocator, value: ?Value) !?[]const Declaration {
@@ -4973,10 +5049,13 @@ fn resolveShadowColor(alloc: Allocator, value: ?Value, modifier: ?Modifier, them
 
 // ─── Shadow Color Conversion Helpers ────────────────────────────────────────
 
-/// Convert rgb() colors in a shadow value to hex8 format and wrap in var(--tw-shadow-color,...).
+/// Convert colors in a shadow value and wrap in var(--tw-shadow-color,...).
+/// Handles rgb() → hex8 conversion, hex colors, and shadows with no color.
 /// e.g. "0 10px 15px -3px rgb(0 0 0 / 0.1)" -> "0 10px 15px -3px var(--tw-shadow-color,#0000001a)"
+/// e.g. "0 -36px 50px 0" -> "0 -36px 50px 0 var(--tw-shadow-color,currentcolor)"
 fn convertShadowColors(alloc: Allocator, raw: []const u8) ![]const u8 {
     var result = try std.ArrayList(u8).initCapacity(alloc, raw.len);
+    var has_color = false;
     var i: usize = 0;
     while (i < raw.len) {
         if (i + 4 <= raw.len and std.mem.eql(u8, raw[i .. i + 4], "rgb(")) {
@@ -5000,13 +5079,39 @@ fn convertShadowColors(alloc: Allocator, raw: []const u8) ![]const u8 {
             try result.appendSlice(alloc, "var(--tw-shadow-color,");
             try result.appendSlice(alloc, hex);
             try result.append(alloc, ')');
+            has_color = true;
             i = j;
+        } else if (raw[i] == '#') {
+            // Hex color: grab all hex digits
+            var j = i + 1;
+            while (j < raw.len and isHexChar(raw[j])) : (j += 1) {}
+            if (j > i + 1) {
+                const hex_str = raw[i..j];
+                try result.appendSlice(alloc, "var(--tw-shadow-color,");
+                try result.appendSlice(alloc, hex_str);
+                try result.append(alloc, ')');
+                has_color = true;
+                i = j;
+            } else {
+                try result.append(alloc, raw[i]);
+                i += 1;
+            }
         } else {
             try result.append(alloc, raw[i]);
             i += 1;
         }
     }
+
+    // If no color was found, append default shadow color variable
+    if (!has_color) {
+        try result.appendSlice(alloc, " var(--tw-shadow-color,currentcolor)");
+    }
+
     return result.toOwnedSlice(alloc);
+}
+
+fn isHexChar(c: u8) bool {
+    return (c >= '0' and c <= '9') or (c >= 'a' and c <= 'f') or (c >= 'A' and c <= 'F');
 }
 
 /// Split a comma-separated drop-shadow value and wrap each part in drop-shadow().

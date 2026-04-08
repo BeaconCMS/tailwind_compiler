@@ -125,6 +125,128 @@ defmodule TailwindCompilerTest do
       assert css =~ "my\\.class"
       assert css =~ "color:red"
     end
+
+    test "@apply resolves utility classes in custom CSS" do
+      custom = ".btn{@apply font-bold py-4 px-8 rounded-lg;}"
+
+      {:ok, css} =
+        TailwindCompiler.compile(["flex"],
+          custom_css: custom,
+          preflight: false
+        )
+
+      # @apply should be resolved to actual CSS declarations
+      refute css =~ "@apply"
+      assert css =~ "font-weight:var(--font-weight-bold)"
+      assert css =~ "padding-block:calc(var(--spacing) * 4)"
+      assert css =~ "padding-inline:calc(var(--spacing) * 8)"
+      assert css =~ "border-radius:var(--radius-lg)"
+    end
+
+    test "@apply with static utilities only" do
+      custom = ".card{@apply flex hidden;}"
+
+      {:ok, css} =
+        TailwindCompiler.compile(["flex"],
+          custom_css: custom,
+          preflight: false
+        )
+
+      refute css =~ "@apply"
+      assert css =~ "display:flex;display:none"
+    end
+
+    test "@apply skips unknown classes" do
+      custom = ".btn{@apply flex unknown-class hidden;}"
+
+      {:ok, css} =
+        TailwindCompiler.compile(["flex"],
+          custom_css: custom,
+          preflight: false
+        )
+
+      refute css =~ "@apply"
+      assert css =~ "display:flex"
+      assert css =~ "display:none"
+    end
+
+    test "theme() resolves color values in custom CSS" do
+      custom = ".featured{--bg:theme(colors.blue.900);}"
+
+      {:ok, css} =
+        TailwindCompiler.compile(["flex"],
+          custom_css: custom,
+          preflight: false
+        )
+
+      refute css =~ "theme("
+      assert css =~ "--bg:oklch("
+    end
+
+    test "theme() resolves spacing in custom CSS" do
+      custom = ":root{--custom-spacing:theme(spacing);}"
+
+      {:ok, css} =
+        TailwindCompiler.compile(["flex"],
+          custom_css: custom,
+          preflight: false
+        )
+
+      refute css =~ "theme("
+      assert css =~ "--custom-spacing:0.25rem"
+    end
+
+    test "theme() resolves borderRadius in custom CSS" do
+      custom = ".card{border-radius:theme(borderRadius.lg);}"
+
+      {:ok, css} =
+        TailwindCompiler.compile(["flex"],
+          custom_css: custom,
+          preflight: false
+        )
+
+      refute css =~ "theme("
+      assert css =~ "border-radius:0.5rem"
+    end
+
+    test "@apply and theme() combined in custom CSS" do
+      custom = ".btn{@apply font-bold;color:theme(colors.red.500);}"
+
+      {:ok, css} =
+        TailwindCompiler.compile(["flex"],
+          custom_css: custom,
+          preflight: false
+        )
+
+      refute css =~ "@apply"
+      refute css =~ "theme("
+      assert css =~ "font-weight:var(--font-weight-bold)"
+      assert css =~ "oklch(63.7%"
+    end
+
+    test "theme() keeps unresolved paths" do
+      custom = ".x{color:theme(nonexistent.path);}"
+
+      {:ok, css} =
+        TailwindCompiler.compile(["flex"],
+          custom_css: custom,
+          preflight: false
+        )
+
+      assert css =~ "theme(nonexistent.path)"
+    end
+
+    test "custom CSS without @apply or theme() passes through unchanged" do
+      custom = ".custom{color:red;font-size:16px}"
+
+      {:ok, css} =
+        TailwindCompiler.compile(["flex"],
+          custom_css: custom,
+          preflight: false
+        )
+
+      assert css =~ ".custom{color:red;font-size:16px}"
+    end
   end
 
   describe "compile!/2" do

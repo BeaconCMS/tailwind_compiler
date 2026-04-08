@@ -72,4 +72,28 @@ defmodule TailwindCompiler do
       {:error, reason} -> raise "TailwindCompiler.compile!/2 failed: #{inspect(reason)}"
     end
   end
+
+  @doc """
+  Validate a list of token strings, returning only those recognized as valid
+  Tailwind CSS utilities.
+
+  This is a fast check — it parses each token against the utility registry
+  without generating CSS. Used for compile-time safelist extraction from
+  host app source files.
+
+  ## Examples
+
+      TailwindCompiler.validate(["flex", "not-a-class", "hover:bg-blue-50", "hello"])
+      #=> ["flex", "hover:bg-blue-50"]
+
+  """
+  @spec validate([String.t()]) :: [String.t()]
+  def validate(tokens) when is_list(tokens) do
+    case TailwindCompiler.NIF.validate(tokens) do
+      "" -> []
+      result when is_binary(result) -> String.split(result, "\n")
+    end
+  rescue
+    e -> raise "TailwindCompiler.validate/1 failed: #{Exception.message(e)}"
+  end
 end

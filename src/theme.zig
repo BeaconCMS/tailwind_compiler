@@ -56,6 +56,8 @@ pub const Theme = struct {
         // Load container sizes
         for (default_theme.container_sizes) |entry| {
             try self.containers.put(entry.key, entry.value);
+            const var_name = try std.fmt.allocPrint(self.alloc, "--container-{s}", .{entry.key});
+            try self.variables.put(var_name, entry.value);
         }
 
         // Load font families

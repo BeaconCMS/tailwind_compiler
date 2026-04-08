@@ -220,7 +220,85 @@ pub const Context = struct {
 
         // Build the escaped selector
         const escaped = try emitter_mod.escapeCssIdentifier(self.alloc, raw);
-        const selector = try std.fmt.allocPrint(self.alloc, ".{s}", .{escaped});
+        var selector = try std.fmt.allocPrint(self.alloc, ".{s}", .{escaped});
+
+        // Space utilities: rewrite to child margin selectors matching Tailwind v4 output
+        // .space-y-4 > :not(:last-child) { margin-block-end: value }
+        if (final_decls.len == 1 and std.mem.eql(u8, final_decls[0].property, "__space_value")) {
+            const space_value = final_decls[0].value;
+            const is_y = std.mem.indexOf(u8, parsed.root, "space-y") != null;
+
+            // Determine reverse var name
+            const reverse_var = if (is_y) "--tw-space-y-reverse" else "--tw-space-x-reverse";
+            const margin_start_prop = if (is_y) "margin-block-start" else "margin-inline-start";
+            const margin_end_prop = if (is_y) "margin-block-end" else "margin-inline-end";
+
+            selector = try std.fmt.allocPrint(self.alloc, ".{s}>:not(:last-child)", .{escaped});
+
+            var space_decls = try self.alloc.alloc(Declaration, 3);
+            space_decls[0] = Declaration{ .property = reverse_var, .value = "0" };
+            space_decls[1] = Declaration{
+                .property = margin_end_prop,
+                .value = try std.fmt.allocPrint(self.alloc, "calc({s} * calc(1 - var({s})))", .{ space_value, reverse_var }),
+            };
+            space_decls[2] = Declaration{
+                .property = margin_start_prop,
+                .value = try std.fmt.allocPrint(self.alloc, "calc({s} * var({s}))", .{ space_value, reverse_var }),
+            };
+            final_decls = space_decls;
+        }
+
+        // All divide-* utilities use child selectors in Tailwind v4
+        // .divide-{color/style} > :not(:last-child) { border-color/style: ... }
+        if (std.mem.startsWith(u8, parsed.root, "divide") and
+            !std.mem.eql(u8, final_decls[0].property, "__divide_value"))
+        {
+            selector = try std.fmt.allocPrint(self.alloc, ".{s}>:not(:last-child)", .{escaped});
+        }
+
+        // Divide width utilities: rewrite to child border selectors matching Tailwind v4
+        // .divide-y-2 > :not(:last-child) { border-top/bottom-width: ... }
+        if (final_decls.len == 1 and std.mem.eql(u8, final_decls[0].property, "__divide_value")) {
+            const divide_value = final_decls[0].value;
+            const is_y = std.mem.indexOf(u8, parsed.root, "divide-y") != null;
+
+            const reverse_var = if (is_y) "--tw-divide-y-reverse" else "--tw-divide-x-reverse";
+
+            selector = try std.fmt.allocPrint(self.alloc, ".{s}>:not(:last-child)", .{escaped});
+
+            if (is_y) {
+                var divide_decls = try self.alloc.alloc(Declaration, 4);
+                divide_decls[0] = Declaration{ .property = reverse_var, .value = "0" };
+                divide_decls[1] = Declaration{ .property = "border-bottom-style", .value = "var(--tw-border-style)" };
+                divide_decls[2] = Declaration{ .property = "border-top-style", .value = "var(--tw-border-style)" };
+                divide_decls[3] = Declaration{
+                    .property = "border-bottom-width",
+                    .value = try std.fmt.allocPrint(self.alloc, "calc({s} * var({s}))", .{ divide_value, reverse_var }),
+                };
+                // Need 5 decls total
+                var full_decls = try self.alloc.alloc(Declaration, 5);
+                @memcpy(full_decls[0..4], divide_decls);
+                full_decls[4] = Declaration{
+                    .property = "border-top-width",
+                    .value = try std.fmt.allocPrint(self.alloc, "calc({s} * calc(1 - var({s})))", .{ divide_value, reverse_var }),
+                };
+                final_decls = full_decls;
+            } else {
+                var divide_decls = try self.alloc.alloc(Declaration, 5);
+                divide_decls[0] = Declaration{ .property = reverse_var, .value = "0" };
+                divide_decls[1] = Declaration{ .property = "border-right-style", .value = "var(--tw-border-style)" };
+                divide_decls[2] = Declaration{ .property = "border-left-style", .value = "var(--tw-border-style)" };
+                divide_decls[3] = Declaration{
+                    .property = "border-right-width",
+                    .value = try std.fmt.allocPrint(self.alloc, "calc({s} * var({s}))", .{ divide_value, reverse_var }),
+                };
+                divide_decls[4] = Declaration{
+                    .property = "border-left-width",
+                    .value = try std.fmt.allocPrint(self.alloc, "calc({s} * calc(1 - var({s})))", .{ divide_value, reverse_var }),
+                };
+                final_decls = divide_decls;
+            }
+        }
 
         // Create base rule
         var base_rule = Rule{
@@ -398,6 +476,439 @@ pub const Context = struct {
         }
     }
 
+    /// Resolve a single utility class name to its CSS declarations (property:value pairs).
+    /// This is used by @apply processing to resolve each class independently.
+    /// Returns null if the class cannot be resolved.
+    fn resolveClassDeclarations(self: *Context, class_name: []const u8) !?[]const Declaration {
+        // Parse the candidate
+        const parsed = try candidate_mod.parseCandidate(
+            self.alloc,
+            class_name,
+            &isStaticWrapper,
+            &isFunctionalWrapper,
+            &isVariantWrapper,
+            &isFunctionalVariantRootWrapper,
+        ) orelse return null;
+
+        // Reject bare functional utilities without a value (unless they have defaults)
+        if (parsed.kind == .functional and parsed.value == null) {
+            if (!utilities.hasDefaultValue(parsed.root)) return null;
+        }
+
+        // We don't handle variants in @apply — just the base utility
+        // Reject negative prefix on utilities that don't support it
+        if (parsed.negative) {
+            if (!utilities.supportsNegative(parsed.root)) return null;
+        }
+
+        // Resolve to CSS declarations
+        return try self.resolveDeclarations(&parsed);
+    }
+
+    /// Process @apply directives and theme() function calls in custom CSS.
+    /// Returns a new string with all directives resolved, or the original if none found.
+    fn processCustomCss(self: *Context) !?[]const u8 {
+        const css = self.custom_css orelse return null;
+        if (css.len == 0) return null;
+
+        // First pass: resolve theme() calls
+        const themed_css = try self.resolveThemeCalls(css);
+
+        // Second pass: resolve @apply directives
+        const result = try self.resolveApplyDirectives(themed_css);
+
+        return result;
+    }
+
+    /// Resolve all theme() function calls in a CSS string.
+    /// theme(colors.blue.900) → the resolved value from the theme.
+    fn resolveThemeCalls(self: *Context, css: []const u8) ![]const u8 {
+        // Quick check: if no "theme(" present, return as-is
+        if (std.mem.indexOf(u8, css, "theme(") == null) return css;
+
+        var result: std.ArrayList(u8) = .empty;
+        var pos: usize = 0;
+
+        while (pos < css.len) {
+            if (pos + 6 <= css.len and std.mem.eql(u8, css[pos .. pos + 6], "theme(")) {
+                // Find the closing paren
+                const start = pos + 6;
+                var depth: usize = 1;
+                var end: usize = start;
+                while (end < css.len and depth > 0) {
+                    if (css[end] == '(') depth += 1;
+                    if (css[end] == ')') depth -= 1;
+                    if (depth > 0) end += 1;
+                }
+
+                if (depth == 0) {
+                    const path = std.mem.trim(u8, css[start..end], " \t");
+
+                    // Convert dot-path to CSS variable name
+                    // e.g., "colors.blue.900" → "--color-blue-900"
+                    // e.g., "spacing" → "--spacing"
+                    if (self.resolveThemePath(path)) |value| {
+                        try result.appendSlice(self.alloc, value);
+                    } else {
+                        // If unresolved, keep original
+                        try result.appendSlice(self.alloc, css[pos .. end + 1]);
+                    }
+                    pos = end + 1;
+                } else {
+                    // Malformed — keep as-is
+                    try result.append(self.alloc, css[pos]);
+                    pos += 1;
+                }
+            } else {
+                try result.append(self.alloc, css[pos]);
+                pos += 1;
+            }
+        }
+
+        return result.items;
+    }
+
+    /// Map a theme() dot-path to a CSS variable name and look up its value.
+    /// E.g., "colors.blue.900" → look up "--color-blue-900"
+    ///       "spacing" → look up "--spacing"
+    ///       "borderRadius.lg" → look up "--radius-lg"
+    ///       "fontSize.lg" → look up "--text-lg"
+    fn resolveThemePath(self: *Context, path: []const u8) ?[]const u8 {
+        var buf: [512]u8 = undefined;
+        var buf_len: usize = 0;
+
+        // Split on dots
+        var parts: [16][]const u8 = undefined;
+        var part_count: usize = 0;
+        var iter = std.mem.splitScalar(u8, path, '.');
+        while (iter.next()) |part| {
+            if (part_count < 16) {
+                parts[part_count] = part;
+                part_count += 1;
+            }
+        }
+
+        if (part_count == 0) return null;
+
+        // Map the first segment (namespace) to a CSS variable prefix
+        const namespace = parts[0];
+        const prefix = themeNamespaceToPrefix(namespace);
+
+        // Build the variable name: prefix + remaining segments joined with "-"
+        @memcpy(buf[0..prefix.len], prefix);
+        buf_len = prefix.len;
+
+        for (parts[1..part_count]) |part| {
+            if (buf_len + 1 + part.len > buf.len) return null;
+            buf[buf_len] = '-';
+            buf_len += 1;
+            @memcpy(buf[buf_len .. buf_len + part.len], part);
+            buf_len += part.len;
+        }
+
+        const var_name = buf[0..buf_len];
+
+        // Look up in theme
+        if (self.theme.get(var_name)) |value| {
+            // Mark as used for tree-shaking
+            self.theme.markUsed(self.alloc.dupe(u8, var_name) catch return value);
+            return value;
+        }
+
+        return null;
+    }
+
+    /// Map theme() namespace to CSS variable prefix.
+    fn themeNamespaceToPrefix(namespace: []const u8) []const u8 {
+        const map = std.StaticStringMap([]const u8).initComptime(.{
+            .{ "colors", "--color" },
+            .{ "spacing", "--spacing" },
+            .{ "fontFamily", "--font" },
+            .{ "fontSize", "--text" },
+            .{ "fontWeight", "--font-weight" },
+            .{ "letterSpacing", "--tracking" },
+            .{ "lineHeight", "--leading" },
+            .{ "borderRadius", "--radius" },
+            .{ "boxShadow", "--shadow" },
+            .{ "insetShadow", "--inset-shadow" },
+            .{ "dropShadow", "--drop-shadow" },
+            .{ "blur", "--blur" },
+            .{ "breakpoints", "--breakpoint" },
+            .{ "maxWidth", "--max-width" },
+            .{ "transitionDuration", "--duration" },
+            .{ "transitionProperty", "--transition-property" },
+            .{ "animation", "--animate" },
+            .{ "ease", "--ease" },
+            .{ "perspective", "--perspective" },
+            .{ "aspectRatio", "--aspect" },
+            .{ "textShadow", "--text-shadow" },
+        });
+        return map.get(namespace) orelse "--unknown";
+    }
+
+    /// Resolve all @apply directives in a CSS string.
+    /// @apply font-bold py-4 px-8; → resolved declarations inline.
+    fn resolveApplyDirectives(self: *Context, css: []const u8) ![]const u8 {
+        // Quick check: if no "@apply" present, return as-is
+        if (std.mem.indexOf(u8, css, "@apply ") == null) return css;
+
+        var result: std.ArrayList(u8) = .empty;
+        // Collect variant rules to append after each rule block
+        var variant_rules: std.ArrayList(u8) = .empty;
+        var pos: usize = 0;
+        // Track current selector for variant rule generation
+        var current_selector: ?[]const u8 = null;
+
+        while (pos < css.len) {
+            // Track selector: when we see something like ".btn {", capture ".btn"
+            if (css[pos] == '{') {
+                // Look backwards for the selector
+                const sel_end = pos;
+                var sel_start = if (pos > 0) pos - 1 else 0;
+                while (sel_start > 0 and css[sel_start] != '}' and css[sel_start] != ';' and css[sel_start] != '{') {
+                    sel_start -= 1;
+                }
+                if (sel_start > 0 or css[sel_start] == '}' or css[sel_start] == ';') sel_start += 1;
+                const sel = std.mem.trim(u8, css[sel_start..sel_end], " \t\n\r");
+                if (sel.len > 0) current_selector = sel;
+                try result.append(self.alloc, css[pos]);
+                pos += 1;
+                continue;
+            }
+
+            // When a rule block closes, append any collected variant rules
+            if (css[pos] == '}') {
+                try result.append(self.alloc, css[pos]);
+                pos += 1;
+
+                if (variant_rules.items.len > 0) {
+                    try result.appendSlice(self.alloc, variant_rules.items);
+                    variant_rules.clearRetainingCapacity();
+                }
+                current_selector = null;
+                continue;
+            }
+
+            // Look for @apply at current position
+            if (pos + 7 <= css.len and std.mem.eql(u8, css[pos .. pos + 7], "@apply ")) {
+                // Find the end of the @apply directive (semicolon or closing brace)
+                const start = pos + 7;
+                var end = start;
+                while (end < css.len and css[end] != ';' and css[end] != '}') {
+                    end += 1;
+                }
+
+                const class_list = std.mem.trim(u8, css[start..end], " \t\n\r");
+
+                // Split class names on whitespace
+                var class_iter = std.mem.tokenizeAny(u8, class_list, " \t\n\r");
+                var first = true;
+
+                while (class_iter.next()) |class_name| {
+                    // Handle [&>selector]:utility arbitrary variant patterns
+                    if (class_name.len > 0 and class_name[0] == '[') {
+                        // Find the closing ] then the : after it
+                        if (std.mem.indexOf(u8, class_name, "]:")) |bracket_end| {
+                            const arb_selector_raw = class_name[1..bracket_end]; // e.g., "&>input" or "&>input:focus"
+                            const utility = class_name[bracket_end + 2 ..]; // e.g., "pb-2"
+
+                            if (self.resolveClassDeclarations(utility) catch null) |decls| {
+                                if (current_selector) |sel| {
+                                    // Convert &>input to parent>input
+                                    // Replace & with the parent selector
+                                    var child_sel: std.ArrayList(u8) = .empty;
+                                    var arb_pos: usize = 0;
+                                    while (arb_pos < arb_selector_raw.len) {
+                                        if (arb_selector_raw[arb_pos] == '&') {
+                                            try child_sel.appendSlice(self.alloc, sel);
+                                        } else {
+                                            try child_sel.append(self.alloc, arb_selector_raw[arb_pos]);
+                                        }
+                                        arb_pos += 1;
+                                    }
+
+                                    try variant_rules.appendSlice(self.alloc, child_sel.items);
+                                    try variant_rules.append(self.alloc, '{');
+                                    for (decls, 0..) |decl, di| {
+                                        if (di > 0) try variant_rules.append(self.alloc, ';');
+                                        try variant_rules.appendSlice(self.alloc, decl.property);
+                                        try variant_rules.append(self.alloc, ':');
+                                        try variant_rules.appendSlice(self.alloc, decl.value);
+                                    }
+                                    try variant_rules.append(self.alloc, '}');
+                                }
+                            }
+                        }
+                        continue;
+                    }
+
+                    // Also handle lg:[&>selector]:utility (responsive + arbitrary)
+                    if (std.mem.indexOf(u8, class_name, ":[&")) |arb_start| {
+                        const responsive_prefix = class_name[0..arb_start];
+                        const rest = class_name[arb_start + 1 ..];
+                        if (rest.len > 0 and rest[0] == '[') {
+                            if (std.mem.indexOf(u8, rest, "]:")) |bracket_end| {
+                                const arb_selector_raw = rest[1..bracket_end];
+                                const utility = rest[bracket_end + 2 ..];
+
+                                if (self.resolveClassDeclarations(utility) catch null) |decls| {
+                                    if (current_selector) |sel| {
+                                        const media = variantToMedia(responsive_prefix);
+                                        if (media) |mq| {
+                                            try variant_rules.appendSlice(self.alloc, mq);
+                                            try variant_rules.append(self.alloc, '{');
+                                        }
+
+                                        var child_sel: std.ArrayList(u8) = .empty;
+                                        var arb_pos: usize = 0;
+                                        while (arb_pos < arb_selector_raw.len) {
+                                            if (arb_selector_raw[arb_pos] == '&') {
+                                                try child_sel.appendSlice(self.alloc, sel);
+                                            } else {
+                                                try child_sel.append(self.alloc, arb_selector_raw[arb_pos]);
+                                            }
+                                            arb_pos += 1;
+                                        }
+
+                                        try variant_rules.appendSlice(self.alloc, child_sel.items);
+                                        try variant_rules.append(self.alloc, '{');
+                                        for (decls, 0..) |decl, di| {
+                                            if (di > 0) try variant_rules.append(self.alloc, ';');
+                                            try variant_rules.appendSlice(self.alloc, decl.property);
+                                            try variant_rules.append(self.alloc, ':');
+                                            try variant_rules.appendSlice(self.alloc, decl.value);
+                                        }
+                                        try variant_rules.append(self.alloc, '}');
+
+                                        if (media != null) {
+                                            try variant_rules.append(self.alloc, '}');
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        continue;
+                    }
+
+                    // Check if class has a variant prefix (contains :)
+                    if (std.mem.indexOfScalar(u8, class_name, ':')) |colon_idx| {
+                        const variant = class_name[0..colon_idx];
+                        const utility = class_name[colon_idx + 1 ..];
+
+                        if (self.resolveClassDeclarations(utility) catch null) |decls| {
+                            if (current_selector) |sel| {
+                                // Generate a variant rule: .btn:hover{background-color:...}
+                                const pseudo = variantToPseudo(variant);
+                                if (pseudo) |ps| {
+                                    // Check if this needs a media query wrapper
+                                    const media = variantToMedia(variant);
+                                    if (media) |mq| {
+                                        try variant_rules.appendSlice(self.alloc, mq);
+                                        try variant_rules.append(self.alloc, '{');
+                                    }
+                                    try variant_rules.appendSlice(self.alloc, sel);
+                                    try variant_rules.appendSlice(self.alloc, ps);
+                                    try variant_rules.append(self.alloc, '{');
+                                    for (decls, 0..) |decl, di| {
+                                        if (di > 0) try variant_rules.append(self.alloc, ';');
+                                        try variant_rules.appendSlice(self.alloc, decl.property);
+                                        try variant_rules.append(self.alloc, ':');
+                                        try variant_rules.appendSlice(self.alloc, decl.value);
+                                    }
+                                    try variant_rules.append(self.alloc, '}');
+                                    if (media != null) {
+                                        try variant_rules.append(self.alloc, '}');
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // No variant — inline declarations as before
+                        if (self.resolveClassDeclarations(class_name) catch null) |decls| {
+                            for (decls) |decl| {
+                                if (!first) try result.append(self.alloc, ';');
+                                try result.appendSlice(self.alloc, decl.property);
+                                try result.append(self.alloc, ':');
+                                try result.appendSlice(self.alloc, decl.value);
+                                first = false;
+                            }
+                        }
+                    }
+                }
+
+                // Skip the semicolon if present
+                if (end < css.len and css[end] == ';') {
+                    pos = end + 1;
+                } else {
+                    pos = end;
+                }
+            } else {
+                try result.append(self.alloc, css[pos]);
+                pos += 1;
+            }
+        }
+
+        // Append any remaining variant rules
+        if (variant_rules.items.len > 0) {
+            try result.appendSlice(self.alloc, variant_rules.items);
+        }
+
+        return result.items;
+    }
+
+    /// Map a variant name to its CSS pseudo-class/element selector suffix.
+    fn variantToPseudo(variant: []const u8) ?[]const u8 {
+        const map = std.StaticStringMap([]const u8).initComptime(.{
+            .{ "hover", ":hover" },
+            .{ "focus", ":focus" },
+            .{ "focus-visible", ":focus-visible" },
+            .{ "focus-within", ":focus-within" },
+            .{ "active", ":active" },
+            .{ "visited", ":visited" },
+            .{ "disabled", ":disabled" },
+            .{ "checked", ":checked" },
+            .{ "first", ":first-child" },
+            .{ "last", ":last-child" },
+            .{ "odd", ":nth-child(odd)" },
+            .{ "even", ":nth-child(even)" },
+            .{ "first-of-type", ":first-of-type" },
+            .{ "last-of-type", ":last-of-type" },
+            .{ "empty", ":empty" },
+            .{ "required", ":required" },
+            .{ "invalid", ":invalid" },
+            .{ "valid", ":valid" },
+            .{ "placeholder-shown", ":placeholder-shown" },
+            .{ "read-only", ":read-only" },
+            .{ "open", "[open]" },
+            .{ "before", "::before" },
+            .{ "after", "::after" },
+            .{ "placeholder", "::placeholder" },
+            .{ "file", "::file-selector-button" },
+            // Responsive variants return the selector as-is (media query handled separately)
+            .{ "sm", "" },
+            .{ "md", "" },
+            .{ "lg", "" },
+            .{ "xl", "" },
+            .{ "2xl", "" },
+            .{ "dark", "" },
+        });
+        return map.get(variant);
+    }
+
+    /// Map a variant name to a media query wrapper, if applicable.
+    fn variantToMedia(variant: []const u8) ?[]const u8 {
+        const map = std.StaticStringMap([]const u8).initComptime(.{
+            .{ "sm", "@media (width>=40rem)" },
+            .{ "md", "@media (width>=48rem)" },
+            .{ "lg", "@media (width>=64rem)" },
+            .{ "xl", "@media (width>=80rem)" },
+            .{ "2xl", "@media (width>=96rem)" },
+            .{ "dark", "@media (prefers-color-scheme:dark)" },
+            .{ "hover", "@media (hover:hover)" },
+        });
+        return map.get(variant);
+    }
+
     /// Emit the final CSS output.
     pub fn emit(self: *Context) ![]const u8 {
         // Sort rules
@@ -418,8 +929,11 @@ pub const Context = struct {
             emit_rules[i] = cr.rule;
         }
 
+        // Process custom CSS: resolve @apply directives and theme() calls
+        const processed_css = try self.processCustomCss();
+
         // Emit CSS (no deinit needed — arena owns all memory, and we return buf.items)
-        var css_emitter = emitter_mod.CssEmitter.init(self.alloc, self.custom_css);
+        var css_emitter = emitter_mod.CssEmitter.init(self.alloc, processed_css);
 
         // Pass @property registrations to emitter
         for (self.at_properties.items) |prop| {
@@ -487,7 +1001,87 @@ pub fn compile(
     return alloc.dupe(u8, result);
 }
 
+/// Validate a list of token strings, returning only those that are recognized
+/// as valid Tailwind utilities. Does NOT generate CSS — just checks parsing
+/// and registry membership. Used for compile-time safelist extraction.
+pub fn validate(
+    alloc: Allocator,
+    tokens: []const []const u8,
+) ![]const []const u8 {
+    var arena = std.heap.ArenaAllocator.init(alloc);
+    defer arena.deinit();
+    const arena_alloc = arena.allocator();
+
+    // Collect indices of valid tokens (using arena for temp storage)
+    var valid_indices: std.ArrayList(usize) = .empty;
+
+    for (tokens, 0..) |token, idx| {
+        if (token.len == 0) continue;
+
+        // Try parsing as a candidate
+        const parsed = candidate_mod.parseCandidate(
+            arena_alloc,
+            token,
+            &isStaticWrapper,
+            &isFunctionalWrapper,
+            &isVariantWrapper,
+            &isFunctionalVariantRootWrapper,
+        ) catch continue;
+
+        if (parsed) |p| {
+            // Reject bare functional utilities without a value (unless they have defaults)
+            if (p.kind == .functional and p.value == null) {
+                if (!utilities.hasDefaultValue(p.root)) continue;
+            }
+
+            // Reject negative prefix on utilities that don't support it
+            if (p.negative) {
+                if (!utilities.supportsNegative(p.root)) continue;
+            }
+
+            try valid_indices.append(arena_alloc, idx);
+        }
+    }
+
+    // Build result using the caller's allocator (references original token slices)
+    const result = try alloc.alloc([]const u8, valid_indices.items.len);
+    for (valid_indices.items, 0..) |idx, i| {
+        result[i] = tokens[idx];
+    }
+
+    return result;
+}
+
 // ─── Tests ─────────────────────────────────────────────────────────────────
+
+test "validate: filters valid candidates" {
+    const alloc = std.testing.allocator;
+
+    const tokens = [_][]const u8{ "flex", "not-a-class", "hover:bg-blue-50", "hello", "p-4", "sm:text-lg" };
+    const result = try validate(alloc, &tokens);
+    defer alloc.free(result);
+
+    // Should include valid utilities and reject invalid tokens
+    var has_flex = false;
+    var has_hover_bg = false;
+    var has_p4 = false;
+    var has_sm_text = false;
+    var has_invalid = false;
+
+    for (result) |r| {
+        if (std.mem.eql(u8, r, "flex")) has_flex = true;
+        if (std.mem.eql(u8, r, "hover:bg-blue-50")) has_hover_bg = true;
+        if (std.mem.eql(u8, r, "p-4")) has_p4 = true;
+        if (std.mem.eql(u8, r, "sm:text-lg")) has_sm_text = true;
+        if (std.mem.eql(u8, r, "not-a-class") or std.mem.eql(u8, r, "hello")) has_invalid = true;
+    }
+
+    try std.testing.expect(has_flex);
+    try std.testing.expect(has_hover_bg);
+    try std.testing.expect(has_p4);
+    try std.testing.expect(has_sm_text);
+    try std.testing.expect(!has_invalid);
+}
 
 test "compile: basic static utilities" {
     const alloc = std.testing.allocator;
@@ -769,4 +1363,114 @@ test "compile: custom utilities with variant" {
     try std.testing.expect(std.mem.indexOf(u8, result, "btn-primary") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "background:blue") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "@media (hover:hover)") != null);
+}
+
+test "compile: @apply resolves static utilities" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = ".btn{@apply font-bold flex;}";
+    const result = try compile(alloc, &candidates, null, false, custom, null);
+    defer alloc.free(result);
+    // @apply should be replaced with resolved declarations
+    // font-bold resolves to --tw-font-weight + font-weight using CSS var
+    try std.testing.expect(std.mem.indexOf(u8, result, "font-weight:var(--font-weight-bold)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "display:flex") != null);
+    // The @apply directive itself should NOT be in the output
+    try std.testing.expect(std.mem.indexOf(u8, result, "@apply") == null);
+}
+
+test "compile: @apply resolves functional utilities" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = ".btn{@apply py-4 px-8;}";
+    const result = try compile(alloc, &candidates, null, false, custom, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "padding-block:calc(var(--spacing) * 4)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "padding-inline:calc(var(--spacing) * 8)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@apply") == null);
+}
+
+test "compile: @apply resolves static-only utilities" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = ".card{@apply flex hidden;}";
+    const result = try compile(alloc, &candidates, null, false, custom, null);
+    defer alloc.free(result);
+    // Static utilities resolve directly
+    try std.testing.expect(std.mem.indexOf(u8, result, "display:flex;display:none") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@apply") == null);
+}
+
+test "compile: @apply with rounded-lg" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = ".card{@apply rounded-lg;}";
+    const result = try compile(alloc, &candidates, null, false, custom, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-radius:var(--radius-lg)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@apply") == null);
+}
+
+test "compile: theme() resolves color values" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = ".featured{--color-featured-bg:theme(colors.blue.900);}";
+    const result = try compile(alloc, &candidates, null, false, custom, null);
+    defer alloc.free(result);
+    // theme(colors.blue.900) should be replaced with the actual oklch value
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--color-featured-bg:oklch(") != null);
+}
+
+test "compile: theme() resolves spacing" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = ":root{--custom-spacing:theme(spacing);}";
+    const result = try compile(alloc, &candidates, null, false, custom, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--custom-spacing:0.25rem") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
+}
+
+test "compile: @apply and theme() combined" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = ".btn{@apply font-bold;color:theme(colors.red.500);}";
+    const result = try compile(alloc, &candidates, null, false, custom, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "font-weight:var(--font-weight-bold)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "oklch(63.7%") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@apply") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
+}
+
+test "compile: custom CSS without @apply or theme() passes through unchanged" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = ".custom{color:red;font-size:16px}";
+    const result = try compile(alloc, &candidates, null, false, custom, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, ".custom{color:red;font-size:16px}") != null);
+}
+
+test "compile: @apply skips unknown classes gracefully" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = ".btn{@apply font-bold not-a-real-class flex;}";
+    const result = try compile(alloc, &candidates, null, false, custom, null);
+    defer alloc.free(result);
+    // Known classes should still resolve
+    try std.testing.expect(std.mem.indexOf(u8, result, "font-weight:var(--font-weight-bold)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "display:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@apply") == null);
+}
+
+test "compile: theme() with unresolved path keeps original" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = ".x{color:theme(nonexistent.path);}";
+    const result = try compile(alloc, &candidates, null, false, custom, null);
+    defer alloc.free(result);
+    // Unresolved theme() should be kept as-is
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(nonexistent.path)") != null);
 }
