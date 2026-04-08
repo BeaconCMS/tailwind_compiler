@@ -1,7 +1,7 @@
-defmodule TailwindCompiler.NIF do
-  @moduledoc false
+if TailwindCompiler.Native.use_precompiled?() do
+  defmodule TailwindCompiler.NIF do
+    @moduledoc false
 
-  if TailwindCompiler.Native.use_precompiled?() do
     @on_load :__load_nif__
 
     @doc false
@@ -15,7 +15,11 @@ defmodule TailwindCompiler.NIF do
 
     def validate(_tokens),
       do: :erlang.nif_error(:not_loaded)
-  else
+  end
+else
+  defmodule TailwindCompiler.NIF do
+    @moduledoc false
+
     use Zig,
       otp_app: :tailwind_compiler,
       nifs: [compile: [:dirty_cpu], validate: [:dirty_cpu]],
