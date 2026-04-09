@@ -102,54 +102,18 @@ defmodule TailwindCompiler.Native do
     "https://github.com/#{@github_repo}/releases/download/v#{@version}/tailwind_compiler-nif-#{target_triple}.tar.gz"
   end
 
-  defp download_and_extract(url, dest, redirects_left \\ 5) do
-    if redirects_left <= 0 do
-      {:error, :too_many_redirects}
-    else
-      Application.ensure_all_started(:inets)
-      Application.ensure_all_started(:ssl)
+  defp download_and_extract(url, dest) do
+    tar_path = Path.join(dest, "nif.tar.gz")
 
-      http_opts = [ssl: ssl_opts()]
+    case System.cmd("curl", ["-fsSL", "-o", tar_path, url], stderr_to_stdout: true) do
+      {_, 0} ->
+        result = :erl_tar.extract(String.to_charlist(tar_path), [:compressed, {:cwd, String.to_charlist(dest)}])
+        File.rm(tar_path)
+        result
 
-      case :httpc.request(:get, {String.to_charlist(url), []}, http_opts, body_format: :binary) do
-        {:ok, {{_, 200, _}, _headers, body}} ->
-          :erl_tar.extract({:binary, body}, [:compressed, {:cwd, String.to_charlist(dest)}])
-
-        {:ok, {{_, status, _}, headers, _body}} when status in [301, 302, 303, 307, 308] ->
-          case List.keyfind(headers, ~c"location", 0) do
-            {_, location} ->
-              download_and_extract(List.to_string(location), dest, redirects_left - 1)
-
-            nil ->
-              {:error, "HTTP #{status} without Location header"}
-          end
-
-        {:ok, {{_, status, _}, _headers, _body}} ->
-          {:error, "HTTP #{status}"}
-
-        {:error, reason} ->
-          {:error, reason}
-      end
-    end
-  end
-
-  defp ssl_opts do
-    try do
-      Application.ensure_all_started(:public_key)
-      cacerts = :public_key.cacerts_get()
-
-      [
-        verify: :verify_peer,
-        cacerts: cacerts,
-        depth: 3,
-        customize_hostname_check: [
-          match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
-        ]
-      ]
-    rescue
-      _ ->
-        # Fallback when :public_key is unavailable during dep compilation
-        [verify: :verify_none]
+      {output, _} ->
+        File.rm(tar_path)
+        {:error, String.trim(output)}
     end
   end
 
