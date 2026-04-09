@@ -106,8 +106,8 @@ defmodule TailwindCompiler.Native do
     if redirects_left <= 0 do
       {:error, :too_many_redirects}
     else
-      :inets.start()
-      :ssl.start()
+      Application.ensure_all_started(:inets)
+      Application.ensure_all_started(:ssl)
 
       http_opts = [ssl: ssl_opts()]
 
