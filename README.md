@@ -22,22 +22,30 @@ Add to your `mix.exs`:
 
 ```elixir
 def deps do
-  [{:tailwind_compiler, "~> 0.0.1"}]
+  [{:tailwind_compiler, "~> 0.0.3"}]
 end
 ```
 
-Precompiled NIF binaries are available for `x86_64-linux`, `aarch64-linux`, `aarch64-macos`, and `x86_64-macos`. The correct binary is downloaded automatically during `mix compile`.
+Precompiled NIF binaries are available for `x86_64-linux`, `aarch64-linux`, and `aarch64-macos`. The correct binary is downloaded automatically during `mix compile` — no Zig toolchain required.
 
-To force compilation from source (requires [Zig 0.15.2+](https://ziglang.org/download/) and the `zigler` dependency):
+### Building from source
+
+To compile from source instead of using a precompiled binary, add `zigler` to your deps and set the `TAILWIND_COMPILER_PATH` environment variable:
 
 ```elixir
-# Add zigler to your deps
-{:zigler, "~> 0.15.1", runtime: false}
+def deps do
+  [
+    {:tailwind_compiler, "~> 0.0.3"},
+    {:zigler, "~> 0.15.1", runtime: false}
+  ]
+end
 ```
 
 ```bash
 TAILWIND_COMPILER_PATH=true mix compile
 ```
+
+This requires [Zig 0.15.2+](https://ziglang.org/download/).
 
 ## Elixir Usage
 

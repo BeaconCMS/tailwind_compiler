@@ -21,17 +21,17 @@ When the user says "release" (or similar), follow this procedure:
 
 ### 2. Update version strings
 
-Both version files **must** be kept in lockstep:
+All three locations **must** be kept in lockstep:
 - `build.zig.zon` — `.version = "X.Y.Z",`
 - `mix.exs` — `version: "X.Y.Z"`
+- `README.md` — the installation dep version `{:tailwind_compiler, "~> X.Y.Z"}`
 
 ### 3. Review and update README.md
 
 Ensure the README accurately reflects the current state of the project:
-- New commands or features are documented
-- Removed or renamed features are cleaned up
-- Installation instructions are current
-- Examples and usage sections match the actual CLI interface
+- Installation version is updated to the new version
+- New features or API changes are documented
+- Installation instructions are current (precompiled NIF is the default path; Zigler is the optional source build path)
 
 ### 4. Update CHANGELOG.md
 
