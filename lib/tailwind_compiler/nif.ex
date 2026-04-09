@@ -10,11 +10,19 @@ if TailwindCompiler.Native.use_precompiled?() do
       :erlang.load_nif(path, 0)
     end
 
-    def compile(_candidates, _theme_json, _preflight, _custom_css, _custom_utilities),
+    # Zigler registers NIF functions with a "marshalled-" prefix.
+    # These stubs must match the names in the precompiled .so.
+    def unquote(:"marshalled-compile")(_candidates, _theme_json, _preflight, _custom_css, _custom_utilities),
       do: :erlang.nif_error(:not_loaded)
 
-    def validate(_tokens),
+    def unquote(:"marshalled-validate")(_tokens),
       do: :erlang.nif_error(:not_loaded)
+
+    def compile(candidates, theme_json, preflight, custom_css, custom_utilities),
+      do: unquote(:"marshalled-compile")(candidates, theme_json, preflight, custom_css, custom_utilities)
+
+    def validate(tokens),
+      do: unquote(:"marshalled-validate")(tokens)
   end
 else
   defmodule TailwindCompiler.NIF do
