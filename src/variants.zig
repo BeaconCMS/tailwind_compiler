@@ -795,37 +795,57 @@ fn applyArbitraryVariant(
             };
         }
 
-        // Selector variant: replace & with the inner selector
-        if (std.mem.indexOf(u8, sel_template, "&")) |_| {
-            // Has & placeholder
-            var result = try std.ArrayList(u8).initCapacity(alloc, sel_template.len + (inner.selector orelse "").len);
-            for (sel_template) |c| {
-                if (c == '&') {
-                    try result.appendSlice(alloc, inner.selector orelse "");
-                } else {
-                    try result.append(alloc, c);
-                }
+        // If inner is a wrapping rule (media, container, supports), apply the
+        // selector variant to each child rule and keep the wrapper intact.
+        if (inner.kind == .media or inner.kind == .container or inner.kind == .supports) {
+            const new_children = try alloc.alloc(Rule, inner.children.len);
+            for (inner.children, 0..) |child, i| {
+                new_children[i] = try applyArbitrarySelectorToStyle(alloc, child, sel_template);
             }
             return Rule{
-                .kind = .style,
-                .selector = try result.toOwnedSlice(alloc),
-                .declarations = inner.declarations,
-                .children = inner.children,
+                .kind = inner.kind,
+                .at_rule = inner.at_rule,
+                .children = new_children,
                 .variant_order = inner.variant_order,
             };
         }
 
-        // No & — wrap in :is(&, selector)
-        const sel = try std.fmt.allocPrint(alloc, "{s} {s}", .{ inner.selector orelse "", sel_template });
+        return applyArbitrarySelectorToStyle(alloc, inner, sel_template);
+    }
+    return inner;
+}
+
+/// Apply an arbitrary selector template (e.g. "&>h3") to a style rule.
+fn applyArbitrarySelectorToStyle(alloc: Allocator, inner: Rule, sel_template: []const u8) !Rule {
+    // Selector variant: replace & with the inner selector
+    if (std.mem.indexOf(u8, sel_template, "&")) |_| {
+        // Has & placeholder
+        var result = try std.ArrayList(u8).initCapacity(alloc, sel_template.len + (inner.selector orelse "").len);
+        for (sel_template) |c| {
+            if (c == '&') {
+                try result.appendSlice(alloc, inner.selector orelse "");
+            } else {
+                try result.append(alloc, c);
+            }
+        }
         return Rule{
             .kind = .style,
-            .selector = sel,
+            .selector = try result.toOwnedSlice(alloc),
             .declarations = inner.declarations,
             .children = inner.children,
             .variant_order = inner.variant_order,
         };
     }
-    return inner;
+
+    // No & — descendent selector
+    const sel = try std.fmt.allocPrint(alloc, "{s} {s}", .{ inner.selector orelse "", sel_template });
+    return Rule{
+        .kind = .style,
+        .selector = sel,
+        .declarations = inner.declarations,
+        .children = inner.children,
+        .variant_order = inner.variant_order,
+    };
 }
 
 fn appendPseudo(alloc: Allocator, selector: []const u8, pseudo: []const u8) ![]const u8 {
