@@ -616,25 +616,6 @@ fn applyCompoundVariant(
                         pseudo,
                     });
 
-                    // Special handling for hover (wrap in @media)
-                    if (std.mem.eql(u8, val.value, "hover")) {
-                        const hover_rule = Rule{
-                            .kind = .style,
-                            .selector = sel,
-                            .declarations = inner.declarations,
-                            .children = inner.children,
-                            .variant_order = inner.variant_order,
-                        };
-                        const children = try alloc.alloc(Rule, 1);
-                        children[0] = hover_rule;
-                        return Rule{
-                            .kind = .media,
-                            .at_rule = "@media (hover:hover)",
-                            .children = children,
-                            .variant_order = inner.variant_order,
-                        };
-                    }
-
                     return Rule{
                         .kind = .style,
                         .selector = sel,
@@ -953,6 +934,7 @@ const compound_variant_roots = std.StaticStringMap(void).initComptime(.{
 });
 
 const pseudo_class_map = std.StaticStringMap([]const u8).initComptime(.{
+    .{ "hover", ":hover" },
     .{ "focus", ":focus" },
     .{ "focus-within", ":focus-within" },
     .{ "focus-visible", ":focus-visible" },
