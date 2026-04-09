@@ -103,17 +103,47 @@ defmodule TailwindCompiler.Native do
   end
 
   defp download_and_extract(url, dest) do
-    tar_path = Path.join(dest, "nif.tar.gz")
+    {:ok, _} = Application.ensure_all_started(:inets)
+    {:ok, _} = Application.ensure_all_started(:ssl)
 
-    case System.cmd("curl", ["-fsSL", "-o", tar_path, url], stderr_to_stdout: true) do
-      {_, 0} ->
-        result = :erl_tar.extract(String.to_charlist(tar_path), [:compressed, {:cwd, String.to_charlist(dest)}])
-        File.rm(tar_path)
-        result
+    url = String.to_charlist(url)
 
-      {output, _} ->
-        File.rm(tar_path)
-        {:error, String.trim(output)}
+    http_options = [ssl: ssl_opts()]
+    options = [body_format: :binary]
+
+    case :httpc.request(:get, {url, []}, http_options, options) do
+      {:ok, {{_, 200, _}, _headers, body}} ->
+        :erl_tar.extract({:binary, body}, [:compressed, {:cwd, String.to_charlist(dest)}])
+
+      {:ok, {{_, status, _}, _headers, _body}} ->
+        {:error, "HTTP #{status}"}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp ssl_opts do
+    cacerts =
+      if System.otp_release() >= "25" do
+        try do
+          :public_key.cacerts_get()
+        rescue
+          _ -> nil
+        end
+      end
+
+    if cacerts do
+      [
+        verify: :verify_peer,
+        cacerts: cacerts,
+        depth: 2,
+        customize_hostname_check: [
+          match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+        ]
+      ]
+    else
+      [verify: :verify_none]
     end
   end
 
