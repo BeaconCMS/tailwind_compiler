@@ -108,6 +108,7 @@ defmodule TailwindCompiler.Native do
     else
       Application.ensure_all_started(:inets)
       Application.ensure_all_started(:ssl)
+      Application.ensure_all_started(:public_key)
 
       http_opts = [ssl: ssl_opts()]
 
