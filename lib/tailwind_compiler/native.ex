@@ -108,7 +108,6 @@ defmodule TailwindCompiler.Native do
     else
       Application.ensure_all_started(:inets)
       Application.ensure_all_started(:ssl)
-      Application.ensure_all_started(:public_key)
 
       http_opts = [ssl: ssl_opts()]
 
@@ -135,14 +134,23 @@ defmodule TailwindCompiler.Native do
   end
 
   defp ssl_opts do
-    [
-      verify: :verify_peer,
-      cacerts: :public_key.cacerts_get(),
-      depth: 3,
-      customize_hostname_check: [
-        match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+    try do
+      Application.ensure_all_started(:public_key)
+      cacerts = :public_key.cacerts_get()
+
+      [
+        verify: :verify_peer,
+        cacerts: cacerts,
+        depth: 3,
+        customize_hostname_check: [
+          match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+        ]
       ]
-    ]
+    rescue
+      _ ->
+        # Fallback when :public_key is unavailable during dep compilation
+        [verify: :verify_none]
+    end
   end
 
   defp arch do
