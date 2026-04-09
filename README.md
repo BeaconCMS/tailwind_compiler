@@ -148,14 +148,15 @@ Display, position, visibility, isolation, box-sizing, float, clear, overflow, ov
 ## Benchmark
 
 ```bash
-# Run 10-round benchmark (requires: npm i -g @tailwindcss/cli)
-bash benchmark/run_benchmark.sh
+# Run 10-round benchmark (default)
+mix run benchmark/benchmark.exs
 
-# View results
-open benchmark/results/report.html
+# Custom rounds
+BENCH_ROUNDS=20 mix run benchmark/benchmark.exs
+
+# Include preflight CSS
+BENCH_PREFLIGHT=1 mix run benchmark/benchmark.exs
 ```
-
-Each round generates 100–150 fresh HTML pages with a unique random seed, extracts candidates, and times both compilers.
 
 ## Architecture
 
