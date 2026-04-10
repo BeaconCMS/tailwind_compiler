@@ -4,11 +4,9 @@ zig-out/
 
 # Benchmark generated files
 benchmark/pages/
-benchmark/results/candidates.txt
-benchmark/results/zig_output.css
-benchmark/results/tw_output.css
-benchmark/results/tw_workdir/
-benchmark/class_inventory.txt
+benchmark/results/
+benchmark/node_modules/
+benchmark/package-lock.json
 
 # Research artifacts
 research/

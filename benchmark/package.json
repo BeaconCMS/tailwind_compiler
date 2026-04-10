@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "tailwindcss": "^4.2.2",
+    "@tailwindcss/node": "^4.2.2"
+  }
+}
