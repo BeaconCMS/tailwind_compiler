@@ -8,10 +8,10 @@ Designed as the CSS compilation engine for [Beacon CMS](https://github.com/Beaco
 
 Compile-only benchmark against the Tailwind CSS v4.2.2 JS `compile()` API — same 2,980 candidates, no filesystem I/O on either side (Apple M4):
 
-| Metric | Zig NIF | Tailwind v4 JS API | Difference |
-|--------|---------|-------------------|------------|
-| Avg compile time | **12 ms** | 21 ms | **1.7x faster** |
-| Median | **11 ms** | 19 ms | |
+| Metric | Zig | Tailwind v4 JS API | Difference |
+|--------|-----|-------------------|------------|
+| Avg compile time | **1.5 ms** | 21 ms | **~14x faster** |
+| Median | **1.5 ms** | 19 ms | |
 
 ## Installation
 

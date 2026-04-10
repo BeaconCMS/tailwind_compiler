@@ -1,46 +1,64 @@
-candidates =
-  "benchmark/class_inventory.txt"
-  |> File.read!()
-  |> String.split("\n", trim: true)
-
+candidates_file = "benchmark/class_inventory.txt"
+candidates = candidates_file |> File.read!() |> String.split("\n", trim: true)
 rounds = String.to_integer(System.get_env("BENCH_ROUNDS") || "10")
-preflight = System.get_env("BENCH_PREFLIGHT") != nil
 
+# Build the standalone Zig benchmark binary
+IO.puts("Building Zig benchmark binary...")
+
+{_, 0} =
+  System.cmd("zig", ["build", "-Doptimize=ReleaseFast"],
+    stderr_to_stdout: true,
+    cd: File.cwd!()
+  )
+
+zig_bin = Path.join([File.cwd!(), "zig-out", "bin", "bench_zig"])
+
+IO.puts("")
 IO.puts("=" |> String.duplicate(60))
-IO.puts("Tailwind Compiler NIF (Zig)")
+IO.puts("Zig Compiler (pure, no NIF overhead)")
 IO.puts("=" |> String.duplicate(60))
 IO.puts("Candidates: #{length(candidates)}")
 IO.puts("Rounds:     #{rounds}")
-IO.puts("Preflight:  #{preflight}")
 IO.puts("")
 
-# Warmup round (ensures NIF is loaded)
-{_warmup_us, css} = :timer.tc(fn -> TailwindCompiler.compile!(candidates, preflight: preflight) end)
-
-# Benchmark rounds
-nif_times_us =
+# Run the Zig binary for each round, capturing timing from stderr
+zig_times =
   for round <- 1..rounds do
-    {time_us, _css} = :timer.tc(fn -> TailwindCompiler.compile!(candidates, preflight: preflight) end)
-    IO.puts("  Round #{String.pad_leading(to_string(round), 2)}: #{Float.round(time_us / 1000.0, 2)} ms")
-    time_us
+    timing_file = Path.join(System.tmp_dir!(), "bench_zig_timing_#{round}.json")
+
+    {_output, 0} =
+      System.shell(
+        "#{zig_bin} --time #{candidates_file} > /dev/null 2> #{timing_file}",
+        stderr_to_stdout: true
+      )
+
+    timing_json = File.read!(timing_file) |> String.trim()
+    File.rm(timing_file)
+
+    timing = Jason.decode!(timing_json)
+    elapsed_ms = timing["elapsed_ms"]
+    IO.puts("  Round #{String.pad_leading(to_string(round), 2)}: #{elapsed_ms} ms")
+    elapsed_ms
   end
 
-nif_times = Enum.map(nif_times_us, &(&1 / 1000.0))
-nif_sorted = Enum.sort(nif_times)
+zig_sorted = Enum.sort(zig_times)
+zig_avg = Enum.sum(zig_times) / length(zig_times)
+zig_median = Enum.at(zig_sorted, div(length(zig_sorted), 2))
+zig_min = List.first(zig_sorted)
+zig_max = List.last(zig_sorted)
 
-nif_avg = Enum.sum(nif_times) / length(nif_times)
-nif_median = Enum.at(nif_sorted, div(length(nif_sorted), 2))
-nif_min = List.first(nif_sorted)
-nif_max = List.last(nif_sorted)
+# Get output size from one run
+{css, 0} = System.cmd(zig_bin, [candidates_file])
+zig_output_bytes = byte_size(css)
 
 IO.puts("")
 IO.puts("Results")
 IO.puts("-------")
-IO.puts("  Average: #{Float.round(nif_avg, 2)} ms")
-IO.puts("  Median:  #{Float.round(nif_median, 2)} ms")
-IO.puts("  Min:     #{Float.round(nif_min, 2)} ms")
-IO.puts("  Max:     #{Float.round(nif_max, 2)} ms")
-IO.puts("  Output:  #{byte_size(css)} bytes")
+IO.puts("  Average: #{Float.round(zig_avg, 3)} ms")
+IO.puts("  Median:  #{Float.round(zig_median, 3)} ms")
+IO.puts("  Min:     #{Float.round(zig_min, 3)} ms")
+IO.puts("  Max:     #{Float.round(zig_max, 3)} ms")
+IO.puts("  Output:  #{zig_output_bytes} bytes")
 
 # Run Tailwind CSS v4 compile API benchmark if node_modules exists
 tw_benchmark = Path.join("benchmark", "bench_tailwind.mjs")
@@ -54,20 +72,18 @@ if File.exists?(tw_benchmark) and File.dir?(node_modules) do
   IO.puts("")
 
   {output, exit_code} =
-    System.cmd("node", [tw_benchmark, "benchmark/class_inventory.txt"],
+    System.cmd("node", [tw_benchmark, candidates_file],
       env: [{"BENCH_ROUNDS", to_string(rounds)}],
       stderr_to_stdout: true
     )
 
   if exit_code == 0 do
-    # Print all lines except the JSON line
     output
     |> String.split("\n")
     |> Enum.reject(&String.starts_with?(&1, "JSON:"))
     |> Enum.join("\n")
     |> IO.puts()
 
-    # Parse the JSON line for comparison
     json_line = output |> String.split("\n") |> Enum.find(&String.starts_with?(&1, "JSON:"))
 
     if json_line do
@@ -79,10 +95,10 @@ if File.exists?(tw_benchmark) and File.dir?(node_modules) do
       IO.puts("Comparison (compile-only, same candidates)")
       IO.puts("=" |> String.duplicate(60))
       IO.puts("")
-      IO.puts("  NIF avg:      #{Float.round(nif_avg, 2)} ms")
+      IO.puts("  Zig avg:      #{Float.round(zig_avg, 3)} ms")
       IO.puts("  TW v4 avg:    #{Float.round(tw_avg, 2)} ms")
-      IO.puts("  Speedup:      #{Float.round(tw_avg / nif_avg, 1)}x faster")
-      IO.puts("  NIF output:   #{byte_size(css)} bytes")
+      IO.puts("  Speedup:      #{Float.round(tw_avg / zig_avg, 1)}x faster")
+      IO.puts("  Zig output:   #{zig_output_bytes} bytes")
       IO.puts("  TW v4 output: #{tw_data["output_bytes"]} bytes")
     end
   else
