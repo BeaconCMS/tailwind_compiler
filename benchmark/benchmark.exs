@@ -2,6 +2,25 @@ candidates_file = "benchmark/class_inventory.txt"
 candidates = candidates_file |> File.read!() |> String.split("\n", trim: true)
 rounds = String.to_integer(System.get_env("BENCH_ROUNDS") || "10")
 
+# Measure peak RSS by running a command under /usr/bin/time -l (macOS)
+# or /usr/bin/time -v (Linux). Returns RSS in bytes.
+measure_rss = fn command ->
+  {output, _} = System.shell("/usr/bin/time -l #{command} 2>&1 > /dev/null")
+
+  cond do
+    # macOS: "maximum resident set size" in bytes
+    rss = Regex.run(~r/(\d+)\s+maximum resident set size/, output) ->
+      String.to_integer(Enum.at(rss, 1))
+
+    # Linux: "Maximum resident set size" in KB
+    rss = Regex.run(~r/Maximum resident set size.*?(\d+)/, output) ->
+      String.to_integer(Enum.at(rss, 1)) * 1024
+
+    true ->
+      nil
+  end
+end
+
 # Build the standalone Zig benchmark binary
 IO.puts("Building Zig benchmark binary...")
 
@@ -47,9 +66,10 @@ zig_median = Enum.at(zig_sorted, div(length(zig_sorted), 2))
 zig_min = List.first(zig_sorted)
 zig_max = List.last(zig_sorted)
 
-# Get output size from one run
+# Get output size and peak RSS from one run
 {css, 0} = System.cmd(zig_bin, [candidates_file])
 zig_output_bytes = byte_size(css)
+zig_rss = measure_rss.("#{zig_bin} #{candidates_file}")
 
 IO.puts("")
 IO.puts("Results")
@@ -59,6 +79,10 @@ IO.puts("  Median:  #{Float.round(zig_median, 3)} ms")
 IO.puts("  Min:     #{Float.round(zig_min, 3)} ms")
 IO.puts("  Max:     #{Float.round(zig_max, 3)} ms")
 IO.puts("  Output:  #{zig_output_bytes} bytes")
+
+if zig_rss do
+  IO.puts("  Peak RSS: #{Float.round(zig_rss / 1_048_576, 1)} MB")
+end
 
 # Run Tailwind CSS v4 compile API benchmark if node_modules exists
 tw_benchmark = Path.join("benchmark", "bench_tailwind.mjs")
@@ -77,12 +101,18 @@ if File.exists?(tw_benchmark) and File.dir?(node_modules) do
       stderr_to_stdout: true
     )
 
+  tw_rss = measure_rss.("node #{tw_benchmark} #{candidates_file}")
+
   if exit_code == 0 do
     output
     |> String.split("\n")
     |> Enum.reject(&String.starts_with?(&1, "JSON:"))
     |> Enum.join("\n")
     |> IO.puts()
+
+    if tw_rss do
+      IO.puts("  Peak RSS: #{Float.round(tw_rss / 1_048_576, 1)} MB")
+    end
 
     json_line = output |> String.split("\n") |> Enum.find(&String.starts_with?(&1, "JSON:"))
 
@@ -100,6 +130,12 @@ if File.exists?(tw_benchmark) and File.dir?(node_modules) do
       IO.puts("  Speedup:      #{Float.round(tw_avg / zig_avg, 1)}x faster")
       IO.puts("  Zig output:   #{zig_output_bytes} bytes")
       IO.puts("  TW v4 output: #{tw_data["output_bytes"]} bytes")
+
+      if zig_rss && tw_rss do
+        IO.puts("  Zig RSS:      #{Float.round(zig_rss / 1_048_576, 1)} MB")
+        IO.puts("  TW v4 RSS:    #{Float.round(tw_rss / 1_048_576, 1)} MB")
+        IO.puts("  Memory:       #{Float.round(tw_rss / zig_rss, 1)}x less")
+      end
     end
   else
     IO.puts("Tailwind benchmark failed:")

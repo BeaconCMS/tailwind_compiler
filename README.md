@@ -10,8 +10,9 @@ Compile-only benchmark against the Tailwind CSS v4.2.2 JS `compile()` API — sa
 
 | Metric | Zig | Tailwind v4 JS API | Difference |
 |--------|-----|-------------------|------------|
-| Avg compile time | **1.5 ms** | 21 ms | **~14x faster** |
-| Median | **1.5 ms** | 19 ms | |
+| Avg compile time | **1.5 ms** | 23 ms | **~15x faster** |
+| Median | **1.5 ms** | 22 ms | |
+| Peak memory | **4.5 MB** | 181 MB | **~40x less** |
 
 ## Installation
 
