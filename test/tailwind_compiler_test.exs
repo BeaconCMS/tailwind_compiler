@@ -54,6 +54,13 @@ defmodule TailwindCompilerTest do
       assert css =~ "color:red"
     end
 
+    test "arbitrary variant with underscore produces descendant combinator" do
+      {:ok, css} = TailwindCompiler.compile(["[&_p]:mb-4"], preflight: false)
+      # The CSS should contain a descendant combinator (space), not a literal underscore
+      assert css =~ " p{"
+      refute css =~ "_p{"
+    end
+
     test "handles important modifier" do
       {:ok, css} = TailwindCompiler.compile(["flex!"], preflight: false)
       assert css =~ "!important"

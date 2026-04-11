@@ -763,7 +763,12 @@ fn applyArbitraryVariant(
     raw_candidate: []const u8,
 ) !Rule {
     _ = raw_candidate;
-    if (variant.selector) |sel_template| {
+    if (variant.selector) |raw_sel_template| {
+        // Decode underscores to spaces in arbitrary variant selectors,
+        // matching Tailwind CSS behavior where _ is a space substitute.
+        // e.g., [&_p]:mb-4 -> "& p" selector (descendant combinator)
+        const sel_template = try candidate_mod.decodeArbitraryValue(alloc, raw_sel_template);
+
         // Check if it's an at-rule (starts with @)
         if (sel_template.len > 0 and sel_template[0] == '@') {
             const children = try alloc.alloc(Rule, 1);

@@ -4210,6 +4210,19 @@ test "tw: arbitrary variants  should generate arbitrary variants" {
     try std.testing.expect(std.mem.indexOf(u8, result, "\\[\\&_p\\]\\:flex") != null);
 }
 
+test "tw: arbitrary variants underscore converts to space for descendant combinator" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"[&_p]:mb-4"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    // The CSS selector should contain a descendant combinator (space), not a literal underscore
+    // [&_p]:mb-4 should produce a selector like .class p { margin-bottom: ... }
+    try std.testing.expect(std.mem.indexOf(u8, result, " p{") != null);
+    // Should NOT contain a literal underscore in the selector
+    try std.testing.expect(std.mem.indexOf(u8, result, "_p{") == null);
+}
+
 test "tw: arbitrary variants  should generate arbitrary at-rule varian" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{ "[@media(width>=123px)]:flex" };
