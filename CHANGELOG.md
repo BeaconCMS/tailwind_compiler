@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.0.5] - 2026-04-11
+
+### Added
+
+- Windows x86_64 precompiled NIF binary support
+- Windows platform detection and `.dll` NIF loading
+
+### Fixed
+
+- Zigler Windows NIF compilation by providing missing `erl_nif_win.h` headers
+
 ## [0.0.4] - 2026-04-10
 
 ### Fixed
@@ -28,5 +39,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - JSON theme overrides, custom CSS passthrough, preflight toggle
 - Arena allocator for efficient memory management
 
+[0.0.5]: https://github.com/beaconcms/tailwind_compiler/releases/tag/v0.0.5
 [0.0.4]: https://github.com/beaconcms/tailwind_compiler/releases/tag/v0.0.4
 [0.0.3]: https://github.com/beaconcms/tailwind_compiler/releases/tag/v0.0.3
