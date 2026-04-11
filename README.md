@@ -20,7 +20,7 @@ Add to your `mix.exs`:
 
 ```elixir
 def deps do
-  [{:tailwind_compiler, "~> 0.0.3"}]
+  [{:tailwind_compiler, "~> 0.0.4"}]
 end
 ```
 
