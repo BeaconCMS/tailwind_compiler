@@ -16,6 +16,9 @@ jobs:
   ci:
     name: CI (${{ matrix.target }})
     runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: true
       matrix:
@@ -26,6 +29,8 @@ jobs:
             runner: ubuntu-24.04-arm
           - target: aarch64-macos
             runner: macos-15
+          - target: x86_64-windows
+            runner: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -58,16 +63,25 @@ jobs:
     name: Build NIF (${{ matrix.target }})
     needs: ci
     runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: true
       matrix:
         include:
           - target: x86_64-linux
             runner: ubuntu-latest
+            nif_ext: so
           - target: aarch64-linux
             runner: ubuntu-24.04-arm
+            nif_ext: so
           - target: aarch64-macos
             runner: macos-15
+            nif_ext: so
+          - target: x86_64-windows
+            runner: windows-latest
+            nif_ext: dll
 
     steps:
       - uses: actions/checkout@v4
@@ -93,17 +107,17 @@ jobs:
 
       - name: Package NIF
         run: |
-          NIF_FILE=$(find _build -name "Elixir.TailwindCompiler.NIF.so" -type f | head -1)
+          NIF_FILE=$(find _build -name "Elixir.TailwindCompiler.NIF.${{ matrix.nif_ext }}" -type f | head -1)
           if [ -z "$NIF_FILE" ]; then
-            echo "ERROR: Could not find compiled NIF .so file"
+            echo "ERROR: Could not find compiled NIF file"
             find _build -name "*NIF*" -type f
             exit 1
           fi
           echo "Found NIF at: $NIF_FILE"
           mkdir -p release
-          cp "$NIF_FILE" release/Elixir.TailwindCompiler.NIF.so
+          cp "$NIF_FILE" "release/Elixir.TailwindCompiler.NIF.${{ matrix.nif_ext }}"
           cd release
-          tar czf "tailwind_compiler-nif-${{ matrix.target }}.tar.gz" Elixir.TailwindCompiler.NIF.so
+          tar czf "tailwind_compiler-nif-${{ matrix.target }}.tar.gz" "Elixir.TailwindCompiler.NIF.${{ matrix.nif_ext }}"
           shasum -a 256 "tailwind_compiler-nif-${{ matrix.target }}.tar.gz" | tee "tailwind_compiler-nif-${{ matrix.target }}.tar.gz.sha256"
 
       - name: Upload artifact

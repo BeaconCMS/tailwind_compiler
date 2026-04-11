@@ -24,7 +24,7 @@ def deps do
 end
 ```
 
-Precompiled NIF binaries are available for `x86_64-linux`, `aarch64-linux`, and `aarch64-macos`. The correct binary is downloaded automatically during `mix compile` — no Zig toolchain required.
+Precompiled NIF binaries are available for `x86_64-linux`, `aarch64-linux`, `aarch64-macos`, and `x86_64-windows`. The correct binary is downloaded automatically during `mix compile` — no Zig toolchain required.
 
 ### Building from source
 

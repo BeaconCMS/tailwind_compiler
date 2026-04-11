@@ -56,7 +56,14 @@ defmodule TailwindCompiler.Native do
   end
 
   defp nif_so_path do
-    Path.join(native_dir(), "Elixir.TailwindCompiler.NIF.so")
+    Path.join(native_dir(), "Elixir.TailwindCompiler.NIF#{nif_ext()}")
+  end
+
+  defp nif_ext do
+    case :os.type() do
+      {:win32, _} -> ".dll"
+      _ -> ".so"
+    end
   end
 
   defp native_dir do
@@ -163,6 +170,7 @@ defmodule TailwindCompiler.Native do
     case :os.type() do
       {:unix, :linux} -> "linux"
       {:unix, :darwin} -> "macos"
+      {:win32, _} -> "windows"
       _ -> "unknown"
     end
   end
