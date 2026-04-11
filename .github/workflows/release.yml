@@ -140,7 +140,7 @@ jobs:
           cp "$NIF_FILE" "release/Elixir.TailwindCompiler.NIF.${{ matrix.nif_ext }}"
           cd release
           tar czf "tailwind_compiler-nif-${{ matrix.target }}.tar.gz" "Elixir.TailwindCompiler.NIF.${{ matrix.nif_ext }}"
-          shasum -a 256 "tailwind_compiler-nif-${{ matrix.target }}.tar.gz" | tee "tailwind_compiler-nif-${{ matrix.target }}.tar.gz.sha256"
+          openssl dgst -sha256 "tailwind_compiler-nif-${{ matrix.target }}.tar.gz" | sed 's/.*= //' | tee "tailwind_compiler-nif-${{ matrix.target }}.tar.gz.sha256"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
