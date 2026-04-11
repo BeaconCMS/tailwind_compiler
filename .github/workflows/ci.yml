@@ -42,11 +42,22 @@ jobs:
           otp-version: "27"
           elixir-version: "1.17"
 
-      - name: Run Elixir tests
-        env:
-          TAILWIND_COMPILER_PATH: "true"
+      - name: Install Elixir deps
         run: |
           mix local.hex --force
           mix local.rebar --force
           mix deps.get
-          mix test
+
+      - name: Fix Zigler Windows NIF headers
+        if: runner.os == 'Windows'
+        run: |
+          mkdir -p deps/zigler/priv/erl_nif_win
+          curl -sL "https://raw.githubusercontent.com/E-xyza/zigler/0.15.2/priv/erl_nif_win/erl_nif_win.h" \
+            -o deps/zigler/priv/erl_nif_win/erl_nif_win.h
+          curl -sL "https://raw.githubusercontent.com/E-xyza/zigler/0.15.2/priv/erl_nif_win/erl_nif_api_funcs_win.h" \
+            -o deps/zigler/priv/erl_nif_win/erl_nif_api_funcs_win.h
+
+      - name: Run Elixir tests
+        env:
+          TAILWIND_COMPILER_PATH: "true"
+        run: mix test
