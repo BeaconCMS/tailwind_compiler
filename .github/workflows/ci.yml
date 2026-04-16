@@ -11,6 +11,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+
+      - name: Build WASM
+        run: zig build -Dtarget=wasm32-freestanding -Doptimize=ReleaseSmall
+
+      - name: Verify WASM output
+        run: test -f zig-out/bin/tailwind_compiler.wasm
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tailwind_compiler.wasm
+          path: zig-out/bin/tailwind_compiler.wasm
+
   test:
     strategy:
       matrix:
