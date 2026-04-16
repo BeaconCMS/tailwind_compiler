@@ -84,6 +84,7 @@ header h1 span{color:var(--accent)}
     <button data-example="hero">Hero</button>
     <button data-example="dashboard">Dashboard</button>
     <button data-example="form">Form</button>
+    <button data-example="daisyui">DaisyUI</button>
   </div>
   <div class="controls">
     <label><input type="checkbox" id="preflight" checked> Preflight</label>
@@ -110,7 +111,7 @@ header h1 span{color:var(--accent)}
 
 <script>
 const EXAMPLES = {
-  card: `<div class="min-h-screen bg-gray-100 flex items-center justify-center p-8">
+  card: { html: `<div class="min-h-screen bg-gray-100 flex items-center justify-center p-8">
   <div class="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
     <div class="h-48 bg-gradient-to-br from-violet-500 to-purple-600"></div>
     <div class="p-8">
@@ -129,9 +130,9 @@ const EXAMPLES = {
       </div>
     </div>
   </div>
-</div>`,
+</div>` },
 
-  hero: `<section class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center px-6">
+  hero: { html: `<section class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center px-6">
   <div class="text-center max-w-4xl">
     <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-purple-500/10 border border-purple-500/20 rounded-full mb-8">
       <span class="w-2 h-2 bg-green-400 rounded-full"></span>
@@ -156,9 +157,9 @@ const EXAMPLES = {
       </a>
     </div>
   </div>
-</section>`,
+</section>` },
 
-  dashboard: `<div class="min-h-screen bg-gray-50 p-8">
+  dashboard: { html: `<div class="min-h-screen bg-gray-50 p-8">
   <div class="max-w-6xl mx-auto">
     <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
     <p class="mt-1 text-gray-500">Welcome back. Here's what's happening.</p>
@@ -216,9 +217,9 @@ const EXAMPLES = {
       </table>
     </div>
   </div>
-</div>`,
+</div>` },
 
-  form: `<div class="min-h-screen bg-gray-100 flex items-center justify-center p-8">
+  form: { html: `<div class="min-h-screen bg-gray-100 flex items-center justify-center p-8">
   <div class="w-full max-w-sm">
     <div class="bg-white rounded-2xl shadow-lg p-8">
       <h2 class="text-2xl font-bold text-gray-900 text-center">Sign In</h2>
@@ -256,7 +257,110 @@ const EXAMPLES = {
       </form>
     </div>
   </div>
-</div>`
+</div>` },
+
+  daisyui: { html: `<div class="min-h-screen bg-base-200 p-8">
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-4xl font-bold text-base-content mb-2">DaisyUI Theme</h1>
+    <p class="text-base-content/60 mb-8">Plugin colors compiled via the <code class="text-sm bg-base-300 px-1.5 py-0.5 rounded">plugin_css</code> option.</p>
+
+    <div class="bg-base-100 rounded-2xl shadow-xl p-8 mb-8">
+      <h2 class="text-lg font-semibold text-base-content mb-4">Buttons</h2>
+      <div class="flex flex-wrap gap-3">
+        <button class="px-5 py-2.5 bg-primary text-primary-content font-medium rounded-lg">Primary</button>
+        <button class="px-5 py-2.5 bg-secondary text-secondary-content font-medium rounded-lg">Secondary</button>
+        <button class="px-5 py-2.5 bg-accent text-accent-content font-medium rounded-lg">Accent</button>
+        <button class="px-5 py-2.5 bg-neutral text-neutral-content font-medium rounded-lg">Neutral</button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-6 mb-8">
+      <div class="bg-base-100 rounded-2xl shadow-xl p-6">
+        <h2 class="text-lg font-semibold text-base-content mb-4">Status</h2>
+        <div class="space-y-3">
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-success"></span>
+            <span class="text-sm text-base-content">Systems operational</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-warning"></span>
+            <span class="text-sm text-base-content">Degraded performance</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-error"></span>
+            <span class="text-sm text-base-content">Service outage</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-info"></span>
+            <span class="text-sm text-base-content">Maintenance scheduled</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-base-100 rounded-2xl shadow-xl p-6">
+        <h2 class="text-lg font-semibold text-base-content mb-4">Alerts</h2>
+        <div class="space-y-3">
+          <div class="px-4 py-3 bg-info/10 border border-info/20 rounded-lg text-sm text-info">
+            New version available.
+          </div>
+          <div class="px-4 py-3 bg-success/10 border border-success/20 rounded-lg text-sm text-success">
+            Changes saved successfully.
+          </div>
+          <div class="px-4 py-3 bg-warning/10 border border-warning/20 rounded-lg text-sm text-warning">
+            Storage almost full.
+          </div>
+          <div class="px-4 py-3 bg-error/10 border border-error/20 rounded-lg text-sm text-error">
+            Payment failed.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-base-100 rounded-2xl shadow-xl p-8">
+      <h2 class="text-lg font-semibold text-base-content mb-4">Color Palette</h2>
+      <div class="grid grid-cols-4 gap-4">
+        <div>
+          <div class="h-16 rounded-lg bg-primary mb-2"></div>
+          <p class="text-xs text-base-content/60">Primary</p>
+        </div>
+        <div>
+          <div class="h-16 rounded-lg bg-secondary mb-2"></div>
+          <p class="text-xs text-base-content/60">Secondary</p>
+        </div>
+        <div>
+          <div class="h-16 rounded-lg bg-accent mb-2"></div>
+          <p class="text-xs text-base-content/60">Accent</p>
+        </div>
+        <div>
+          <div class="h-16 rounded-lg bg-neutral mb-2"></div>
+          <p class="text-xs text-base-content/60">Neutral</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`,
+  plugin_css: `:root {
+  --color-primary: oklch(62.3% 0.214 259.815);
+  --color-primary-content: oklch(97.8% 0.014 259.815);
+  --color-secondary: oklch(71.1% 0.194 261.209);
+  --color-secondary-content: oklch(98% 0.019 261.209);
+  --color-accent: oklch(76.7% 0.166 183.613);
+  --color-accent-content: oklch(16.3% 0.033 183.613);
+  --color-neutral: oklch(31.3% 0.021 254.128);
+  --color-neutral-content: oklch(98.5% 0.002 247.839);
+  --color-base-100: oklch(100% 0 0);
+  --color-base-200: oklch(96.1% 0.006 247.839);
+  --color-base-300: oklch(92.4% 0.012 247.839);
+  --color-base-content: oklch(27.6% 0.03 256.848);
+  --color-info: oklch(72.3% 0.15 232.661);
+  --color-info-content: oklch(16.3% 0.033 232.661);
+  --color-success: oklch(76.5% 0.16 149.214);
+  --color-success-content: oklch(16.3% 0.033 149.214);
+  --color-warning: oklch(82.8% 0.17 83.713);
+  --color-warning-content: oklch(16.3% 0.033 83.713);
+  --color-error: oklch(62.8% 0.258 29.234);
+  --color-error-content: oklch(97.8% 0.014 29.234);
+}` }
 };
 
 // ── Syntax Highlighting ────────────────────────────────────
@@ -367,11 +471,12 @@ function extractCandidates(html) {
   return [...classes];
 }
 
-function compileTailwind(html, preflight, minify) {
+function compileTailwind(html, preflight, minify, pluginCss) {
   const candidates = extractCandidates(html);
   if (!candidates.length) return '';
 
   const cand = writeStr(candidates.join('\n'));
+  const plugin = pluginCss ? writeStr(pluginCss) : [0, 0];
 
   const result = wasm.compile(
     cand[0], cand[1],
@@ -380,10 +485,11 @@ function compileTailwind(html, preflight, minify) {
     minify ? 1 : 0,
     0, 0,
     0, 0,
-    0, 0
+    plugin[0], plugin[1]
   );
 
   wasm.free(cand[0], cand[1]);
+  if (plugin[0]) wasm.free(plugin[0], plugin[1]);
 
   if (result === 0n) return '';
 
@@ -406,6 +512,7 @@ const cssStatsEl  = document.getElementById('css-stats');
 const errorEl     = document.getElementById('error');
 const preflightCb = document.getElementById('preflight');
 const minifyCb    = document.getElementById('minify');
+let currentExample = 'card';
 
 function showError(msg) {
   errorEl.style.display = 'block';
@@ -421,10 +528,12 @@ function doCompile() {
   const html = htmlInput.value;
   const minify = minifyCb.checked;
 
+  const pluginCss = EXAMPLES[currentExample]?.plugin_css || null;
+
   const t0 = performance.now();
   let css;
   try {
-    css = compileTailwind(html, preflightCb.checked, minify);
+    css = compileTailwind(html, preflightCb.checked, minify, pluginCss);
   } catch (e) {
     showError('Compilation error: ' + e.message);
     return;
@@ -481,7 +590,8 @@ for (const btn of document.querySelectorAll('[data-example]')) {
   btn.addEventListener('click', () => {
     document.querySelector('.examples .active')?.classList.remove('active');
     btn.classList.add('active');
-    htmlInput.value = EXAMPLES[btn.dataset.example];
+    currentExample = btn.dataset.example;
+    htmlInput.value = EXAMPLES[currentExample].html;
     updateHTMLHighlight();
     doCompile();
   });
@@ -524,7 +634,7 @@ async function init() {
   wasm = instance.exports;
   statusEl.textContent = 'Ready';
 
-  htmlInput.value = EXAMPLES.card;
+  htmlInput.value = EXAMPLES.card.html;
   updateHTMLHighlight();
   doCompile();
 }
