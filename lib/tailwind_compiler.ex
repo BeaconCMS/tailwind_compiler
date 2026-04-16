@@ -19,6 +19,8 @@ defmodule TailwindCompiler do
 
     * `:theme` - JSON string with theme overrides (optional)
     * `:preflight` - whether to include the base CSS reset (default: `true`)
+    * `:minify` - whether to minify the CSS output (default: `true`).
+      When `false`, the output is pretty-printed with indentation.
     * `:custom_css` - raw CSS string to append after `@layer utilities` (optional).
       Use this for custom components or user stylesheets.
     * `:custom_utilities` - map of `%{"class-name" => "css-declarations"}` (optional).
@@ -52,6 +54,7 @@ defmodule TailwindCompiler do
   def compile(candidates, opts \\ []) when is_list(candidates) do
     theme_json = Keyword.get(opts, :theme)
     preflight = Keyword.get(opts, :preflight, true)
+    minify = Keyword.get(opts, :minify, true)
     custom_css = Keyword.get(opts, :custom_css)
     custom_utilities = Keyword.get(opts, :custom_utilities)
     plugin_css = Keyword.get(opts, :plugin_css)
@@ -63,7 +66,7 @@ defmodule TailwindCompiler do
         str when is_binary(str) -> str
       end
 
-    case TailwindCompiler.NIF.compile(candidates, theme_json || "", preflight, custom_css || "", custom_utilities_json, plugin_css || "") do
+    case TailwindCompiler.NIF.compile(candidates, theme_json || "", preflight, minify, custom_css || "", custom_utilities_json, plugin_css || "") do
       result when is_binary(result) -> {:ok, result}
       error -> {:error, error}
     end
