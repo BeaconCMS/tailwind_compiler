@@ -132,15 +132,33 @@ pub const CssEmitter = struct {
     at_properties: std.ArrayList(AtProperty),
     keyframes: std.ArrayList(Keyframes),
     custom_css: ?[]const u8 = null,
+    minify: bool,
+    indent: u32 = 0,
 
-    pub fn init(alloc: Allocator, custom_css: ?[]const u8) CssEmitter {
+    pub fn init(alloc: Allocator, custom_css: ?[]const u8, minify: bool) CssEmitter {
         return CssEmitter{
             .alloc = alloc,
             .buf = .empty,
             .at_properties = .empty,
             .keyframes = .empty,
             .custom_css = custom_css,
+            .minify = minify,
         };
+    }
+
+    /// Write a newline followed by indentation (pretty mode only; no-op when minified).
+    fn writeNewline(self: *CssEmitter) !void {
+        if (self.minify) return;
+        try self.buf.append(self.alloc, '\n');
+        for (0..self.indent * 2) |_| {
+            try self.buf.append(self.alloc, ' ');
+        }
+    }
+
+    /// Write a space (pretty mode only).
+    fn writeSpace(self: *CssEmitter) !void {
+        if (self.minify) return;
+        try self.buf.append(self.alloc, ' ');
     }
 
     pub fn deinit(self: *CssEmitter) void {
@@ -182,26 +200,7 @@ pub const CssEmitter = struct {
         // Tailwind v4 uses @property declarations for these, but for
         // browser compatibility we set them on the universal selector.
         // Only include properties that have safe, non-destructive defaults.
-        try self.buf.appendSlice(self.alloc,
-            "@layer properties{*,:before,:after,::backdrop{" ++
-            "--tw-border-style:solid;" ++
-            "--tw-content:\"\";" ++
-            "--tw-outline-style:solid;" ++
-            "--tw-ring-shadow:0 0 #0000;" ++
-            "--tw-inset-ring-shadow:0 0 #0000;" ++
-            "--tw-ring-offset-width:0px;" ++
-            "--tw-ring-offset-color:#fff;" ++
-            "--tw-ring-offset-shadow:0 0 #0000;" ++
-            "--tw-shadow:0 0 #0000;" ++
-            "--tw-inset-shadow:0 0 #0000;" ++
-            "--tw-shadow-alpha:100%;" ++
-            "--tw-inset-shadow-alpha:100%;" ++
-            "--tw-divide-x-reverse:0;" ++
-            "--tw-divide-y-reverse:0;" ++
-            "--tw-space-x-reverse:0;" ++
-            "--tw-space-y-reverse:0" ++
-            "}}"
-        );
+        try self.emitPropertiesLayer();
 
         // @layer base (preflight)
         if (include_preflight) {
@@ -213,8 +212,8 @@ pub const CssEmitter = struct {
 
         // Custom CSS (plugins, user stylesheets)
         if (self.custom_css) |css| {
-            try self.buf.ensureUnusedCapacity(self.alloc, css.len);
-            self.buf.appendSliceAssumeCapacity(css);
+            try self.buf.appendSlice(self.alloc, css);
+            try self.writeNewline();
         }
 
         // @property declarations
@@ -263,26 +262,93 @@ pub const CssEmitter = struct {
             }
         }.lessThan);
 
-        try self.buf.appendSlice(self.alloc,"@layer theme{:root{");
+        try self.buf.appendSlice(self.alloc, "@layer theme");
+        try self.writeSpace();
+        try self.buf.append(self.alloc, '{');
+        self.indent += 1;
+        try self.writeNewline();
+        try self.buf.appendSlice(self.alloc, ":root");
+        try self.writeSpace();
+        try self.buf.append(self.alloc, '{');
+        self.indent += 1;
         for (used_vars.items, 0..) |v, i| {
-            if (i > 0) try self.buf.append(self.alloc,';');
-            try self.buf.appendSlice(self.alloc,v.name);
-            try self.buf.append(self.alloc,':');
-            try self.buf.appendSlice(self.alloc,v.value);
+            if (i > 0 and self.minify) try self.buf.append(self.alloc, ';');
+            try self.writeNewline();
+            try self.buf.appendSlice(self.alloc, v.name);
+            try self.buf.append(self.alloc, ':');
+            try self.writeSpace();
+            try self.buf.appendSlice(self.alloc, v.value);
+            if (!self.minify) try self.buf.append(self.alloc, ';');
         }
-        try self.buf.appendSlice(self.alloc,"}}");
+        self.indent -= 1;
+        try self.writeNewline();
+        try self.buf.append(self.alloc, '}');
+        self.indent -= 1;
+        try self.writeNewline();
+        try self.buf.append(self.alloc, '}');
+        try self.writeNewline();
     }
 
     /// Emit @layer base (preflight).
     fn emitBaseLayer(self: *CssEmitter) !void {
-        try self.buf.appendSlice(self.alloc,"@layer base{");
-        try self.buf.appendSlice(self.alloc,preflight_css);
-        try self.buf.append(self.alloc,'}');
+        try self.buf.appendSlice(self.alloc, "@layer base");
+        try self.writeSpace();
+        try self.buf.append(self.alloc, '{');
+        try self.buf.appendSlice(self.alloc, preflight_css);
+        try self.buf.append(self.alloc, '}');
+        try self.writeNewline();
+    }
+
+    /// Emit @layer properties with default --tw-* custom properties.
+    fn emitPropertiesLayer(self: *CssEmitter) !void {
+        const props = [_][2][]const u8{
+            .{ "--tw-border-style", "solid" },
+            .{ "--tw-content", "\"\"" },
+            .{ "--tw-outline-style", "solid" },
+            .{ "--tw-ring-shadow", "0 0 #0000" },
+            .{ "--tw-inset-ring-shadow", "0 0 #0000" },
+            .{ "--tw-ring-offset-width", "0px" },
+            .{ "--tw-ring-offset-color", "#fff" },
+            .{ "--tw-ring-offset-shadow", "0 0 #0000" },
+            .{ "--tw-shadow", "0 0 #0000" },
+            .{ "--tw-inset-shadow", "0 0 #0000" },
+            .{ "--tw-shadow-alpha", "100%" },
+            .{ "--tw-inset-shadow-alpha", "100%" },
+            .{ "--tw-divide-x-reverse", "0" },
+            .{ "--tw-divide-y-reverse", "0" },
+            .{ "--tw-space-x-reverse", "0" },
+            .{ "--tw-space-y-reverse", "0" },
+        };
+
+        try self.buf.appendSlice(self.alloc, "@layer properties");
+        try self.writeSpace();
+        try self.buf.append(self.alloc, '{');
+        self.indent += 1;
+        try self.writeNewline();
+        try self.buf.appendSlice(self.alloc, "*,:before,:after,::backdrop");
+        try self.writeSpace();
+        try self.buf.append(self.alloc, '{');
+        self.indent += 1;
+        for (props, 0..) |prop, i| {
+            if (i > 0 and self.minify) try self.buf.append(self.alloc, ';');
+            try self.writeNewline();
+            try self.buf.appendSlice(self.alloc, prop[0]);
+            try self.buf.append(self.alloc, ':');
+            try self.writeSpace();
+            try self.buf.appendSlice(self.alloc, prop[1]);
+            if (!self.minify) try self.buf.append(self.alloc, ';');
+        }
+        self.indent -= 1;
+        try self.writeNewline();
+        try self.buf.append(self.alloc, '}');
+        self.indent -= 1;
+        try self.writeNewline();
+        try self.buf.append(self.alloc, '}');
+        try self.writeNewline();
     }
 
     /// Emit @property declarations.
     fn emitAtProperties(self: *CssEmitter) !void {
-        // Sort for deterministic output
         std.mem.sort(AtProperty, self.at_properties.items, {}, struct {
             fn lessThan(_: void, a: AtProperty, b: AtProperty) bool {
                 return std.mem.order(u8, a.name, b.name) == .lt;
@@ -292,19 +358,34 @@ pub const CssEmitter = struct {
         for (self.at_properties.items) |prop| {
             try self.buf.appendSlice(self.alloc, "@property ");
             try self.buf.appendSlice(self.alloc, prop.name);
-            try self.buf.appendSlice(self.alloc, "{syntax:\"");
+            try self.writeSpace();
+            try self.buf.append(self.alloc, '{');
+            self.indent += 1;
+            try self.writeNewline();
+            try self.buf.appendSlice(self.alloc, "syntax:");
+            try self.writeSpace();
+            try self.buf.appendSlice(self.alloc, "\"");
             try self.buf.appendSlice(self.alloc, prop.syntax);
-            try self.buf.appendSlice(self.alloc, "\";inherits:");
+            try self.buf.appendSlice(self.alloc, "\";");
+            try self.writeNewline();
+            try self.buf.appendSlice(self.alloc, "inherits:");
+            try self.writeSpace();
             if (prop.inherits) {
                 try self.buf.appendSlice(self.alloc, "true");
             } else {
                 try self.buf.appendSlice(self.alloc, "false");
             }
             if (prop.initial_value) |iv| {
-                try self.buf.appendSlice(self.alloc, ";initial-value:");
+                try self.buf.append(self.alloc, ';');
+                try self.writeNewline();
+                try self.buf.appendSlice(self.alloc, "initial-value:");
+                try self.writeSpace();
                 try self.buf.appendSlice(self.alloc, iv);
             }
+            self.indent -= 1;
+            try self.writeNewline();
             try self.buf.append(self.alloc, '}');
+            try self.writeNewline();
         }
     }
 
@@ -318,9 +399,11 @@ pub const CssEmitter = struct {
         for (self.keyframes.items) |kf| {
             try self.buf.appendSlice(self.alloc, "@keyframes ");
             try self.buf.appendSlice(self.alloc, kf.name);
+            try self.writeSpace();
             try self.buf.append(self.alloc, '{');
             try self.buf.appendSlice(self.alloc, kf.body);
             try self.buf.append(self.alloc, '}');
+            try self.writeNewline();
         }
     }
 
@@ -328,75 +411,64 @@ pub const CssEmitter = struct {
     fn emitUtilitiesLayer(self: *CssEmitter, rules: []const Rule) !void {
         if (rules.len == 0) return;
 
-        try self.buf.appendSlice(self.alloc,"@layer utilities{");
+        try self.buf.appendSlice(self.alloc, "@layer utilities");
+        try self.writeSpace();
+        try self.buf.append(self.alloc, '{');
+        self.indent += 1;
         for (rules) |rule| {
-            try self.emitRule(&rule, false);
+            try self.emitRule(&rule);
         }
-        try self.buf.append(self.alloc,'}');
+        self.indent -= 1;
+        try self.writeNewline();
+        try self.buf.append(self.alloc, '}');
+        try self.writeNewline();
     }
 
-    /// Emit a single CSS rule (minified).
-    fn emitRule(self: *CssEmitter, rule: *const Rule, nested: bool) !void {
-        _ = nested;
+    /// Emit a single CSS rule.
+    fn emitRule(self: *CssEmitter, rule: *const Rule) !void {
         switch (rule.kind) {
             .style => {
                 if (rule.selector) |sel| {
-                    try self.buf.appendSlice(self.alloc,sel);
-                    try self.buf.append(self.alloc,'{');
+                    try self.writeNewline();
+                    try self.buf.appendSlice(self.alloc, sel);
+                    try self.writeSpace();
+                    try self.buf.append(self.alloc, '{');
+                    self.indent += 1;
                     try self.emitDeclarations(rule.declarations);
-                    // Emit child rules
                     for (rule.children) |child| {
-                        try self.emitRule(&child, true);
+                        try self.emitRule(&child);
                     }
-                    try self.buf.append(self.alloc,'}');
+                    self.indent -= 1;
+                    try self.writeNewline();
+                    try self.buf.append(self.alloc, '}');
                 }
             },
-            .media => {
-                if (rule.at_rule) |at| {
-                    try self.buf.appendSlice(self.alloc,at);
-                    try self.buf.append(self.alloc,'{');
-                    for (rule.children) |child| {
-                        try self.emitRule(&child, true);
-                    }
-                    try self.buf.append(self.alloc,'}');
+            .media, .container, .supports, .layer => {
+                const at = rule.at_rule orelse return;
+                try self.writeNewline();
+                try self.buf.appendSlice(self.alloc, at);
+                try self.writeSpace();
+                try self.buf.append(self.alloc, '{');
+                self.indent += 1;
+                for (rule.children) |child| {
+                    try self.emitRule(&child);
                 }
-            },
-            .container => {
-                if (rule.at_rule) |at| {
-                    try self.buf.appendSlice(self.alloc,at);
-                    try self.buf.append(self.alloc,'{');
-                    for (rule.children) |child| {
-                        try self.emitRule(&child, true);
-                    }
-                    try self.buf.append(self.alloc,'}');
-                }
-            },
-            .supports => {
-                if (rule.at_rule) |at| {
-                    try self.buf.appendSlice(self.alloc,at);
-                    try self.buf.append(self.alloc,'{');
-                    for (rule.children) |child| {
-                        try self.emitRule(&child, true);
-                    }
-                    try self.buf.append(self.alloc,'}');
-                }
+                self.indent -= 1;
+                try self.writeNewline();
+                try self.buf.append(self.alloc, '}');
             },
             .at_starting_style => {
-                try self.buf.appendSlice(self.alloc,"@starting-style{");
+                try self.writeNewline();
+                try self.buf.appendSlice(self.alloc, "@starting-style");
+                try self.writeSpace();
+                try self.buf.append(self.alloc, '{');
+                self.indent += 1;
                 for (rule.children) |child| {
-                    try self.emitRule(&child, true);
+                    try self.emitRule(&child);
                 }
-                try self.buf.append(self.alloc,'}');
-            },
-            .layer => {
-                if (rule.at_rule) |at| {
-                    try self.buf.appendSlice(self.alloc,at);
-                    try self.buf.append(self.alloc,'{');
-                    for (rule.children) |child| {
-                        try self.emitRule(&child, true);
-                    }
-                    try self.buf.append(self.alloc,'}');
-                }
+                self.indent -= 1;
+                try self.writeNewline();
+                try self.buf.append(self.alloc, '}');
             },
             .at_property => {
                 // @property rules are emitted separately via emitAtProperties
@@ -404,23 +476,35 @@ pub const CssEmitter = struct {
         }
     }
 
-    /// Emit declarations (minified, no trailing semicolons for single-decl rules).
+    /// Emit declarations for a rule block.
     fn emitDeclarations(self: *CssEmitter, decls: []const Declaration) !void {
-        // Pre-calculate total size needed
-        var total: usize = 0;
-        for (decls, 0..) |decl, i| {
-            if (i > 0) total += 1; // semicolon
-            total += decl.property.len + 1 + decl.value.len; // prop:value
-            if (decl.important) total += 10; // !important
-        }
-        try self.buf.ensureUnusedCapacity(self.alloc, total);
+        if (self.minify) {
+            // Minified: no whitespace
+            var total: usize = 0;
+            for (decls, 0..) |decl, i| {
+                if (i > 0) total += 1;
+                total += decl.property.len + 1 + decl.value.len;
+                if (decl.important) total += 10;
+            }
+            try self.buf.ensureUnusedCapacity(self.alloc, total);
 
-        for (decls, 0..) |decl, i| {
-            if (i > 0) self.buf.appendAssumeCapacity(';');
-            self.buf.appendSliceAssumeCapacity(decl.property);
-            self.buf.appendAssumeCapacity(':');
-            self.buf.appendSliceAssumeCapacity(decl.value);
-            if (decl.important) self.buf.appendSliceAssumeCapacity("!important");
+            for (decls, 0..) |decl, i| {
+                if (i > 0) self.buf.appendAssumeCapacity(';');
+                self.buf.appendSliceAssumeCapacity(decl.property);
+                self.buf.appendAssumeCapacity(':');
+                self.buf.appendSliceAssumeCapacity(decl.value);
+                if (decl.important) self.buf.appendSliceAssumeCapacity("!important");
+            }
+        } else {
+            // Pretty: one declaration per line with indentation
+            for (decls) |decl| {
+                try self.writeNewline();
+                try self.buf.appendSlice(self.alloc, decl.property);
+                try self.buf.appendSlice(self.alloc, ": ");
+                try self.buf.appendSlice(self.alloc, decl.value);
+                if (decl.important) try self.buf.appendSlice(self.alloc, " !important");
+                try self.buf.append(self.alloc, ';');
+            }
         }
     }
 

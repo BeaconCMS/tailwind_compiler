@@ -11,6 +11,12 @@ benchmark/package-lock.json
 # Research artifacts
 research/
 
+# Precompiled NIF binaries
+priv/
+
+# WASM build artifact in demo (rebuilt by CI)
+wasm-demo/tailwind_compiler.wasm
+
 # Elixir
 _build/
 deps/
