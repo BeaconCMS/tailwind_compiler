@@ -4,7 +4,7 @@ defmodule TailwindCompiler.MixProject do
   def project do
     [
       app: :tailwind_compiler,
-      version: "0.0.5",
+      version: "0.0.6",
       elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
       compilers: Mix.compilers(),

@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.0.6] - 2026-04-15
+
+### Added
+
+- `plugin_css` option for importing Tailwind plugin CSS (e.g., DaisyUI, @tailwindcss/forms). Parses `--color-*` variable definitions from `:root` and `[data-theme]` blocks, registers them as theme colors for utility generation (`bg-*`, `text-*`, `border-*`), and includes all plugin CSS in output.
+
 ## [0.0.5] - 2026-04-11
 
 ### Added
@@ -39,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - JSON theme overrides, custom CSS passthrough, preflight toggle
 - Arena allocator for efficient memory management
 
+[0.0.6]: https://github.com/beaconcms/tailwind_compiler/releases/tag/v0.0.6
 [0.0.5]: https://github.com/beaconcms/tailwind_compiler/releases/tag/v0.0.5
 [0.0.4]: https://github.com/beaconcms/tailwind_compiler/releases/tag/v0.0.4
 [0.0.3]: https://github.com/beaconcms/tailwind_compiler/releases/tag/v0.0.3

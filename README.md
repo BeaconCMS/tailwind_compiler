@@ -20,7 +20,7 @@ Add to your `mix.exs`:
 
 ```elixir
 def deps do
-  [{:tailwind_compiler, "~> 0.0.5"}]
+  [{:tailwind_compiler, "~> 0.0.6"}]
 end
 ```
 
@@ -62,6 +62,10 @@ TailwindCompiler.compile(["text-brand", "p-4"],
 TailwindCompiler.compile(["flex"],
   custom_css: ".custom-btn{background:blue;padding:1rem}")
 
+# With plugin CSS (e.g., DaisyUI — extracts color variables and includes plugin CSS)
+TailwindCompiler.compile(["bg-primary", "btn"],
+  plugin_css: File.read!("path/to/daisyui.css"))
+
 # Bang variant (raises on error)
 css = TailwindCompiler.compile!(["flex", "p-4"])
 ```
@@ -74,7 +78,7 @@ The NIF runs on a dirty CPU scheduler. For a typical site (~3,000 candidates), e
 const tailwind = @import("tailwind_compiler");
 
 const candidates = [_][]const u8{ "flex", "p-4", "hover:bg-blue-500/50", "sm:text-lg" };
-const css = try tailwind.compile(allocator, &candidates, null, false, null);
+const css = try tailwind.compile(allocator, &candidates, null, false, null, null, null);
 ```
 
 ### Zig API
@@ -82,10 +86,12 @@ const css = try tailwind.compile(allocator, &candidates, null, false, null);
 ```zig
 pub fn compile(
     alloc: std.mem.Allocator,
-    candidates: []const []const u8,  // Tailwind class names
-    theme_json: ?[]const u8,         // Optional JSON theme overrides
-    include_preflight: bool,         // Include base CSS reset
-    custom_css: ?[]const u8,         // Optional raw CSS to append (plugins, user stylesheets)
+    candidates: []const []const u8,     // Tailwind class names
+    theme_json: ?[]const u8,            // Optional JSON theme overrides
+    include_preflight: bool,            // Include base CSS reset
+    custom_css: ?[]const u8,            // Optional raw CSS to append
+    custom_utilities_json: ?[]const u8, // Optional JSON mapping class names to CSS declarations
+    plugin_css: ?[]const u8,            // Optional plugin CSS (e.g., DaisyUI output)
 ) ![]const u8
 ```
 
