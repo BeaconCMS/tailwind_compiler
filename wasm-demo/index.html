@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tailwind Compiler — WASM Playground</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f172a;--surface:#1e293b;--border:#334155;--text:#e2e8f0;--dim:#94a3b8;--accent:#8b5cf6;--mono:'SF Mono','Fira Code','Cascadia Code','Consolas',monospace}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+header h1{font-size:14px;font-weight:600}
+header h1 span{color:var(--accent)}
+.toolbar{display:flex;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+.examples{display:flex;gap:4px}
+.examples button{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--dim);font-size:12px;cursor:pointer;transition:all .15s}
+.examples button:hover{border-color:var(--accent);color:var(--text)}
+.examples button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.controls{display:flex;align-items:center;gap:12px;margin-left:auto}
+.controls label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);cursor:pointer;user-select:none}
+.controls input[type=checkbox]{accent-color:var(--accent)}
+.panels{display:flex;flex:1;min-height:0}
+.panel{display:flex;flex-direction:column;flex:1;min-width:0;border-right:1px solid var(--border)}
+.panel:last-child{border-right:none}
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
+.panel-stats{font-size:11px;font-weight:400;text-transform:none;letter-spacing:normal;font-variant-numeric:tabular-nums;display:flex;gap:10px}
+.panel-stats .time{color:#34d399;font-weight:600}
+.panel-stats .size{color:var(--dim)}
+#preview{flex:1;border:none;background:#fff}
+#error{display:none;padding:12px 16px;background:#451a1a;color:#fca5a5;font-size:13px;border-bottom:1px solid #7f1d1d;flex-shrink:0}
+
+/* Editor overlay */
+.editor-wrap{position:relative;flex:1;min-height:0;overflow:hidden}
+.editor-wrap textarea,.editor-wrap pre{position:absolute;top:0;left:0;right:0;bottom:0;font-family:var(--mono);font-size:13px;line-height:1.6;padding:12px;margin:0;border:none;white-space:pre;overflow:auto;tab-size:2;word-wrap:normal}
+.editor-wrap textarea{color:transparent;caret-color:#e2e8f0;-webkit-text-fill-color:transparent;background:transparent;z-index:2;resize:none;outline:none}
+.editor-wrap pre{z-index:1;pointer-events:none;background:transparent;color:var(--text)}
+
+/* CSS output (read-only, no overlay needed) */
+.css-wrap{flex:1;min-height:0;overflow:auto;padding:12px;font-family:var(--mono);font-size:12px;line-height:1.6;white-space:pre;word-wrap:normal;color:var(--text)}
+
+/* Syntax highlighting colors */
+.hl-punct{color:#6272a4}
+.hl-tag{color:#ff79c6}
+.hl-attr{color:#50fa7b}
+.hl-str{color:#f1fa8c}
+.hl-at{color:#ff79c6}
+.hl-sel{color:#8be9fd}
+.hl-prop{color:#50fa7b}
+.hl-val{color:#f8f8f2}
+.hl-brace{color:#6272a4}
+.hl-num{color:#bd93f9}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Tailwind <span>Compiler</span> &mdash; WASM Playground</h1>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div id="status" style="font-size:12px;color:var(--dim)">Loading WASM&hellip;</div>
+    <a href="https://github.com/BeaconCMS/tailwind_compiler" target="_blank" rel="noopener" title="View on GitHub" style="color:var(--dim);display:flex;transition:color .15s"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+  </div>
+</header>
+<div id="error"></div>
+<div class="toolbar">
+  <div class="examples">
+    <button class="active" data-example="card">Card</button>
+    <button data-example="hero">Hero</button>
+    <button data-example="dashboard">Dashboard</button>
+    <button data-example="form">Form</button>
+  </div>
+  <div class="controls">
+    <label><input type="checkbox" id="preflight" checked> Preflight</label>
+    <label><input type="checkbox" id="minify"> Minify</label>
+  </div>
+</div>
+<div class="panels">
+  <div class="panel">
+    <div class="panel-header">HTML</div>
+    <div class="editor-wrap">
+      <pre aria-hidden="true"><code id="html-hl"></code></pre>
+      <textarea id="html-input" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header">Generated CSS <span class="panel-stats" id="css-stats"></span></div>
+    <div class="css-wrap"><code id="css-output"></code></div>
+  </div>
+  <div class="panel">
+    <div class="panel-header">Preview</div>
+    <iframe id="preview"></iframe>
+  </div>
+</div>
+
+<script>
+const EXAMPLES = {
+  card: `<div class="min-h-screen bg-gray-100 flex items-center justify-center p-8">
+  <div class="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
+    <div class="h-48 bg-gradient-to-br from-violet-500 to-purple-600"></div>
+    <div class="p-8">
+      <h2 class="text-2xl font-bold text-gray-900">Beautiful Card</h2>
+      <p class="mt-3 text-gray-600 leading-relaxed">
+        Built with Tailwind CSS, compiled to real CSS entirely
+        in your browser using WebAssembly. No server needed.
+      </p>
+      <div class="mt-6 flex gap-3">
+        <button class="flex-1 px-4 py-2.5 bg-violet-600 text-white font-medium rounded-lg hover:bg-violet-700 transition-colors">
+          Get Started
+        </button>
+        <button class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">
+          Learn More
+        </button>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+  hero: `<section class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center px-6">
+  <div class="text-center max-w-4xl">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-purple-500/10 border border-purple-500/20 rounded-full mb-8">
+      <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+      <span class="text-sm text-purple-300">Compiled in WebAssembly</span>
+    </div>
+    <h1 class="text-6xl font-extrabold text-white leading-tight">
+      Tailwind CSS<br>
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+        In Your Browser
+      </span>
+    </h1>
+    <p class="mt-6 text-xl text-gray-400 max-w-2xl mx-auto">
+      Zero server round-trips. Real-time compilation. The full Tailwind CSS v4
+      engine running as a WebAssembly module.
+    </p>
+    <div class="mt-10 flex flex-wrap justify-center gap-4">
+      <a class="px-8 py-3.5 bg-white text-gray-900 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+        Try the Playground
+      </a>
+      <a class="px-8 py-3.5 border border-white/20 text-white font-semibold rounded-xl hover:bg-white/5 transition-colors cursor-pointer">
+        View on GitHub
+      </a>
+    </div>
+  </div>
+</section>`,
+
+  dashboard: `<div class="min-h-screen bg-gray-50 p-8">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+    <p class="mt-1 text-gray-500">Welcome back. Here's what's happening.</p>
+    <div class="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <p class="text-sm font-medium text-gray-500">Revenue</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">$45,231</p>
+        <p class="mt-2 text-sm text-emerald-600 font-medium">&uarr; 20.1%</p>
+      </div>
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <p class="text-sm font-medium text-gray-500">Users</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">2,338</p>
+        <p class="mt-2 text-sm text-emerald-600 font-medium">&uarr; 12.5%</p>
+      </div>
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <p class="text-sm font-medium text-gray-500">Orders</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">1,429</p>
+        <p class="mt-2 text-sm text-red-500 font-medium">&darr; 3.2%</p>
+      </div>
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <p class="text-sm font-medium text-gray-500">Conversion</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">3.6%</p>
+        <p class="mt-2 text-sm text-emerald-600 font-medium">&uarr; 0.8%</p>
+      </div>
+    </div>
+    <div class="mt-8 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100">
+        <h2 class="font-semibold text-gray-900">Recent Orders</h2>
+      </div>
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-gray-500 text-left">
+          <tr>
+            <th class="px-6 py-3 font-medium">Customer</th>
+            <th class="px-6 py-3 font-medium">Amount</th>
+            <th class="px-6 py-3 font-medium">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr>
+            <td class="px-6 py-4 text-gray-900">Alice Johnson</td>
+            <td class="px-6 py-4 text-gray-600">$250.00</td>
+            <td class="px-6 py-4"><span class="px-2.5 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-full">Completed</span></td>
+          </tr>
+          <tr>
+            <td class="px-6 py-4 text-gray-900">Bob Smith</td>
+            <td class="px-6 py-4 text-gray-600">$1,200.00</td>
+            <td class="px-6 py-4"><span class="px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 rounded-full">Pending</span></td>
+          </tr>
+          <tr>
+            <td class="px-6 py-4 text-gray-900">Carol Williams</td>
+            <td class="px-6 py-4 text-gray-600">$89.99</td>
+            <td class="px-6 py-4"><span class="px-2.5 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-full">Completed</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`,
+
+  form: `<div class="min-h-screen bg-gray-100 flex items-center justify-center p-8">
+  <div class="w-full max-w-sm">
+    <div class="bg-white rounded-2xl shadow-lg p-8">
+      <h2 class="text-2xl font-bold text-gray-900 text-center">Sign In</h2>
+      <p class="mt-2 text-sm text-gray-500 text-center">
+        Welcome back! Please enter your details.
+      </p>
+      <form class="mt-8 space-y-5">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Email</label>
+          <input type="email" placeholder="Enter your email"
+            class="mt-1 w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-shadow">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Password</label>
+          <input type="password" placeholder="Enter your password"
+            class="mt-1 w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-shadow">
+        </div>
+        <div class="flex items-center justify-between">
+          <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input type="checkbox" class="w-4 h-4 rounded border-gray-300 text-violet-600 accent-violet-600">
+            Remember me
+          </label>
+          <a class="text-sm text-violet-600 font-medium hover:text-violet-500 cursor-pointer">
+            Forgot password?
+          </a>
+        </div>
+        <button type="button"
+          class="w-full py-2.5 bg-violet-600 text-white font-medium rounded-lg hover:bg-violet-700 transition-colors">
+          Sign In
+        </button>
+        <p class="text-center text-sm text-gray-500">
+          Don't have an account?
+          <a class="text-violet-600 font-medium hover:text-violet-500 cursor-pointer">Sign up</a>
+        </p>
+      </form>
+    </div>
+  </div>
+</div>`
+};
+
+// ── Syntax Highlighting ────────────────────────────────────
+
+function esc(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function highlightHTML(src) {
+  // Escape first, then match on escaped entities
+  let html = esc(src);
+  // Match tags: &lt; ... &gt;
+  html = html.replace(/&lt;(\/?)([\w-]+)([\s\S]*?)(\/?)\s*&gt;/g, (_, slash, tag, attrs, selfClose) => {
+    let r = `<span class="hl-punct">&lt;${slash}</span><span class="hl-tag">${tag}</span>`;
+    // Highlight attributes within the rest
+    r += attrs.replace(/([\w@:.-]+)(\s*=\s*)"([^"]*)"/g,
+      '<span class="hl-attr">$1</span><span class="hl-punct">$2</span><span class="hl-str">"$3"</span>');
+    r += `<span class="hl-punct">${selfClose}&gt;</span>`;
+    return r;
+  });
+  return html;
+}
+
+function highlightCSSPretty(src) {
+  return src.split('\n').map(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return '';
+    const indent = esc(line.slice(0, line.length - line.trimStart().length));
+
+    // Closing brace
+    if (trimmed === '}') return indent + '<span class="hl-brace">}</span>';
+
+    // At-rule opening: @keyword ... {
+    if (trimmed.startsWith('@') && trimmed.endsWith('{')) {
+      const m = trimmed.match(/^(@[\w-]+)(\s.*?)?\s*(\{)$/);
+      if (m) return indent
+        + `<span class="hl-at">${esc(m[1])}</span>`
+        + (m[2] ? esc(m[2]) : '')
+        + ` <span class="hl-brace">{</span>`;
+    }
+
+    // Selector opening: ... {
+    if (trimmed.endsWith('{')) {
+      const sel = trimmed.slice(0, -1).trim();
+      return indent + `<span class="hl-sel">${esc(sel)}</span> <span class="hl-brace">{</span>`;
+    }
+
+    // Declaration: property: value;
+    const colon = trimmed.indexOf(':');
+    if (colon > 0) {
+      const prop = trimmed.slice(0, colon);
+      const rest = trimmed.slice(colon + 1);
+      const hasSemi = rest.endsWith(';');
+      const val = (hasSemi ? rest.slice(0, -1) : rest).trim();
+      return indent
+        + `<span class="hl-prop">${esc(prop)}</span>`
+        + `<span class="hl-brace">:</span> `
+        + `<span class="hl-val">${highlightCSSValue(val)}</span>`
+        + (hasSemi ? '<span class="hl-brace">;</span>' : '');
+    }
+
+    return indent + esc(trimmed);
+  }).join('\n');
+}
+
+function highlightCSSMinified(src) {
+  let html = esc(src);
+  html = html.replace(/@[\w-]+/g, '<span class="hl-at">$&</span>');
+  html = html.replace(/[{}]/g, '<span class="hl-brace">$&</span>');
+  html = html.replace(/;/g, '<span class="hl-brace">;</span>');
+  return html;
+}
+
+function highlightCSSValue(val) {
+  let v = esc(val);
+  v = v.replace(/"[^"]*"/g, '<span class="hl-str">$&</span>');
+  v = v.replace(/\b(\d+\.?\d*)(px|rem|em|%|vh|vw|deg|s|ms|lh)?\b/g, '<span class="hl-num">$&</span>');
+  return v;
+}
+
+// ── WASM interface ──────────────────────────────────────────
+
+let wasm = null;
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
+function writeStr(s) {
+  const bytes = encoder.encode(s);
+  const ptr = wasm.alloc(bytes.length);
+  if (!ptr) throw new Error('WASM alloc failed');
+  new Uint8Array(wasm.memory.buffer, ptr, bytes.length).set(bytes);
+  return [ptr, bytes.length];
+}
+
+function readStr(ptr, len) {
+  return decoder.decode(new Uint8Array(wasm.memory.buffer, ptr, len));
+}
+
+function extractCandidates(html) {
+  const classes = new Set();
+  const re = /class\s*=\s*["']([^"']*)["']/gi;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    for (const cls of m[1].split(/\s+/)) {
+      if (cls) classes.add(cls);
+    }
+  }
+  return [...classes];
+}
+
+function compileTailwind(html, preflight, minify) {
+  const candidates = extractCandidates(html);
+  if (!candidates.length) return '';
+
+  const cand = writeStr(candidates.join('\n'));
+
+  const result = wasm.compile(
+    cand[0], cand[1],
+    0, 0,
+    preflight ? 1 : 0,
+    minify ? 1 : 0,
+    0, 0,
+    0, 0,
+    0, 0
+  );
+
+  wasm.free(cand[0], cand[1]);
+
+  if (result === 0n) return '';
+
+  const ptr = Number(result >> 32n);
+  const len = Number(result & 0xFFFFFFFFn);
+  const css = readStr(ptr, len);
+  wasm.free(ptr, len);
+  return css;
+}
+
+// ── UI ──────────────────────────────────────────────────────
+
+const htmlInput   = document.getElementById('html-input');
+const htmlHl      = document.getElementById('html-hl');
+const cssOutput   = document.getElementById('css-output');
+const cssWrap     = cssOutput.parentElement;
+const preview     = document.getElementById('preview');
+const statusEl    = document.getElementById('status');
+const cssStatsEl  = document.getElementById('css-stats');
+const errorEl     = document.getElementById('error');
+const preflightCb = document.getElementById('preflight');
+const minifyCb    = document.getElementById('minify');
+
+function showError(msg) {
+  errorEl.style.display = 'block';
+  errorEl.textContent = msg;
+}
+
+function updateHTMLHighlight() {
+  htmlHl.innerHTML = highlightHTML(htmlInput.value) + '\n';
+}
+
+function doCompile() {
+  if (!wasm) return;
+  const html = htmlInput.value;
+  const minify = minifyCb.checked;
+
+  const t0 = performance.now();
+  let css;
+  try {
+    css = compileTailwind(html, preflightCb.checked, minify);
+  } catch (e) {
+    showError('Compilation error: ' + e.message);
+    return;
+  }
+  const ms = (performance.now() - t0).toFixed(1);
+  const kb = (encoder.encode(css).length / 1024).toFixed(1);
+
+  errorEl.style.display = 'none';
+  cssOutput.innerHTML = minify ? highlightCSSMinified(css) : highlightCSSPretty(css);
+  cssStatsEl.innerHTML = `<span class="time">${ms} ms</span> <span class="size">${kb} KB</span>`;
+
+  preview.srcdoc = '<!DOCTYPE html><html><head><style>' + css + '</style></head>'
+    + '<body style="margin:0;font-family:system-ui,-apple-system,sans-serif">'
+    + html + '</body></html>';
+}
+
+let timer;
+function scheduleCompile() {
+  clearTimeout(timer);
+  timer = setTimeout(doCompile, 150);
+}
+
+// Sync highlight layer with textarea input
+htmlInput.addEventListener('input', () => {
+  updateHTMLHighlight();
+  scheduleCompile();
+});
+
+// Sync scroll positions
+htmlInput.addEventListener('scroll', () => {
+  const pre = htmlInput.previousElementSibling;
+  pre.scrollTop = htmlInput.scrollTop;
+  pre.scrollLeft = htmlInput.scrollLeft;
+});
+
+preflightCb.addEventListener('change', doCompile);
+minifyCb.addEventListener('change', doCompile);
+
+// Tab key inserts spaces
+htmlInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const start = htmlInput.selectionStart;
+    const end = htmlInput.selectionEnd;
+    htmlInput.value = htmlInput.value.substring(0, start) + '  ' + htmlInput.value.substring(end);
+    htmlInput.selectionStart = htmlInput.selectionEnd = start + 2;
+    updateHTMLHighlight();
+    scheduleCompile();
+  }
+});
+
+// Example buttons
+for (const btn of document.querySelectorAll('[data-example]')) {
+  btn.addEventListener('click', () => {
+    document.querySelector('.examples .active')?.classList.remove('active');
+    btn.classList.add('active');
+    htmlInput.value = EXAMPLES[btn.dataset.example];
+    updateHTMLHighlight();
+    doCompile();
+  });
+}
+
+// ── Load WASM ───────────────────────────────────────────────
+
+async function init() {
+  const paths = [
+    'tailwind_compiler.wasm',
+    '../zig-out/bin/tailwind_compiler.wasm',
+  ];
+
+  let instance;
+  for (const path of paths) {
+    try {
+      const resp = await fetch(path);
+      if (!resp.ok) continue;
+      const result = await WebAssembly.instantiateStreaming(resp, {});
+      instance = result.instance;
+      break;
+    } catch {
+      try {
+        const resp = await fetch(path);
+        if (!resp.ok) continue;
+        const buf = await resp.arrayBuffer();
+        const result = await WebAssembly.instantiate(buf, {});
+        instance = result.instance;
+        break;
+      } catch { /* try next path */ }
+    }
+  }
+
+  if (!instance) {
+    showError('Could not load tailwind_compiler.wasm. Serve this directory with a web server and ensure the WASM file is accessible.');
+    statusEl.textContent = 'WASM load failed';
+    return;
+  }
+
+  wasm = instance.exports;
+  statusEl.textContent = 'Ready';
+
+  htmlInput.value = EXAMPLES.card;
+  updateHTMLHighlight();
+  doCompile();
+}
+
+init();
+</script>
+</body>
+</html>
