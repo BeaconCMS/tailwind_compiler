@@ -30,8 +30,9 @@ pub const Context = struct {
     custom_utility_map: std.StringHashMap([]const u8),
     at_properties: std.ArrayList(emitter_mod.AtProperty),
     keyframes: std.ArrayList(emitter_mod.Keyframes),
+    plugin_css: ?[]const u8,
 
-    pub fn init(alloc: Allocator, include_preflight: bool, custom_css: ?[]const u8, custom_utilities_json: ?[]const u8) Context {
+    pub fn init(alloc: Allocator, include_preflight: bool, custom_css: ?[]const u8, custom_utilities_json: ?[]const u8, plugin_css: ?[]const u8) Context {
         return Context{
             .alloc = alloc,
             .theme = Theme.init(alloc),
@@ -43,6 +44,7 @@ pub const Context = struct {
             .custom_utility_map = std.StringHashMap([]const u8).init(alloc),
             .at_properties = .empty,
             .keyframes = .empty,
+            .plugin_css = plugin_css,
         };
     }
 
@@ -64,6 +66,125 @@ pub const Context = struct {
                 const css = try self.alloc.dupe(u8, entry.value_ptr.*.string);
                 try self.custom_utility_map.put(name, css);
             }
+        }
+    }
+
+    /// Parse plugin CSS to extract theme color variables and component CSS.
+    /// Scans for :root, [data-theme=...] blocks containing --color-* declarations,
+    /// registers them as theme colors (so bg-*, text-*, border-* etc. work),
+    /// and passes through all CSS (including component classes) as custom_css.
+    pub fn loadPluginCss(self: *Context) !void {
+        const css = self.plugin_css orelse return;
+        if (css.len == 0) return;
+
+        // Parse CSS variable definitions from :root and [data-theme] blocks
+        // and register --color-* variables as theme colors
+        try self.extractPluginThemeColors(css);
+
+        // Append plugin CSS (component classes, theme variable blocks, etc.)
+        // after any existing custom_css, minifying whitespace
+        const minified = try minifyCss(self.alloc, css);
+        if (self.custom_css) |existing| {
+            self.custom_css = try std.fmt.allocPrint(self.alloc, "{s}{s}", .{ existing, minified });
+        } else {
+            self.custom_css = minified;
+        }
+    }
+
+    /// Extract --color-* variable definitions from CSS blocks like :root { } and
+    /// [data-theme="..."] { }, and register them into the theme so utilities like
+    /// bg-primary, text-secondary, etc. are generated.
+    fn extractPluginThemeColors(self: *Context, css: []const u8) !void {
+        var pos: usize = 0;
+
+        while (pos < css.len) {
+            // Skip whitespace
+            while (pos < css.len and isWhitespace(css[pos])) pos += 1;
+            if (pos >= css.len) break;
+
+            // Skip CSS comments
+            if (pos + 1 < css.len and css[pos] == '/' and css[pos + 1] == '*') {
+                pos += 2;
+                while (pos + 1 < css.len) {
+                    if (css[pos] == '*' and css[pos + 1] == '/') {
+                        pos += 2;
+                        break;
+                    }
+                    pos += 1;
+                }
+                continue;
+            }
+
+            // Look for a block: find the next '{'
+            const block_start = std.mem.indexOfScalarPos(u8, css, pos, '{') orelse break;
+            const selector = std.mem.trim(u8, css[pos..block_start], " \t\n\r");
+
+            // Find matching closing brace (handle nesting)
+            const body_start = block_start + 1;
+            var depth: usize = 1;
+            var body_end: usize = body_start;
+            while (body_end < css.len and depth > 0) {
+                if (css[body_end] == '{') depth += 1;
+                if (css[body_end] == '}') depth -= 1;
+                if (depth > 0) body_end += 1;
+            }
+
+            const body = css[body_start..body_end];
+
+            // Check if this is a :root or [data-theme] block
+            if (std.mem.eql(u8, selector, ":root") or
+                std.mem.startsWith(u8, selector, "[data-theme"))
+            {
+                // Parse CSS declarations within this block for --color-* variables
+                try self.parseColorVariables(body);
+            }
+
+            // Move past the closing brace
+            pos = if (body_end < css.len) body_end + 1 else css.len;
+        }
+    }
+
+    /// Parse CSS declarations within a block body to find --color-* variable definitions.
+    /// E.g., "--color-primary: oklch(62.3% 0.214 259.815);" → registers as theme color.
+    fn parseColorVariables(self: *Context, body: []const u8) !void {
+        var pos: usize = 0;
+
+        while (pos < body.len) {
+            // Skip whitespace
+            while (pos < body.len and isWhitespace(body[pos])) pos += 1;
+            if (pos >= body.len) break;
+
+            // Skip comments
+            if (pos + 1 < body.len and body[pos] == '/' and body[pos + 1] == '*') {
+                pos += 2;
+                while (pos + 1 < body.len) {
+                    if (body[pos] == '*' and body[pos + 1] == '/') {
+                        pos += 2;
+                        break;
+                    }
+                    pos += 1;
+                }
+                continue;
+            }
+
+            // Find the property name (up to ':')
+            const colon_pos = std.mem.indexOfScalarPos(u8, body, pos, ':') orelse break;
+            const property = std.mem.trim(u8, body[pos..colon_pos], " \t\n\r");
+
+            // Find the value (up to ';' or end of block)
+            const val_start = colon_pos + 1;
+            const semicolon_pos = std.mem.indexOfScalarPos(u8, body, val_start, ';') orelse body.len;
+            const value = std.mem.trim(u8, body[val_start..semicolon_pos], " \t\n\r");
+
+            // If this is a --color-* variable, register it in the theme
+            if (std.mem.startsWith(u8, property, "--color-")) {
+                const duped_name = try self.alloc.dupe(u8, property);
+                const duped_value = try self.alloc.dupe(u8, value);
+                try self.theme.variables.put(duped_name, duped_value);
+            }
+
+            // Move past the semicolon
+            pos = if (semicolon_pos < body.len) semicolon_pos + 1 else body.len;
         }
     }
 
@@ -967,6 +1088,55 @@ fn isFunctionalVariantRootWrapper(name: []const u8) bool {
     return variants_mod.isFunctionalVariantRoot(name);
 }
 
+fn isWhitespace(c: u8) bool {
+    return c == ' ' or c == '\t' or c == '\n' or c == '\r';
+}
+
+/// Minify CSS: collapse whitespace runs to single spaces, remove whitespace
+/// around braces, colons, semicolons, and strip comments.
+fn minifyCss(alloc: Allocator, css: []const u8) ![]const u8 {
+    var result: std.ArrayList(u8) = .empty;
+    try result.ensureTotalCapacity(alloc, css.len);
+    var pos: usize = 0;
+
+    while (pos < css.len) {
+        // Skip comments
+        if (pos + 1 < css.len and css[pos] == '/' and css[pos + 1] == '*') {
+            pos += 2;
+            while (pos + 1 < css.len) {
+                if (css[pos] == '*' and css[pos + 1] == '/') {
+                    pos += 2;
+                    break;
+                }
+                pos += 1;
+            }
+            continue;
+        }
+
+        // Collapse whitespace
+        if (isWhitespace(css[pos])) {
+            // Skip all whitespace
+            while (pos < css.len and isWhitespace(css[pos])) pos += 1;
+            // Only add a space if the previous and next chars aren't structural
+            if (result.items.len > 0 and pos < css.len) {
+                const prev = result.items[result.items.len - 1];
+                const next = css[pos];
+                if (prev != '{' and prev != '}' and prev != ';' and prev != ':' and
+                    next != '{' and next != '}' and next != ';' and next != ':')
+                {
+                    try result.append(alloc, ' ');
+                }
+            }
+            continue;
+        }
+
+        try result.append(alloc, css[pos]);
+        pos += 1;
+    }
+
+    return result.items;
+}
+
 // ─── Public API ────────────────────────────────────────────────────────────
 
 /// Compile a list of candidate strings into minified CSS.
@@ -977,15 +1147,17 @@ pub fn compile(
     include_preflight: bool,
     custom_css: ?[]const u8,
     custom_utilities_json: ?[]const u8,
+    plugin_css: ?[]const u8,
 ) ![]const u8 {
     var arena = std.heap.ArenaAllocator.init(alloc);
     defer arena.deinit();
     const arena_alloc = arena.allocator();
 
-    var ctx = Context.init(arena_alloc, include_preflight, custom_css, custom_utilities_json);
+    var ctx = Context.init(arena_alloc, include_preflight, custom_css, custom_utilities_json, plugin_css);
 
     try ctx.loadDefaults();
     try ctx.loadCustomUtilities();
+    try ctx.loadPluginCss();
 
     if (theme_json) |json| {
         try ctx.applyThemeJson(json);
@@ -1087,7 +1259,7 @@ test "compile: basic static utilities" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{ "flex", "block", "hidden" };
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     // Should contain the utility classes
@@ -1100,7 +1272,7 @@ test "compile: static utility with variant" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"hover:flex"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     // Should have hover media query wrapping
@@ -1113,7 +1285,7 @@ test "compile: dark mode variant" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"dark:hidden"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     try std.testing.expect(std.mem.indexOf(u8, result, "@media (prefers-color-scheme:dark)") != null);
@@ -1124,7 +1296,7 @@ test "compile: important flag" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"flex!"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     try std.testing.expect(std.mem.indexOf(u8, result, "display:flex!important") != null);
@@ -1134,7 +1306,7 @@ test "compile: arbitrary property" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"[color:red]"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     try std.testing.expect(std.mem.indexOf(u8, result, "color:red") != null);
@@ -1144,7 +1316,7 @@ test "compile: deduplication" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{ "flex", "flex", "flex" };
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     // Should only contain one .flex rule
@@ -1157,7 +1329,7 @@ test "compile: spacing utility" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"p-4"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     try std.testing.expect(std.mem.indexOf(u8, result, "padding:calc(var(--spacing) * 4)") != null);
@@ -1167,7 +1339,7 @@ test "compile: color utility" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"bg-red-500"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     try std.testing.expect(std.mem.indexOf(u8, result, "background-color:var(--color-red-500)") != null);
@@ -1177,7 +1349,7 @@ test "compile: z-index" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"z-10"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     try std.testing.expect(std.mem.indexOf(u8, result, "z-index:10") != null);
@@ -1187,7 +1359,7 @@ test "compile: arbitrary value" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"bg-[#0088cc]"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     try std.testing.expect(std.mem.indexOf(u8, result, "background-color:#0088cc") != null);
@@ -1197,7 +1369,7 @@ test "compile: selector escaping" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"hover:underline"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     try std.testing.expect(std.mem.indexOf(u8, result, ".hover\\:underline") != null);
@@ -1207,7 +1379,7 @@ test "compile: responsive variant" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"sm:flex"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     try std.testing.expect(std.mem.indexOf(u8, result, "@media (width>=40rem)") != null);
@@ -1217,7 +1389,7 @@ test "compile: theme layer emits used variables" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"bg-red-500"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     try std.testing.expect(std.mem.indexOf(u8, result, "@layer theme{:root{") != null);
@@ -1228,7 +1400,7 @@ test "compile: negative spacing" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"-mt-4"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     try std.testing.expect(std.mem.indexOf(u8, result, "margin-top:calc(var(--spacing) * -4)") != null);
@@ -1238,7 +1410,7 @@ test "compile: fraction value" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"w-1/2"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     try std.testing.expect(std.mem.indexOf(u8, result, "width:50%") != null);
@@ -1248,7 +1420,7 @@ test "compile: special spacing keywords" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"w-full"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     try std.testing.expect(std.mem.indexOf(u8, result, "width:100%") != null);
@@ -1258,7 +1430,7 @@ test "compile: data variant - basic arbitrary" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"data-[state=active]:bg-blue-500"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     // data-[state=active] should produce [data-state=active] attribute selector
@@ -1270,7 +1442,7 @@ test "compile: data variant - named" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"data-active:bg-red-500"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     try std.testing.expect(std.mem.indexOf(u8, result, "[data-active]") != null);
@@ -1280,7 +1452,7 @@ test "compile: data variant - arbitrary boolean" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"data-[disabled]:bg-gray-500"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     try std.testing.expect(std.mem.indexOf(u8, result, "[data-disabled]") != null);
@@ -1290,7 +1462,7 @@ test "compile: data variant - compound group" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"group-data-[state=open]:flex"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     // Should wrap in group ancestor selector with data attribute
@@ -1302,7 +1474,7 @@ test "compile: data variant - compound has" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"has-data-[loading]:opacity-50"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     // Should produce :has([data-loading])
@@ -1313,7 +1485,7 @@ test "compile: aria variant - compound group" {
     const alloc = std.testing.allocator;
 
     const candidates = [_][]const u8{"group-aria-checked:bg-blue-500"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
 
     // Should wrap in group ancestor selector with aria attribute
@@ -1325,7 +1497,7 @@ test "compile: custom CSS passthrough" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{"flex"};
     const custom = ".custom{color:red}";
-    const result = try compile(alloc, &candidates, null, false, custom, null);
+    const result = try compile(alloc, &candidates, null, false, custom, null, null);
     defer alloc.free(result);
     try std.testing.expect(std.mem.indexOf(u8, result, ".flex{display:flex}") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, ".custom{color:red}") != null);
@@ -1334,7 +1506,7 @@ test "compile: custom CSS passthrough" {
 test "compile: custom CSS null is no-op" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{"flex"};
-    const result = try compile(alloc, &candidates, null, false, null, null);
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
     defer alloc.free(result);
     try std.testing.expect(std.mem.indexOf(u8, result, ".flex{display:flex}") != null);
 }
@@ -1345,7 +1517,7 @@ test "compile: custom utilities via JSON" {
     const custom =
         \\{"btn-primary":"background:blue;color:white;padding:0.5rem 1rem","link-default":"color:inherit;text-decoration:underline"}
     ;
-    const result = try compile(alloc, &candidates, null, false, null, custom);
+    const result = try compile(alloc, &candidates, null, false, null, custom, null);
     defer alloc.free(result);
     try std.testing.expect(std.mem.indexOf(u8, result, ".flex{display:flex}") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, ".btn-primary{background:blue;color:white;padding:0.5rem 1rem}") != null);
@@ -1358,7 +1530,7 @@ test "compile: custom utilities with variant" {
     const custom =
         \\{"btn-primary":"background:blue;color:white"}
     ;
-    const result = try compile(alloc, &candidates, null, false, null, custom);
+    const result = try compile(alloc, &candidates, null, false, null, custom, null);
     defer alloc.free(result);
     try std.testing.expect(std.mem.indexOf(u8, result, "btn-primary") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "background:blue") != null);
@@ -1369,7 +1541,7 @@ test "compile: @apply resolves static utilities" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{"flex"};
     const custom = ".btn{@apply font-bold flex;}";
-    const result = try compile(alloc, &candidates, null, false, custom, null);
+    const result = try compile(alloc, &candidates, null, false, custom, null, null);
     defer alloc.free(result);
     // @apply should be replaced with resolved declarations
     // font-bold resolves to --tw-font-weight + font-weight using CSS var
@@ -1383,7 +1555,7 @@ test "compile: @apply resolves functional utilities" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{"flex"};
     const custom = ".btn{@apply py-4 px-8;}";
-    const result = try compile(alloc, &candidates, null, false, custom, null);
+    const result = try compile(alloc, &candidates, null, false, custom, null, null);
     defer alloc.free(result);
     try std.testing.expect(std.mem.indexOf(u8, result, "padding-block:calc(var(--spacing) * 4)") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "padding-inline:calc(var(--spacing) * 8)") != null);
@@ -1394,7 +1566,7 @@ test "compile: @apply resolves static-only utilities" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{"flex"};
     const custom = ".card{@apply flex hidden;}";
-    const result = try compile(alloc, &candidates, null, false, custom, null);
+    const result = try compile(alloc, &candidates, null, false, custom, null, null);
     defer alloc.free(result);
     // Static utilities resolve directly
     try std.testing.expect(std.mem.indexOf(u8, result, "display:flex;display:none") != null);
@@ -1405,7 +1577,7 @@ test "compile: @apply with rounded-lg" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{"flex"};
     const custom = ".card{@apply rounded-lg;}";
-    const result = try compile(alloc, &candidates, null, false, custom, null);
+    const result = try compile(alloc, &candidates, null, false, custom, null, null);
     defer alloc.free(result);
     try std.testing.expect(std.mem.indexOf(u8, result, "border-radius:var(--radius-lg)") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "@apply") == null);
@@ -1415,7 +1587,7 @@ test "compile: theme() resolves color values" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{"flex"};
     const custom = ".featured{--color-featured-bg:theme(colors.blue.900);}";
-    const result = try compile(alloc, &candidates, null, false, custom, null);
+    const result = try compile(alloc, &candidates, null, false, custom, null, null);
     defer alloc.free(result);
     // theme(colors.blue.900) should be replaced with the actual oklch value
     try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
@@ -1426,7 +1598,7 @@ test "compile: theme() resolves spacing" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{"flex"};
     const custom = ":root{--custom-spacing:theme(spacing);}";
-    const result = try compile(alloc, &candidates, null, false, custom, null);
+    const result = try compile(alloc, &candidates, null, false, custom, null, null);
     defer alloc.free(result);
     try std.testing.expect(std.mem.indexOf(u8, result, "--custom-spacing:0.25rem") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
@@ -1436,7 +1608,7 @@ test "compile: @apply and theme() combined" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{"flex"};
     const custom = ".btn{@apply font-bold;color:theme(colors.red.500);}";
-    const result = try compile(alloc, &candidates, null, false, custom, null);
+    const result = try compile(alloc, &candidates, null, false, custom, null, null);
     defer alloc.free(result);
     try std.testing.expect(std.mem.indexOf(u8, result, "font-weight:var(--font-weight-bold)") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "oklch(63.7%") != null);
@@ -1448,7 +1620,7 @@ test "compile: custom CSS without @apply or theme() passes through unchanged" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{"flex"};
     const custom = ".custom{color:red;font-size:16px}";
-    const result = try compile(alloc, &candidates, null, false, custom, null);
+    const result = try compile(alloc, &candidates, null, false, custom, null, null);
     defer alloc.free(result);
     try std.testing.expect(std.mem.indexOf(u8, result, ".custom{color:red;font-size:16px}") != null);
 }
@@ -1457,7 +1629,7 @@ test "compile: @apply skips unknown classes gracefully" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{"flex"};
     const custom = ".btn{@apply font-bold not-a-real-class flex;}";
-    const result = try compile(alloc, &candidates, null, false, custom, null);
+    const result = try compile(alloc, &candidates, null, false, custom, null, null);
     defer alloc.free(result);
     // Known classes should still resolve
     try std.testing.expect(std.mem.indexOf(u8, result, "font-weight:var(--font-weight-bold)") != null);
@@ -1469,7 +1641,7 @@ test "compile: theme() with unresolved path keeps original" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{"flex"};
     const custom = ".x{color:theme(nonexistent.path);}";
-    const result = try compile(alloc, &candidates, null, false, custom, null);
+    const result = try compile(alloc, &candidates, null, false, custom, null, null);
     defer alloc.free(result);
     // Unresolved theme() should be kept as-is
     try std.testing.expect(std.mem.indexOf(u8, result, "theme(nonexistent.path)") != null);

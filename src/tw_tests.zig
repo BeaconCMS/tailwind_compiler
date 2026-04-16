@@ -8,7 +8,7 @@ const std = @import("std");
 const compiler = @import("compiler.zig");
 
 fn compile(alloc: std.mem.Allocator, candidates: []const []const u8) ![]const u8 {
-    return compiler.compile(alloc, candidates, null, false, null, null);
+    return compiler.compile(alloc, candidates, null, false, null, null, null);
 }
 
 test "tw: sr-only" {
@@ -2530,7 +2530,7 @@ test "tw: custom utilities  referencing custom utilities in custom uti" {
     const custom_utils =
         \\{"bar":"color:red"}
     ;
-    const result = try compiler.compile(alloc, &candidates, null, false, null, custom_utils);
+    const result = try compiler.compile(alloc, &candidates, null, false, null, custom_utils, null);
     defer alloc.free(result);
 
     try std.testing.expect(std.mem.indexOf(u8, result, "bar") != null);

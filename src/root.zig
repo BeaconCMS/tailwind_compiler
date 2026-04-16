@@ -20,6 +20,9 @@ pub const color = @import("color.zig");
 /// - `include_preflight`: Whether to include the base CSS reset
 /// - `custom_css`: Optional raw CSS to append after @layer utilities
 /// - `custom_utilities_json`: Optional JSON object mapping class names to CSS declarations
+/// - `plugin_css`: Optional CSS output from a Tailwind plugin (e.g., DaisyUI).
+///   Color variables (--color-*) are extracted and registered as theme colors,
+///   and all CSS (components, theme blocks) is included in the output.
 ///
 /// Returns minified CSS string. Caller owns the returned memory.
 pub fn compile(
@@ -29,8 +32,9 @@ pub fn compile(
     include_preflight: bool,
     custom_css: ?[]const u8,
     custom_utilities_json: ?[]const u8,
+    plugin_css: ?[]const u8,
 ) ![]const u8 {
-    return compiler.compile(alloc, candidates, theme_json, include_preflight, custom_css, custom_utilities_json);
+    return compiler.compile(alloc, candidates, theme_json, include_preflight, custom_css, custom_utilities_json, plugin_css);
 }
 
 pub const tw_tests = @import("tw_tests.zig");

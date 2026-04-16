@@ -1,0 +1,44 @@
+/* Sample Tailwind plugin CSS output */
+/* This represents the CSS a plugin like DaisyUI would produce */
+
+:root {
+  --color-primary: oklch(62.3% 0.214 259.815);
+  --color-secondary: oklch(71.1% 0.194 261.209);
+  --color-accent: oklch(76.7% 0.152 181.912);
+  --color-base-100: oklch(100% 0 0);
+  --color-base-200: oklch(96.1% 0.001 286.375);
+  --color-base-300: oklch(92.4% 0.002 286.375);
+}
+
+[data-theme="dark"] {
+  --color-primary: oklch(70% 0.2 260);
+  --color-secondary: oklch(65% 0.18 261);
+  --color-accent: oklch(80% 0.14 182);
+  --color-base-100: oklch(25.3% 0.015 252.417);
+  --color-base-200: oklch(23.3% 0.014 252.417);
+  --color-base-300: oklch(21.3% 0.013 252.417);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 1rem;
+  padding-block: 0.5rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: #fff;
+}
+
+.alert {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  gap: 0.5rem;
+}

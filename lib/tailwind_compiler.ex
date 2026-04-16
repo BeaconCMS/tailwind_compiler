@@ -20,10 +20,15 @@ defmodule TailwindCompiler do
     * `:theme` - JSON string with theme overrides (optional)
     * `:preflight` - whether to include the base CSS reset (default: `true`)
     * `:custom_css` - raw CSS string to append after `@layer utilities` (optional).
-      Use this for plugin CSS, custom components, or user stylesheets.
+      Use this for custom components or user stylesheets.
     * `:custom_utilities` - map of `%{"class-name" => "css-declarations"}` (optional).
       These get full selector escaping, variant support, and deduplication like built-in
       utilities. Example: `%{"btn-primary" => "background:blue;color:white"}`
+    * `:plugin_css` - CSS output from a Tailwind plugin (optional).
+      The compiler parses color variable definitions (`--color-*`) from `:root` and
+      `[data-theme]` blocks and registers them as theme colors so that utilities like
+      `bg-primary`, `text-secondary`, etc. are generated. All plugin CSS (component
+      classes, theme blocks) is included in the output.
 
   ## Examples
 
@@ -39,6 +44,9 @@ defmodule TailwindCompiler do
       TailwindCompiler.compile(["flex"], custom_css: ".custom{color:red}", preflight: false)
       #=> {:ok, "@layer utilities{.flex{display:flex}}.custom{color:red}"}
 
+      TailwindCompiler.compile(["bg-primary"], plugin_css: daisy_css, preflight: false)
+      #=> {:ok, "...bg-primary{background-color:var(--color-primary)}..."}
+
   """
   @spec compile([String.t()], keyword()) :: {:ok, String.t()} | {:error, term()}
   def compile(candidates, opts \\ []) when is_list(candidates) do
@@ -46,6 +54,7 @@ defmodule TailwindCompiler do
     preflight = Keyword.get(opts, :preflight, true)
     custom_css = Keyword.get(opts, :custom_css)
     custom_utilities = Keyword.get(opts, :custom_utilities)
+    plugin_css = Keyword.get(opts, :plugin_css)
 
     custom_utilities_json =
       case custom_utilities do
@@ -54,7 +63,7 @@ defmodule TailwindCompiler do
         str when is_binary(str) -> str
       end
 
-    case TailwindCompiler.NIF.compile(candidates, theme_json || "", preflight, custom_css || "", custom_utilities_json) do
+    case TailwindCompiler.NIF.compile(candidates, theme_json || "", preflight, custom_css || "", custom_utilities_json, plugin_css || "") do
       result when is_binary(result) -> {:ok, result}
       error -> {:error, error}
     end

@@ -263,4 +263,142 @@ defmodule TailwindCompilerTest do
       assert css =~ ".flex{display:flex}"
     end
   end
+
+  describe "plugin_css option" do
+    setup do
+      plugin_css = File.read!(Path.join([__DIR__, "fixtures", "sample_plugin.css"]))
+      %{plugin_css: plugin_css}
+    end
+
+    test "generates utility classes from plugin-defined colors", %{plugin_css: plugin_css} do
+      {:ok, css} =
+        TailwindCompiler.compile(
+          ["bg-primary", "text-secondary", "bg-base-100"],
+          plugin_css: plugin_css,
+          preflight: false
+        )
+
+      # Plugin colors should be recognized and generate utility CSS
+      assert css =~ "background-color:var(--color-primary)"
+      assert css =~ "color:var(--color-secondary)"
+      assert css =~ "background-color:var(--color-base-100)"
+    end
+
+    test "includes plugin component CSS in output", %{plugin_css: plugin_css} do
+      {:ok, css} =
+        TailwindCompiler.compile(
+          ["flex"],
+          plugin_css: plugin_css,
+          preflight: false
+        )
+
+      # Plugin component classes should be included in output
+      assert css =~ ".btn{"
+      assert css =~ ".btn-primary{"
+      assert css =~ ".alert{"
+    end
+
+    test "includes theme variable definitions from plugin", %{plugin_css: plugin_css} do
+      {:ok, css} =
+        TailwindCompiler.compile(
+          ["bg-primary"],
+          plugin_css: plugin_css,
+          preflight: false
+        )
+
+      # The :root theme variables should be in the theme layer
+      assert css =~ "--color-primary:"
+    end
+
+    test "includes data-theme blocks from plugin", %{plugin_css: plugin_css} do
+      {:ok, css} =
+        TailwindCompiler.compile(
+          ["flex"],
+          plugin_css: plugin_css,
+          preflight: false
+        )
+
+      # data-theme blocks should be passed through
+      assert css =~ "[data-theme=\"dark\"]"
+    end
+
+    test "plugin colors work with opacity modifiers", %{plugin_css: plugin_css} do
+      {:ok, css} =
+        TailwindCompiler.compile(
+          ["bg-primary/50"],
+          plugin_css: plugin_css,
+          preflight: false
+        )
+
+      # Should resolve to a pre-resolved hex with alpha (e.g., #4d9aff80)
+      # The utility selector should NOT use var(--color-primary) since opacity was applied
+      assert css =~ ~r/\.bg-primary\\\/50\{background-color:#[0-9a-f]+\}/
+    end
+
+    test "plugin colors work with border utilities", %{plugin_css: plugin_css} do
+      {:ok, css} =
+        TailwindCompiler.compile(
+          ["border-primary"],
+          plugin_css: plugin_css,
+          preflight: false
+        )
+
+      assert css =~ "border-color:var(--color-primary)"
+    end
+
+    test "works alongside existing theme overrides", %{plugin_css: plugin_css} do
+      {:ok, css} =
+        TailwindCompiler.compile(
+          ["bg-primary", "bg-red-500"],
+          plugin_css: plugin_css,
+          preflight: false
+        )
+
+      # Both plugin colors and stock colors should work
+      assert css =~ "background-color:var(--color-primary)"
+      assert css =~ "background-color:var(--color-red-500)"
+    end
+
+    test "works with inline plugin CSS (not from file)" do
+      inline_plugin_css = """
+      :root {
+        --color-brand: oklch(65% 0.2 260);
+        --color-surface: #f5f5f5;
+      }
+      .card { border-radius: 0.5rem; padding: 1rem; }
+      """
+
+      {:ok, css} =
+        TailwindCompiler.compile(
+          ["bg-brand", "text-surface"],
+          plugin_css: inline_plugin_css,
+          preflight: false
+        )
+
+      assert css =~ "background-color:var(--color-brand)"
+      assert css =~ "color:var(--color-surface)"
+      assert css =~ ".card{"
+    end
+
+    test "backward compatible — works without plugin_css" do
+      {:ok, css} = TailwindCompiler.compile(["flex"], preflight: false)
+      assert css =~ ".flex{display:flex}"
+    end
+
+    test "plugin_css combined with custom_css" do
+      plugin_css = ":root { --color-brand: #ff0000; }"
+      custom_css = ".my-custom{color:blue}"
+
+      {:ok, css} =
+        TailwindCompiler.compile(
+          ["bg-brand", "flex"],
+          plugin_css: plugin_css,
+          custom_css: custom_css,
+          preflight: false
+        )
+
+      assert css =~ "background-color:var(--color-brand)"
+      assert css =~ ".my-custom{color:blue}"
+    end
+  end
 end
