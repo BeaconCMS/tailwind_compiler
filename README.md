@@ -4,6 +4,8 @@ A Tailwind CSS v4-compatible compiler written in Zig. Accepts a list of CSS clas
 
 Designed as the CSS compilation engine for [Beacon CMS](https://github.com/BeaconCMS/beacon), callable from Elixir as a NIF via [Zigler](https://github.com/E-xyza/zigler).
 
+**[Try the WASM Playground](https://beaconcms.github.io/tailwind_compiler/)** — compile Tailwind CSS entirely in your browser.
+
 ## Performance
 
 Compile-only benchmark against the Tailwind CSS v4.2.2 JS `compile()` API — same 2,980 candidates, no filesystem I/O on either side (Apple M4):
@@ -78,7 +80,7 @@ The NIF runs on a dirty CPU scheduler. For a typical site (~3,000 candidates), e
 const tailwind = @import("tailwind_compiler");
 
 const candidates = [_][]const u8{ "flex", "p-4", "hover:bg-blue-500/50", "sm:text-lg" };
-const css = try tailwind.compile(allocator, &candidates, null, false, null, null, null);
+const css = try tailwind.compile(allocator, &candidates, null, false, true, null, null, null);
 ```
 
 ### Zig API
@@ -89,6 +91,7 @@ pub fn compile(
     candidates: []const []const u8,     // Tailwind class names
     theme_json: ?[]const u8,            // Optional JSON theme overrides
     include_preflight: bool,            // Include base CSS reset
+    minify: bool,                       // true = minified, false = pretty-printed
     custom_css: ?[]const u8,            // Optional raw CSS to append
     custom_utilities_json: ?[]const u8, // Optional JSON mapping class names to CSS declarations
     plugin_css: ?[]const u8,            // Optional plugin CSS (e.g., DaisyUI output)
