@@ -1646,3 +1646,103 @@ test "compile: theme() with unresolved path keeps original" {
     // Unresolved theme() should be kept as-is
     try std.testing.expect(std.mem.indexOf(u8, result, "theme(nonexistent.path)") != null);
 }
+
+test "compile: plugin_css registers color variables as theme colors" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "bg-primary", "text-secondary" };
+    const plugin =
+        \\:root {
+        \\  --color-primary: oklch(62.3% 0.214 259.815);
+        \\  --color-secondary: oklch(71.1% 0.194 261.209);
+        \\}
+    ;
+    const result = try compile(alloc, &candidates, null, false, null, null, plugin);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-color:var(--color-primary)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "color:var(--color-secondary)") != null);
+}
+
+test "compile: plugin_css includes component CSS in output" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const plugin =
+        \\.btn { display: inline-flex; padding: 0.5rem; }
+    ;
+    const result = try compile(alloc, &candidates, null, false, null, null, plugin);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, ".btn{") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "display:inline-flex") != null);
+}
+
+test "compile: plugin_css includes data-theme blocks" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const plugin =
+        \\:root { --color-base-100: #fff; }
+        \\[data-theme="dark"] { --color-base-100: #1a1a2e; }
+    ;
+    const result = try compile(alloc, &candidates, null, false, null, null, plugin);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "[data-theme=\"dark\"]") != null);
+}
+
+test "compile: plugin_css colors work with opacity modifiers" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"bg-brand/50"};
+    const plugin =
+        \\:root { --color-brand: oklch(62.3% 0.214 259.815); }
+    ;
+    const result = try compile(alloc, &candidates, null, false, null, null, plugin);
+    defer alloc.free(result);
+    // Should have a pre-resolved hex color with alpha, not var()
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-color:#") != null);
+}
+
+test "compile: plugin_css null is no-op" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const result = try compile(alloc, &candidates, null, false, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, ".flex{display:flex}") != null);
+}
+
+test "compile: plugin_css works alongside custom_css" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "bg-brand", "flex" };
+    const plugin =
+        \\:root { --color-brand: #ff0000; }
+    ;
+    const custom = ".my-custom{color:blue}";
+    const result = try compile(alloc, &candidates, null, false, custom, null, plugin);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-color:var(--color-brand)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, ".my-custom{color:blue}") != null);
+}
+
+test "compile: plugin_css works alongside stock theme colors" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "bg-primary", "bg-red-500" };
+    const plugin =
+        \\:root { --color-primary: oklch(62.3% 0.214 259.815); }
+    ;
+    const result = try compile(alloc, &candidates, null, false, null, null, plugin);
+    defer alloc.free(result);
+    // Both plugin and stock colors should work
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-color:var(--color-primary)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-color:var(--color-red-500)") != null);
+}
+
+test "compile: plugin_css minifies whitespace in output" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const plugin =
+        \\.card {
+        \\  border-radius: 0.5rem;
+        \\  padding: 1rem;
+        \\}
+    ;
+    const result = try compile(alloc, &candidates, null, false, null, null, plugin);
+    defer alloc.free(result);
+    // Whitespace should be collapsed
+    try std.testing.expect(std.mem.indexOf(u8, result, ".card{border-radius:0.5rem;padding:1rem;}") != null);
+}
