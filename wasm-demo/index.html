@@ -500,6 +500,75 @@ function compileTailwind(html, preflight, minify, pluginCss) {
   return css;
 }
 
+// ── TailwindCSS helper (adoptedStyleSheets) ─────────────────
+//
+// Use this to apply compiled CSS at runtime without compounding rules.
+// Each call to update() atomically replaces the previous stylesheet.
+//
+// Usage:
+//   const tw = new TailwindCSS(wasm);
+//   tw.update(['flex', 'p-4', 'hover:bg-blue-500'], {
+//     preflight: true,
+//     minify: true,
+//     pluginCss: ':root { --color-primary: oklch(62% 0.21 260); }',
+//   });
+//
+// Or apply to a specific document (e.g., an iframe):
+//   const tw = new TailwindCSS(wasm, iframe.contentDocument);
+//
+class TailwindCSS {
+  constructor(wasmExports, doc = document) {
+    this._wasm = wasmExports;
+    this._doc = doc;
+    this._sheet = new CSSStyleSheet();
+    this._doc.adoptedStyleSheets = [...this._doc.adoptedStyleSheets, this._sheet];
+  }
+
+  update(candidates, opts = {}) {
+    if (!candidates.length) { this._sheet.replaceSync(''); return ''; }
+    const preflight = opts.preflight ?? true;
+    const minify = opts.minify ?? true;
+    const pluginCss = opts.pluginCss ?? null;
+
+    const cand = this._writeStr(candidates.join('\n'));
+    const plugin = pluginCss ? this._writeStr(pluginCss) : [0, 0];
+
+    const result = this._wasm.compile(
+      cand[0], cand[1], 0, 0,
+      preflight ? 1 : 0, minify ? 1 : 0,
+      0, 0, 0, 0,
+      plugin[0], plugin[1]
+    );
+
+    this._wasm.free(cand[0], cand[1]);
+    if (plugin[0]) this._wasm.free(plugin[0], plugin[1]);
+
+    if (result === 0n) { this._sheet.replaceSync(''); return ''; }
+
+    const ptr = Number(result >> 32n);
+    const len = Number(result & 0xFFFFFFFFn);
+    const css = new TextDecoder().decode(
+      new Uint8Array(this._wasm.memory.buffer, ptr, len)
+    );
+    this._wasm.free(ptr, len);
+
+    this._sheet.replaceSync(css);
+    return css;
+  }
+
+  destroy() {
+    this._doc.adoptedStyleSheets = this._doc.adoptedStyleSheets.filter(s => s !== this._sheet);
+  }
+
+  _writeStr(s) {
+    const bytes = new TextEncoder().encode(s);
+    const ptr = this._wasm.alloc(bytes.length);
+    if (!ptr) throw new Error('WASM alloc failed');
+    new Uint8Array(this._wasm.memory.buffer, ptr, bytes.length).set(bytes);
+    return [ptr, bytes.length];
+  }
+}
+
 // ── UI ──────────────────────────────────────────────────────
 
 const htmlInput   = document.getElementById('html-input');
@@ -513,6 +582,7 @@ const errorEl     = document.getElementById('error');
 const preflightCb = document.getElementById('preflight');
 const minifyCb    = document.getElementById('minify');
 let currentExample = 'card';
+let previewTw = null; // TailwindCSS instance for the preview iframe
 
 function showError(msg) {
   errorEl.style.display = 'block';
@@ -545,9 +615,21 @@ function doCompile() {
   cssOutput.innerHTML = minify ? highlightCSSMinified(css) : highlightCSSPretty(css);
   cssStatsEl.innerHTML = `<span class="time">${ms} ms</span> <span class="size">${kb} KB</span>`;
 
-  preview.srcdoc = '<!DOCTYPE html><html><head><style>' + css + '</style></head>'
-    + '<body style="margin:0;font-family:system-ui,-apple-system,sans-serif">'
-    + html + '</body></html>';
+  // Update the preview iframe using adoptedStyleSheets.
+  // Reuse the CSS we already compiled (may be pretty-printed — that's valid CSS).
+  // replaceSync atomically swaps all rules — no compounding.
+  const previewDoc = preview.contentDocument;
+  if (previewDoc) {
+    if (!previewTw) {
+      previewDoc.open();
+      previewDoc.write('<!DOCTYPE html><html><head></head><body style="margin:0;font-family:system-ui,-apple-system,sans-serif"></body></html>');
+      previewDoc.close();
+      previewTw = new CSSStyleSheet();
+      previewDoc.adoptedStyleSheets = [previewTw];
+    }
+    previewDoc.body.innerHTML = html;
+    previewTw.replaceSync(css);
+  }
 }
 
 let timer;
