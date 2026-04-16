@@ -624,7 +624,9 @@ function doCompile() {
       previewDoc.open();
       previewDoc.write('<!DOCTYPE html><html><head></head><body style="margin:0;font-family:system-ui,-apple-system,sans-serif"></body></html>');
       previewDoc.close();
-      previewTw = new CSSStyleSheet();
+      // Construct the sheet inside the iframe's context so it can be adopted there
+      const SheetCtor = preview.contentWindow.CSSStyleSheet;
+      previewTw = new SheetCtor();
       previewDoc.adoptedStyleSheets = [previewTw];
     }
     previewDoc.body.innerHTML = html;
