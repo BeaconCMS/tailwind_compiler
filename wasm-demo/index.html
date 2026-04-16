@@ -37,8 +37,18 @@ header h1 span{color:var(--accent)}
 .controls label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);cursor:pointer;user-select:none}
 .controls input[type=checkbox]{accent-color:var(--accent)}
 .panels{display:flex;flex:1;min-height:0}
-.panel{display:flex;flex-direction:column;flex:1;min-width:0;border-right:1px solid var(--border)}
+.panel{display:flex;flex-direction:column;flex:1;min-width:0;border-right:1px solid var(--border);transition:flex .2s}
 .panel:last-child{border-right:none}
+.panel.collapsed{flex:0;min-width:0;overflow:hidden}
+.panel.collapsed>*:not(.panel-header){display:none}
+.panel.collapsed .panel-header{writing-mode:vertical-rl;rotate:180deg;white-space:nowrap;padding:12px 8px;cursor:pointer}
+.panel.collapsed .expand-btn{display:none}
+.panels:has(.expanded) .panel:not(.expanded){flex:0;min-width:0;overflow:hidden}
+.panels:has(.expanded) .panel:not(.expanded)>*:not(.panel-header){display:none}
+.panels:has(.expanded) .panel:not(.expanded) .panel-header{writing-mode:vertical-rl;rotate:180deg;white-space:nowrap;padding:12px 8px;cursor:pointer}
+.panels:has(.expanded) .panel:not(.expanded) .expand-btn{display:none}
+.expand-btn{background:none;border:none;color:var(--dim);cursor:pointer;padding:2px;display:flex;align-items:center;transition:color .15s}
+.expand-btn:hover{color:var(--text)}
 .panel-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
 .panel-stats{font-size:11px;font-weight:400;text-transform:none;letter-spacing:normal;font-variant-numeric:tabular-nums;display:flex;gap:10px}
 .panel-stats .time{color:#34d399;font-weight:600}
@@ -93,18 +103,18 @@ header h1 span{color:var(--accent)}
 </div>
 <div class="panels">
   <div class="panel">
-    <div class="panel-header">HTML</div>
+    <div class="panel-header"><span>HTML</span><button class="expand-btn" title="Expand"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button></div>
     <div class="editor-wrap">
       <pre aria-hidden="true"><code id="html-hl"></code></pre>
       <textarea id="html-input" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
     </div>
   </div>
   <div class="panel">
-    <div class="panel-header">Generated CSS <span class="panel-stats" id="css-stats"></span></div>
+    <div class="panel-header"><span>Generated CSS <span class="panel-stats" id="css-stats"></span></span><button class="expand-btn" title="Expand"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button></div>
     <div class="css-wrap"><code id="css-output"></code></div>
   </div>
   <div class="panel">
-    <div class="panel-header">Preview</div>
+    <div class="panel-header"><span>Preview</span><button class="expand-btn" title="Expand"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button></div>
     <iframe id="preview"></iframe>
   </div>
 </div>
@@ -681,6 +691,36 @@ for (const btn of document.querySelectorAll('[data-example]')) {
     htmlInput.value = EXAMPLES[currentExample].html;
     updateHTMLHighlight();
     doCompile();
+  });
+}
+
+// ── Panel expand/collapse ───────────────────────────────────
+
+for (const btn of document.querySelectorAll('.expand-btn')) {
+  btn.addEventListener('click', () => {
+    const panel = btn.closest('.panel');
+    if (panel.classList.contains('expanded')) {
+      panel.classList.remove('expanded');
+      btn.title = 'Expand';
+    } else {
+      // Remove expanded from any other panel
+      document.querySelectorAll('.panel.expanded').forEach(p => p.classList.remove('expanded'));
+      panel.classList.add('expanded');
+      btn.title = 'Collapse';
+    }
+  });
+}
+
+// Click a collapsed panel header to restore default layout
+for (const header of document.querySelectorAll('.panel-header')) {
+  header.addEventListener('click', (e) => {
+    const panel = header.closest('.panel');
+    // Only act if this panel is collapsed (another is expanded)
+    if (e.target.closest('.expand-btn')) return;
+    const expanded = document.querySelector('.panel.expanded');
+    if (expanded && expanded !== panel) {
+      expanded.classList.remove('expanded');
+    }
   });
 }
 
