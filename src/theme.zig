@@ -192,26 +192,19 @@ pub const Theme = struct {
 
     /// Load nested theme values from a JSON object into variables with a given prefix.
     /// E.g., {"heading": "Manrope, sans-serif"} with prefix "--font" → --font-heading = "Manrope, sans-serif"
-    /// Handles one level of nesting (for color palettes like {"gray": {"50": "#F0F5F9"}}).
+    /// Handles arbitrary nesting depth (e.g., colors.brand.primary.light → --color-brand-primary-light).
     fn loadNestedThemeValues(self: *Theme, obj: std.json.ObjectMap, prefix: []const u8) !void {
         var obj_iter = obj.iterator();
         while (obj_iter.next()) |entry| {
             const k = entry.key_ptr.*;
             const v = entry.value_ptr.*;
+            const var_name = try std.fmt.allocPrint(self.alloc, "{s}-{s}", .{ prefix, k });
             if (v == .string) {
-                const var_name = try std.fmt.allocPrint(self.alloc, "{s}-{s}", .{ prefix, k });
                 const var_val = try self.alloc.dupe(u8, v.string);
                 try self.variables.put(var_name, var_val);
             } else if (v == .object) {
-                // One level deeper (e.g., colors.gray.50)
-                var inner_iter = v.object.iterator();
-                while (inner_iter.next()) |inner| {
-                    if (inner.value_ptr.* == .string) {
-                        const var_name = try std.fmt.allocPrint(self.alloc, "{s}-{s}-{s}", .{ prefix, k, inner.key_ptr.* });
-                        const var_val = try self.alloc.dupe(u8, inner.value_ptr.*.string);
-                        try self.variables.put(var_name, var_val);
-                    }
-                }
+                // Recurse for deeper nesting
+                try self.loadNestedThemeValues(v.object, var_name);
             }
         }
     }

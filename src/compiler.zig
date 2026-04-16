@@ -696,7 +696,24 @@ pub const Context = struct {
     ///       "spacing" → look up "--spacing"
     ///       "borderRadius.lg" → look up "--radius-lg"
     ///       "fontSize.lg" → look up "--text-lg"
-    fn resolveThemePath(self: *Context, path: []const u8) ?[]const u8 {
+    fn resolveThemePath(self: *Context, raw_path: []const u8) ?[]const u8 {
+        // Handle opacity modifier: "colors.red.500 / 50%"
+        var path = raw_path;
+        var opacity: ?[]const u8 = null;
+        if (std.mem.indexOf(u8, raw_path, " / ")) |slash_pos| {
+            path = std.mem.trim(u8, raw_path[0..slash_pos], " \t");
+            opacity = std.mem.trim(u8, raw_path[slash_pos + 3 ..], " \t");
+        }
+
+        // CSS variable shorthand: theme(--color-red-500) → look up directly
+        if (std.mem.startsWith(u8, path, "--")) {
+            if (self.theme.get(path)) |value| {
+                self.theme.markUsed(self.alloc.dupe(u8, path) catch return value);
+                return self.maybeApplyOpacity(value, opacity);
+            }
+            return null;
+        }
+
         var buf: [512]u8 = undefined;
         var buf_len: usize = 0;
 
@@ -735,10 +752,22 @@ pub const Context = struct {
         if (self.theme.get(var_name)) |value| {
             // Mark as used for tree-shaking
             self.theme.markUsed(self.alloc.dupe(u8, var_name) catch return value);
-            return value;
+            return self.maybeApplyOpacity(value, opacity);
         }
 
         return null;
+    }
+
+    /// Apply an opacity modifier to a resolved color value.
+    /// E.g., "oklch(63.7% 0.237 25.331)" with "50%" → "oklch(63.7% 0.237 25.331 / 50%)"
+    fn maybeApplyOpacity(self: *Context, value: []const u8, opacity: ?[]const u8) ?[]const u8 {
+        const op = opacity orelse return value;
+        // If value is an oklch/rgb/hsl function, inject opacity before the closing paren
+        if (std.mem.lastIndexOfScalar(u8, value, ')')) |close| {
+            return std.fmt.allocPrint(self.alloc, "{s} / {s})", .{ value[0..close], op }) catch return value;
+        }
+        // For hex or other values, use color-mix as fallback
+        return std.fmt.allocPrint(self.alloc, "color-mix(in oklab,{s} {s},transparent)", .{ value, op }) catch return value;
     }
 
     /// Map theme() namespace to CSS variable prefix.
@@ -947,12 +976,23 @@ pub const Context = struct {
                         }
                     } else {
                         // No variant — inline declarations as before
-                        if (self.resolveClassDeclarations(class_name) catch null) |decls| {
+                        // Handle important modifier: flex! or !flex
+                        var resolved_name = class_name;
+                        var important = false;
+                        if (std.mem.endsWith(u8, class_name, "!")) {
+                            resolved_name = class_name[0 .. class_name.len - 1];
+                            important = true;
+                        } else if (std.mem.startsWith(u8, class_name, "!")) {
+                            resolved_name = class_name[1..];
+                            important = true;
+                        }
+                        if (self.resolveClassDeclarations(resolved_name) catch null) |decls| {
                             for (decls) |decl| {
                                 if (!first) try result.append(self.alloc, ';');
                                 try result.appendSlice(self.alloc, decl.property);
                                 try result.append(self.alloc, ':');
                                 try result.appendSlice(self.alloc, decl.value);
+                                if (important) try result.appendSlice(self.alloc, "!important");
                                 first = false;
                             }
                         }
@@ -1014,6 +1054,8 @@ pub const Context = struct {
             .{ "xl", "" },
             .{ "2xl", "" },
             .{ "dark", "" },
+            .{ "any-hover", "" },
+            .{ "prefers-reduced-transparency", "" },
         });
         return map.get(variant);
     }
@@ -1028,6 +1070,8 @@ pub const Context = struct {
             .{ "2xl", "@media (width>=96rem)" },
             .{ "dark", "@media (prefers-color-scheme:dark)" },
             .{ "hover", "@media (hover:hover)" },
+            .{ "any-hover", "@media (any-hover:hover)" },
+            .{ "prefers-reduced-transparency", "@media (prefers-reduced-transparency:reduce)" },
         });
         return map.get(variant);
     }
@@ -1787,4 +1831,86 @@ test "compile: pretty print with variants" {
     try std.testing.expect(std.mem.indexOf(u8, result, "  @media (hover:hover) {\n") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "    .hover\\:flex:hover {\n") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "      display: flex;\n") != null);
+}
+
+// ─── Missing variant tests ────────────────────────────────────────────────
+
+test "compile: any-hover variant" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"any-hover:flex"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@media (any-hover:hover)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "display:flex") != null);
+}
+
+test "compile: prefers-reduced-transparency variant" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"prefers-reduced-transparency:hidden"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@media (prefers-reduced-transparency:reduce)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "display:none") != null);
+}
+
+// ─── theme() edge case tests ──────────────────────────────────────────────
+
+test "compile: theme() CSS variable shorthand" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = ":root{--featured:theme(--color-red-500);}";
+    const result = try compile(alloc, &candidates, null, false, true, custom, null, null);
+    defer alloc.free(result);
+    // theme(--color-red-500) should resolve to the oklch value
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--featured:oklch(") != null);
+}
+
+test "compile: theme() with opacity modifier" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = ":root{--bg:theme(colors.red.500 / 50%);}";
+    const result = try compile(alloc, &candidates, null, false, true, custom, null, null);
+    defer alloc.free(result);
+    // Should resolve with opacity applied
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--bg:") != null);
+}
+
+// ─── @apply edge case tests ───────────────────────────────────────────────
+
+test "compile: @apply with important modifier" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = ".btn{@apply flex!;}";
+    const result = try compile(alloc, &candidates, null, false, true, custom, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "display:flex!important") != null);
+}
+
+// ─── Theme JSON edge case tests ───────────────────────────────────────────
+
+test "compile: theme JSON deep nesting (3 levels)" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"bg-brand-light"};
+    const theme_json =
+        \\{"colors":{"brand":{"light":"#aabbcc","dark":"#112233"}}}
+    ;
+    const result2 = try compile(alloc, &candidates, theme_json, false, true, null, null, null);
+    defer alloc.free(result2);
+    try std.testing.expect(std.mem.indexOf(u8, result2, "background-color:var(--color-brand-light)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result2, "--color-brand-light:#aabbcc") != null);
+}
+
+test "compile: theme JSON recursive nesting (4+ levels)" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"bg-brand-primary-light"};
+    const theme_json =
+        \\{"colors":{"brand":{"primary":{"light":"#aabbcc","dark":"#112233"}}}}
+    ;
+    const result = try compile(alloc, &candidates, theme_json, false, true, null, null, null);
+    defer alloc.free(result);
+    // 4-level: colors -> brand -> primary -> light = --color-brand-primary-light
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-color:var(--color-brand-primary-light)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--color-brand-primary-light:#aabbcc") != null);
 }

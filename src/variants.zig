@@ -900,9 +900,11 @@ const static_variants = std.StaticStringMap(void).initComptime(.{
     .{ "pointer-none", {} },
     .{ "pointer-coarse", {} },
     .{ "pointer-fine", {} },
+    .{ "any-hover", {} },
     .{ "any-pointer-none", {} },
     .{ "any-pointer-coarse", {} },
     .{ "any-pointer-fine", {} },
+    .{ "prefers-reduced-transparency", {} },
     .{ "noscript", {} },
     .{ "ltr", {} },
     .{ "rtl", {} },
@@ -1002,9 +1004,11 @@ const media_variant_map = std.StaticStringMap([]const u8).initComptime(.{
     .{ "pointer-none", "@media (pointer:none)" },
     .{ "pointer-coarse", "@media (pointer:coarse)" },
     .{ "pointer-fine", "@media (pointer:fine)" },
+    .{ "any-hover", "@media (any-hover:hover)" },
     .{ "any-pointer-none", "@media (any-pointer:none)" },
     .{ "any-pointer-coarse", "@media (any-pointer:coarse)" },
     .{ "any-pointer-fine", "@media (any-pointer:fine)" },
+    .{ "prefers-reduced-transparency", "@media (prefers-reduced-transparency:reduce)" },
     .{ "noscript", "@media (scripting:none)" },
 });
 
@@ -1093,10 +1097,12 @@ const variant_order_map = std.StaticStringMap(u16).initComptime(.{
     .{ "pointer-none", 81 },
     .{ "pointer-coarse", 82 },
     .{ "pointer-fine", 83 },
-    .{ "any-pointer-none", 84 },
-    .{ "any-pointer-coarse", 85 },
-    .{ "any-pointer-fine", 86 },
-    .{ "noscript", 87 },
+    .{ "any-hover", 84 },
+    .{ "any-pointer-none", 85 },
+    .{ "any-pointer-coarse", 86 },
+    .{ "any-pointer-fine", 87 },
+    .{ "prefers-reduced-transparency", 88 },
+    .{ "noscript", 89 },
 });
 
 // ─── Tests ─────────────────────────────────────────────────────────────────
