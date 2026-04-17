@@ -8,6 +8,9 @@ pub const Declaration = struct {
     property: []const u8,
     value: []const u8,
     important: bool = false,
+    /// When set, emitter wraps this value in a nested @supports block
+    /// for color-mix() progressive enhancement.
+    supports_value: ?[]const u8 = null,
 };
 
 pub const RuleKind = enum {
@@ -435,6 +438,7 @@ pub const CssEmitter = struct {
                     try self.buf.append(self.alloc, '{');
                     self.indent += 1;
                     try self.emitDeclarations(rule.declarations);
+                    try self.emitSupportsEnhancement(rule.declarations);
                     for (rule.children) |child| {
                         try self.emitRule(&child);
                     }
@@ -474,6 +478,39 @@ pub const CssEmitter = struct {
                 // @property rules are emitted separately via emitAtProperties
             },
         }
+    }
+
+    /// Emit a nested @supports block for color-mix() progressive enhancement.
+    /// Only emits if any declarations have supports_value set.
+    fn emitSupportsEnhancement(self: *CssEmitter, decls: []const Declaration) !void {
+        var has_any = false;
+        for (decls) |d| {
+            if (d.supports_value != null) { has_any = true; break; }
+        }
+        if (!has_any) return;
+
+        try self.writeNewline();
+        try self.buf.appendSlice(self.alloc, "@supports (color:color-mix(in lab,red,red))");
+        try self.writeSpace();
+        try self.buf.append(self.alloc, '{');
+        self.indent += 1;
+        for (decls) |decl| {
+            if (decl.supports_value) |enhanced| {
+                try self.writeNewline();
+                try self.buf.appendSlice(self.alloc, decl.property);
+                try self.buf.append(self.alloc, ':');
+                try self.writeSpace();
+                try self.buf.appendSlice(self.alloc, enhanced);
+                if (decl.important) {
+                    try self.writeSpace();
+                    try self.buf.appendSlice(self.alloc, "!important");
+                }
+                if (!self.minify) try self.buf.append(self.alloc, ';');
+            }
+        }
+        self.indent -= 1;
+        try self.writeNewline();
+        try self.buf.append(self.alloc, '}');
     }
 
     /// Emit declarations for a rule block.

@@ -2485,14 +2485,18 @@ fn resolveColor(
     }
 
     // Apply color opacity modifier if present
+    var supports_value: ?[]const u8 = null;
     if (modifier) |mod| {
-        css_value = try applyColorOpacityWithTheme(alloc, css_value, mod, theme);
+        const mix = try applyColorMix(alloc, css_value, mod, theme);
+        css_value = mix.base;
+        supports_value = mix.enhanced;
     }
 
     const decls = try alloc.alloc(Declaration, 1);
     decls[0] = Declaration{
         .property = property,
         .value = css_value,
+        .supports_value = supports_value,
     };
     return decls;
 }
@@ -2781,51 +2785,65 @@ fn formatMsToSeconds(alloc: Allocator, ms: u32) ![]const u8 {
 
 // ─── Color Opacity Helper ──────────────────────────────────────────────────
 
+const ColorMixResult = struct {
+    base: []const u8,
+    enhanced: ?[]const u8 = null,
+};
+
+/// Create a Declaration with color-mix progressive enhancement for opacity modifiers.
+fn makeColorDecl(alloc: Allocator, property: []const u8, css_value: []const u8, modifier: ?Modifier, theme: ?*Theme) !Declaration {
+    if (modifier) |mod| {
+        const mix = try applyColorMix(alloc, css_value, mod, theme);
+        return Declaration{ .property = property, .value = mix.base, .supports_value = mix.enhanced };
+    }
+    return Declaration{ .property = property, .value = css_value };
+}
+
 fn applyColorOpacity(alloc: Allocator, color: []const u8, mod: Modifier) ![]const u8 {
-    return applyColorOpacityWithTheme(alloc, color, mod, null);
+    const r = try applyColorMix(alloc, color, mod, null);
+    return r.base;
 }
 
 fn applyColorOpacityWithTheme(alloc: Allocator, color: []const u8, mod: Modifier, theme: ?*Theme) ![]const u8 {
-    // Determine alpha percentage
-    var alpha_pct: ?u8 = null;
-    switch (mod.kind) {
-        .arbitrary => {
-            const f = std.fmt.parseFloat(f64, mod.value) catch {
-                // Can't pre-resolve with non-numeric modifier
-                return std.fmt.allocPrint(alloc, "color-mix(in oklab,{s} {s},transparent)", .{ color, mod.value });
-            };
-            const pct_val = @as(u32, @intFromFloat(@round(f * 100.0)));
-            if (pct_val <= 255) alpha_pct = @intCast(pct_val);
-        },
-        .named => {
-            alpha_pct = std.fmt.parseInt(u8, mod.value, 10) catch null;
-        },
-    }
+    const r = try applyColorMix(alloc, color, mod, theme);
+    return r.base;
+}
 
-    // Try to pre-resolve: look up the raw color value from theme
-    if (alpha_pct) |pct| {
+/// Resolve a color + opacity modifier into color-mix() progressive enhancement values.
+/// Returns a base srgb fallback value and an optional enhanced oklab value using var().
+fn applyColorMix(alloc: Allocator, color: []const u8, mod: Modifier, theme: ?*Theme) !ColorMixResult {
+    // Determine the percentage string
+    const percent: []const u8 = switch (mod.kind) {
+        .arbitrary => blk: {
+            const f = std.fmt.parseFloat(f64, mod.value) catch {
+                // Non-numeric modifier: use as-is
+                const p = try std.fmt.allocPrint(alloc, "{s}", .{mod.value});
+                const base = try std.fmt.allocPrint(alloc, "color-mix(in oklab,{s} {s},transparent)", .{ color, p });
+                return ColorMixResult{ .base = base };
+            };
+            const pct = @as(u32, @intFromFloat(@round(f * 100.0)));
+            break :blk try std.fmt.allocPrint(alloc, "{d}%", .{pct});
+        },
+        .named => try std.fmt.allocPrint(alloc, "{s}%", .{mod.value}),
+    };
+
+    // If color is a var() reference, look up the raw value for the srgb fallback
+    if (std.mem.startsWith(u8, color, "var(") and color.len > 5) {
+        const var_name = color[4 .. color.len - 1]; // e.g. --color-blue-500
         if (theme) |t| {
-            // color is like "var(--color-blue-500)" — extract the var name
-            if (std.mem.startsWith(u8, color, "var(") and color.len > 5) {
-                const var_name = color[4 .. color.len - 1]; // --color-blue-500
-                if (t.get(var_name)) |raw_color| {
-                    // Pre-resolve: oklch/hex -> #RRGGBBAA
-                    return color_mod.resolveColorMixWithKey(alloc, raw_color, pct, var_name);
-                }
-            }
-            // Direct color value (not a var reference)
-            if (std.mem.startsWith(u8, color, "oklch(") or color[0] == '#') {
-                return color_mod.resolveColorMix(alloc, color, pct);
+            if (t.get(var_name)) |raw_color| {
+                return ColorMixResult{
+                    .base = try std.fmt.allocPrint(alloc, "color-mix(in srgb,{s} {s},transparent)", .{ raw_color, percent }),
+                    .enhanced = try std.fmt.allocPrint(alloc, "color-mix(in oklab,{s} {s},transparent)", .{ color, percent }),
+                };
             }
         }
     }
 
-    // Fallback to color-mix()
-    const percent = switch (mod.kind) {
-        .arbitrary => try std.fmt.allocPrint(alloc, "{d}%", .{@as(u32, @intFromFloat(@round(std.fmt.parseFloat(f64, mod.value) catch 0) * 100.0))}),
-        .named => try std.fmt.allocPrint(alloc, "{s}%", .{mod.value}),
+    // Direct color value (hex, oklch, etc.) — no var() enhancement available
+    return ColorMixResult{
+        .base = try std.fmt.allocPrint(alloc, "color-mix(in srgb,{s} {s},transparent)", .{ color, percent }),
     };
-    return std.fmt.allocPrint(alloc, "color-mix(in oklab,{s} {s},transparent)", .{ color, percent });
 }
 
 // ─── Text (font-size + line-height / color) ────────────────────────────────
@@ -2839,12 +2857,8 @@ fn resolveText(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
             if (val.data_type) |dt| {
                 if (std.mem.eql(u8, dt, "color")) {
                     // Color with opacity modifier
-                    var css_value: []const u8 = val.value;
-                    if (modifier) |mod| {
-                        css_value = try applyColorOpacityWithTheme(alloc, css_value, mod, theme);
-                    }
                     const decls = try alloc.alloc(Declaration, 1);
-                    decls[0] = Declaration{ .property = "color", .value = css_value };
+                    decls[0] = try makeColorDecl(alloc, "color", val.value, modifier, theme);
                     return decls;
                 }
             }
@@ -2881,11 +2895,8 @@ fn resolveText(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
                     theme.markUsed(try std.fmt.allocPrint(alloc, "--color-{s}", .{val.value}));
                     css_value = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
                 }
-                if (modifier) |mod| {
-                    css_value = try applyColorOpacityWithTheme(alloc, css_value, mod, theme);
-                }
                 const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "color", .value = css_value };
+                decls[0] = try makeColorDecl(alloc, "color", css_value, modifier, theme);
                 return decls;
             }
 
@@ -3049,12 +3060,8 @@ fn resolveBorder(alloc: Allocator, root: []const u8, value: ?Value, modifier: ?M
             }
             // Otherwise treat as color
             const color_property = borderColorProperty(root);
-            var css_value: []const u8 = val.value;
-            if (modifier) |mod| {
-                css_value = try applyColorOpacityWithTheme(alloc, css_value, mod, theme);
-            }
             const decls = try alloc.alloc(Declaration, 1);
-            decls[0] = Declaration{ .property = color_property, .value = css_value };
+            decls[0] = try makeColorDecl(alloc, color_property, val.value, modifier, theme);
             return decls;
         },
         .named => {
@@ -3087,12 +3094,9 @@ fn resolveBorder(alloc: Allocator, root: []const u8, value: ?Value, modifier: ?M
                 return decls;
             } else if (theme.resolve(val.value, "--color")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--color-{s}", .{val.value}));
-                var css_value: []const u8 = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
-                if (modifier) |mod| {
-                    css_value = try applyColorOpacityWithTheme(alloc, css_value, mod, theme);
-                }
+                const css_value: []const u8 = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
                 const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = color_property, .value = css_value };
+                decls[0] = try makeColorDecl(alloc, color_property, css_value, modifier, theme);
                 return decls;
             }
 
@@ -3738,13 +3742,9 @@ fn resolveRing(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
             if (theme.resolve(val.value, "--color")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--color-{s}", .{val.value}));
                 var color_css: []const u8 = undefined;
-                if (modifier) |mod| {
-                    color_css = try applyColorOpacityWithTheme(alloc, try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value}), mod, theme);
-                } else {
-                    color_css = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
-                }
+                color_css = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
                 const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "--tw-ring-color", .value = color_css };
+                decls[0] = try makeColorDecl(alloc, "--tw-ring-color", color_css, modifier, theme);
                 return decls;
             }
 
@@ -4440,21 +4440,22 @@ fn resolveGradientStop(alloc: Allocator, root: []const u8, value: ?Value, modifi
     }
 
     // Apply opacity modifier if present
+    var supports_value: ?[]const u8 = null;
     if (modifier) |mod| {
-        css_value = try applyColorOpacityWithTheme(alloc, css_value, mod, theme);
+        const mix = try applyColorMix(alloc, css_value, mod, theme);
+        css_value = mix.base;
+        supports_value = mix.enhanced;
     }
 
     if (is_via) {
-        // via sets --tw-gradient-via + --tw-gradient-via-stops + --tw-gradient-stops
         const decls = try alloc.alloc(Declaration, 3);
-        decls[0] = Declaration{ .property = property, .value = css_value };
+        decls[0] = Declaration{ .property = property, .value = css_value, .supports_value = supports_value };
         decls[1] = Declaration{ .property = "--tw-gradient-via-stops", .value = GRADIENT_VIA_STOPS_COMPOSITION };
         decls[2] = Declaration{ .property = "--tw-gradient-stops", .value = "var(--tw-gradient-via-stops)" };
         return decls;
     } else {
-        // from and to set their color + --tw-gradient-stops
         const decls = try alloc.alloc(Declaration, 2);
-        decls[0] = Declaration{ .property = property, .value = css_value };
+        decls[0] = Declaration{ .property = property, .value = css_value, .supports_value = supports_value };
         decls[1] = Declaration{ .property = "--tw-gradient-stops", .value = GRADIENT_STOPS_COMPOSITION };
         return decls;
     }
@@ -4612,12 +4613,8 @@ fn resolveOutline(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *
                 return decls;
             }
             // Otherwise treat as color
-            var css_value: []const u8 = val.value;
-            if (modifier) |mod| {
-                css_value = try applyColorOpacityWithTheme(alloc, css_value, mod, theme);
-            }
             const decls = try alloc.alloc(Declaration, 1);
-            decls[0] = Declaration{ .property = "outline-color", .value = css_value };
+            decls[0] = try makeColorDecl(alloc, "outline-color", val.value, modifier, theme);
             return decls;
         },
         .named => {
@@ -4645,12 +4642,9 @@ fn resolveOutline(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *
                 return decls;
             } else if (theme.resolve(val.value, "--color")) {
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--color-{s}", .{val.value}));
-                var css_value: []const u8 = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
-                if (modifier) |mod| {
-                    css_value = try applyColorOpacityWithTheme(alloc, css_value, mod, theme);
-                }
+                const css_value: []const u8 = try std.fmt.allocPrint(alloc, "var(--color-{s})", .{val.value});
                 const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "outline-color", .value = css_value };
+                decls[0] = try makeColorDecl(alloc, "outline-color", css_value, modifier, theme);
                 return decls;
             }
 
@@ -5079,11 +5073,8 @@ fn resolveShadowColor(alloc: Allocator, value: ?Value, modifier: ?Modifier, them
             }
         },
     }
-    if (modifier) |mod| {
-        css_value = try applyColorOpacityWithTheme(alloc, css_value, mod, theme);
-    }
     const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = Declaration{ .property = "--tw-shadow-color", .value = css_value };
+    decls[0] = try makeColorDecl(alloc, "--tw-shadow-color", css_value, modifier, theme);
     return decls;
 }
 

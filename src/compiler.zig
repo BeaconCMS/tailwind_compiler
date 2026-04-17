@@ -1775,8 +1775,8 @@ test "compile: plugin_css colors work with opacity modifiers" {
     ;
     const result = try compile(alloc, &candidates, null, false, true, null, null, plugin);
     defer alloc.free(result);
-    // Should have a pre-resolved hex color with alpha, not var()
-    try std.testing.expect(std.mem.indexOf(u8, result, "background-color:#") != null);
+    // Should use color-mix with the raw oklch value
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-color:color-mix(in srgb,oklch(62.3% 0.214 259.815) 50%,transparent)") != null);
 }
 
 test "compile: plugin_css null is no-op" {
@@ -1948,6 +1948,45 @@ test "compile: text-xs line-height uses calc ratio" {
     const result = try compile(alloc, &candidates, null, false, true, null, null, null);
     defer alloc.free(result);
     try std.testing.expect(std.mem.indexOf(u8, result, "--text-xs--line-height:calc(1 / 0.75)") != null);
+}
+
+test "compile: bg color with opacity uses color-mix" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"bg-white/10"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    // Base: color-mix in srgb with raw value
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-color:color-mix(in srgb,#fff 10%,transparent)") != null);
+    // Enhanced: @supports with color-mix in oklab using var()
+    try std.testing.expect(std.mem.indexOf(u8, result, "@supports (color:color-mix(in lab,red,red))") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-color:color-mix(in oklab,var(--color-white) 10%,transparent)") != null);
+}
+
+test "compile: border color with opacity uses color-mix" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"border-cyan-400/20"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-color:color-mix(in srgb,") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-color:color-mix(in oklab,var(--color-cyan-400) 20%,transparent)") != null);
+}
+
+test "compile: gradient from with opacity uses color-mix" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"from-violet-500/10"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--tw-gradient-from:color-mix(in srgb,") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--tw-gradient-from:color-mix(in oklab,var(--color-violet-500) 10%,transparent)") != null);
+}
+
+test "compile: ring color with opacity uses color-mix" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"ring-white/10"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--tw-ring-color:color-mix(in srgb,#fff 10%,transparent)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--tw-ring-color:color-mix(in oklab,var(--color-white) 10%,transparent)") != null);
 }
 
 test "compile: text-sm line-height uses calc ratio" {
