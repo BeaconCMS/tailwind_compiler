@@ -5521,6 +5521,10 @@ const css_color_functions = [_][]const u8{
     "lab(",
     "rgba(",
     "rgb(",
+    // theme() is included so that theme() references in shadow arbitrary values are wrapped
+    // before theme resolution; after resolveThemeInDeclarations runs, the wrapper will
+    // contain the resolved oklch()/color-mix() value.
+    "theme(",
 };
 
 /// Check if the string at position i in raw starts with a CSS color function.

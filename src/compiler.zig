@@ -792,9 +792,10 @@ pub const Context = struct {
         }
 
         // CSS variable shorthand: theme(--color-red-500) → look up directly
+        // Note: do NOT call markUsed here — theme() inlines the raw value, so no var() reference
+        // is emitted and the variable does not need to appear in @layer theme.
         if (std.mem.startsWith(u8, path, "--")) {
             if (self.theme.get(path)) |value| {
-                self.theme.markUsed(self.alloc.dupe(u8, path) catch return value);
                 return self.maybeApplyOpacity(value, opacity);
             }
             return null;
@@ -835,9 +836,9 @@ pub const Context = struct {
         const var_name = buf[0..buf_len];
 
         // Look up in theme
+        // Note: do NOT call markUsed here — theme() inlines the raw value, so no var() reference
+        // is emitted and the variable does not need to appear in @layer theme.
         if (self.theme.get(var_name)) |value| {
-            // Mark as used for tree-shaking
-            self.theme.markUsed(self.alloc.dupe(u8, var_name) catch return value);
             return self.maybeApplyOpacity(value, opacity);
         }
 
