@@ -1930,10 +1930,10 @@ test "compile: pretty print with variants" {
     const result = try compile(alloc, &candidates, null, false, false, null, null, null);
     defer alloc.free(result);
 
-    // CSS nesting format: outer class wraps the @media and &:hover pseudo-class
+    // CSS nesting format: outer class wraps &:hover which wraps @media (hover:hover)
     try std.testing.expect(std.mem.indexOf(u8, result, "  .hover\\:flex {\n") != null);
-    try std.testing.expect(std.mem.indexOf(u8, result, "    @media (hover:hover) {\n") != null);
-    try std.testing.expect(std.mem.indexOf(u8, result, "      &:hover {\n") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "    &:hover {\n") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "      @media (hover:hover) {\n") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "        display: flex;\n") != null);
 }
 

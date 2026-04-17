@@ -486,6 +486,11 @@ pub const CssEmitter = struct {
                 try self.writeSpace();
                 try self.buf.append(self.alloc, '{');
                 self.indent += 1;
+                // Emit declarations directly on at-rules (e.g. @media (hover:hover) { decls })
+                if (rule.declarations.len > 0) {
+                    try self.emitDeclarations(rule.declarations);
+                    try self.emitSupportsEnhancement(rule.declarations);
+                }
                 for (rule.children) |child| {
                     try self.emitRule(&child);
                 }

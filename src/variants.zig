@@ -555,27 +555,35 @@ fn makeNestedCompoundRule(
     inner: Rule,
     hover_guard: bool,
 ) !Rule {
-    const inner_rule = Rule{
-        .kind = .style,
-        .selector = nested_sel,
-        .declarations = inner.declarations,
-        .children = inner.children,
-        .variant_order = inner.variant_order,
-    };
-
     const outer_children: []Rule = try alloc.alloc(Rule, 1);
     if (hover_guard) {
-        // Wrap the nested selector in @media (hover:hover)
-        const media_children = try alloc.alloc(Rule, 1);
-        media_children[0] = inner_rule;
-        outer_children[0] = Rule{
+        // Wrap declarations in @media (hover:hover), then nest inside the selector
+        // Result: .class { &:hover { @media (hover:hover) { declarations } } }
+        // The media rule directly holds declarations via emitter's media rule handling
+        const media_rule = Rule{
             .kind = .media,
             .at_rule = "@media (hover:hover)",
-            .children = media_children,
+            .declarations = inner.declarations,
+            .children = inner.children,
+            .variant_order = inner.variant_order,
+        };
+        const sel_children = try alloc.alloc(Rule, 1);
+        sel_children[0] = media_rule;
+        outer_children[0] = Rule{
+            .kind = .style,
+            .selector = nested_sel,
+            .declarations = &.{},
+            .children = sel_children,
             .variant_order = inner.variant_order,
         };
     } else {
-        outer_children[0] = inner_rule;
+        outer_children[0] = Rule{
+            .kind = .style,
+            .selector = nested_sel,
+            .declarations = inner.declarations,
+            .children = inner.children,
+            .variant_order = inner.variant_order,
+        };
     }
 
     return Rule{
