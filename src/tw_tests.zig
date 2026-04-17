@@ -8919,6 +8919,32 @@ test "tw variant nesting: hover uses CSS nesting with & and @media (hover:hover)
     try std.testing.expect(std.mem.indexOf(u8, result, "@media (hover:hover){.hover\\:bg-amber-200") == null);
 }
 
+test "tw variant nesting: hover has &:hover OUTSIDE @media (hover:hover)" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"hover:flex"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+    // The correct nesting order is: .hover\:flex{&:hover{@media (hover:hover){display:flex}}}
+    // NOT: .hover\:flex{@media (hover:hover){&:hover{display:flex}}}
+    // &:hover must come before @media
+    const hover_pos = std.mem.indexOf(u8, result, "&:hover{") orelse return error.TestUnexpectedResult;
+    const media_pos = std.mem.indexOf(u8, result, "@media (hover:hover)") orelse return error.TestUnexpectedResult;
+    try std.testing.expect(hover_pos < media_pos);
+}
+
+test "tw variant nesting: group-hover has selector OUTSIDE @media (hover:hover)" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"group-hover:flex"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+    // The correct nesting order is: .group-hover\:flex{&:is(:where(.group):hover *){@media (hover:hover){display:flex}}}
+    // NOT: .group-hover\:flex{@media (hover:hover){&:is(:where(.group):hover *){display:flex}}}
+    // &:is(...) must come before @media
+    const sel_pos = std.mem.indexOf(u8, result, "&:is(:where(.group):hover *)") orelse return error.TestUnexpectedResult;
+    const media_pos = std.mem.indexOf(u8, result, "@media (hover:hover)") orelse return error.TestUnexpectedResult;
+    try std.testing.expect(sel_pos < media_pos);
+}
+
 test "tw variant nesting: last uses CSS nesting with &:last-child" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{"last:border-r-0"};

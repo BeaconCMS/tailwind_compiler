@@ -2535,6 +2535,56 @@ test "compile: theme() CSS var shorthand does not pollute theme layer" {
     try std.testing.expect(std.mem.indexOf(u8, result, "--color-red-500:") == null);
 }
 
+test "compile: color-mix values include spaces after commas" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"bg-white/10"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    // Base: color-mix should have spaces after commas
+    try std.testing.expect(std.mem.indexOf(u8, result, "color-mix(in srgb, #fff 10%, transparent)") != null);
+    // Enhanced: color-mix in oklab should also have spaces
+    try std.testing.expect(std.mem.indexOf(u8, result, "color-mix(in oklab, var(--color-white) 10%, transparent)") != null);
+    // @supports should have spaces after colons and commas
+    try std.testing.expect(std.mem.indexOf(u8, result, "@supports (color: color-mix(in lab, red, red))") != null);
+}
+
+test "compile: var() fallback values include spaces after commas" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"transition"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    // var() with fallback should have space after comma
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--tw-ease, var(--default-transition-timing-function))") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--tw-duration, var(--default-transition-duration))") != null);
+}
+
+test "compile: ring color var() fallback includes space after comma" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"ring"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    // var(--tw-ring-color, currentcolor) should have space after comma
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--tw-ring-color, currentcolor)") != null);
+}
+
+test "compile: shadow color var() fallback includes space after comma" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"shadow-inner"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    // var(--tw-shadow-color, ...) should have space after comma
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--tw-shadow-color, #0000000d)") != null);
+}
+
+test "compile: text size line-height var() fallback includes space after comma" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"text-2xl"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    // var(--tw-leading, var(--text-2xl--line-height)) should have space after comma
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--tw-leading, var(--text-2xl--line-height))") != null);
+}
+
 test "compile: bg-emerald-500 still adds variable to theme layer (var() path)" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{"bg-emerald-500"};
