@@ -2330,6 +2330,34 @@ test "tw: leading_1" {
     try std.testing.expect(std.mem.indexOf(u8, result, "leading-none") != null);
 }
 
+test "tw: leading numeric theme vars" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "leading-3", "leading-4", "leading-5", "leading-6", "leading-7", "leading-8", "leading-9", "leading-10" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    // Numeric line heights should use --leading-N theme variables
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--leading-3)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--leading-4)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--leading-5)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--leading-6)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--leading-7)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--leading-8)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--leading-9)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--leading-10)") != null);
+}
+
+test "tw: leading numeric theme vars emitted" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "leading-3", "leading-10" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    // Theme layer should contain the numeric --leading- variables
+    try std.testing.expect(std.mem.indexOf(u8, result, "--leading-3") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--leading-10") != null);
+}
+
 test "tw: font-smoothing" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{ "antialiased", "subpixel-antialiased" };
@@ -2588,6 +2616,20 @@ test "tw: marker" {
     defer alloc.free(result);
 
     try std.testing.expect(std.mem.indexOf(u8, result, "marker\\:flex") != null);
+    // marker should target both descendant and self markers
+    try std.testing.expect(std.mem.indexOf(u8, result, "& *::marker") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "&::marker") != null);
+}
+
+test "tw: marker webkit" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "marker:flex" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    // marker should also include webkit details-marker fallbacks
+    try std.testing.expect(std.mem.indexOf(u8, result, "& *::-webkit-details-marker") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "&::-webkit-details-marker") != null);
 }
 
 test "tw: selection" {
@@ -2597,6 +2639,9 @@ test "tw: selection" {
     defer alloc.free(result);
 
     try std.testing.expect(std.mem.indexOf(u8, result, "selection\\:flex") != null);
+    // selection should target both descendant and self selections
+    try std.testing.expect(std.mem.indexOf(u8, result, "& *::selection") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "&::selection") != null);
 }
 
 test "tw: file" {

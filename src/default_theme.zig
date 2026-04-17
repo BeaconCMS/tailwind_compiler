@@ -421,11 +421,20 @@ pub const letter_spacings = [_]ThemeEntry{
 // ─── Line Heights ──────────────────────────────────────────────────────────
 
 pub const line_heights = [_]ThemeEntry{
+    .{ .key = "--leading-none", .value = "1" },
     .{ .key = "--leading-tight", .value = "1.25" },
     .{ .key = "--leading-snug", .value = "1.375" },
     .{ .key = "--leading-normal", .value = "1.5" },
     .{ .key = "--leading-relaxed", .value = "1.625" },
     .{ .key = "--leading-loose", .value = "2" },
+    .{ .key = "--leading-3", .value = "0.75rem" },
+    .{ .key = "--leading-4", .value = "1rem" },
+    .{ .key = "--leading-5", .value = "1.25rem" },
+    .{ .key = "--leading-6", .value = "1.5rem" },
+    .{ .key = "--leading-7", .value = "1.75rem" },
+    .{ .key = "--leading-8", .value = "2rem" },
+    .{ .key = "--leading-9", .value = "2.25rem" },
+    .{ .key = "--leading-10", .value = "2.5rem" },
 };
 
 // ─── Border Radius ─────────────────────────────────────────────────────────

@@ -147,6 +147,27 @@ fn applyStaticVariant(
         };
     }
 
+    // Multi-selector pseudo-element variants (marker, selection)
+    // These need to target both the element itself and its descendants.
+    if (multi_selector_pseudo_map.get(name)) |selectors| {
+        const children = try alloc.alloc(Rule, selectors.len);
+        for (selectors, 0..) |sel, i| {
+            children[i] = Rule{
+                .kind = .style,
+                .selector = sel,
+                .declarations = inner.declarations,
+                .children = inner.children,
+            };
+        }
+        return Rule{
+            .kind = .style,
+            .selector = inner.selector,
+            .declarations = &.{},
+            .children = children,
+            .variant_order = inner.variant_order,
+        };
+    }
+
     // Pseudo-element variants — use CSS nesting: .sel { &::pseudo { ... } }
     if (pseudo_element_map.get(name)) |pseudo| {
         const child_sel = try std.fmt.allocPrint(alloc, "&{s}", .{pseudo});
@@ -990,12 +1011,24 @@ const pseudo_element_map = std.StaticStringMap([]const u8).initComptime(.{
     .{ "after", "::after" },
     .{ "first-letter", "::first-letter" },
     .{ "first-line", "::first-line" },
-    .{ "marker", "::marker" },
-    .{ "selection", "::selection" },
     .{ "file", "::file-selector-button" },
     .{ "placeholder", "::placeholder" },
     .{ "backdrop", "::backdrop" },
     .{ "details-content", "::details-content" },
+});
+
+// Pseudo-element variants that target both descendants and the element itself.
+const multi_selector_pseudo_map = std.StaticStringMap([]const []const u8).initComptime(.{
+    .{ "marker", &[_][]const u8{
+        "& *::marker",
+        "&::marker",
+        "& *::-webkit-details-marker",
+        "&::-webkit-details-marker",
+    } },
+    .{ "selection", &[_][]const u8{
+        "& *::selection",
+        "&::selection",
+    } },
 });
 
 const media_variant_map = std.StaticStringMap([]const u8).initComptime(.{
