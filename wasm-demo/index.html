@@ -63,7 +63,7 @@ header h1 span{color:var(--accent)}
 .editor-wrap pre{z-index:1;pointer-events:none;background:transparent;color:var(--text)}
 
 /* CSS output (read-only, no overlay needed) */
-.css-wrap{flex:1;min-height:0;overflow:auto;padding:12px;font-family:var(--mono);font-size:12px;line-height:1.6;white-space:pre;word-wrap:normal;color:var(--text)}
+.css-wrap{flex:1;min-height:0;overflow:auto;padding:12px;font-family:var(--mono);font-size:12px;line-height:1.6;white-space:pre;word-wrap:normal;color:var(--text);user-select:text}
 
 /* Syntax highlighting colors */
 .hl-punct{color:#6272a4}
@@ -111,7 +111,7 @@ header h1 span{color:var(--accent)}
   </div>
   <div class="panel">
     <div class="panel-header"><span>Generated CSS <span class="panel-stats" id="css-stats"></span></span><button class="expand-btn" title="Expand"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button></div>
-    <div class="css-wrap"><code id="css-output"></code></div>
+    <div class="css-wrap" tabindex="0"><code id="css-output"></code></div>
   </div>
   <div class="panel">
     <div class="panel-header"><span>Preview</span><button class="expand-btn" title="Expand"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button></div>
@@ -664,6 +664,18 @@ htmlInput.addEventListener('scroll', () => {
   const pre = htmlInput.previousElementSibling;
   pre.scrollTop = htmlInput.scrollTop;
   pre.scrollLeft = htmlInput.scrollLeft;
+});
+
+// Scope Cmd+A / Ctrl+A to the CSS pane when it's focused
+cssWrap.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+    e.preventDefault();
+    const range = document.createRange();
+    range.selectNodeContents(cssWrap);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
 });
 
 preflightCb.addEventListener('change', doCompile);
