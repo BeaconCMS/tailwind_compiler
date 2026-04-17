@@ -196,6 +196,12 @@ pub const CssEmitter = struct {
         const estimated_size = rules.len * 80 + 4096; // ~80 bytes per rule + overhead for theme/base/properties
         try self.buf.ensureTotalCapacity(self.alloc, estimated_size);
 
+        // Layer order declarations — establishes cascade priority
+        try self.buf.appendSlice(self.alloc, "@layer properties;");
+        try self.writeNewline();
+        try self.buf.appendSlice(self.alloc, "@layer theme, base, components, utilities;");
+        try self.writeNewline();
+
         // @layer theme
         try self.emitThemeLayer(theme);
 
