@@ -2159,3 +2159,53 @@ test "compile: theme JSON recursive nesting (4+ levels)" {
     try std.testing.expect(std.mem.indexOf(u8, result, "background-color:var(--color-brand-primary-light)") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "--color-brand-primary-light:#aabbcc") != null);
 }
+
+// ─── Missing static utility tests ────────────────────────────────────────
+
+test "compile: missing safe alignment utilities" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "content-center-safe", "content-end-safe", "content-none", "items-baseline-last", "justify-baseline", "justify-items-center-safe", "justify-items-end-safe", "place-content-center-safe", "place-content-end-safe", "place-items-center-safe", "place-items-end-safe" };
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "align-content:safe center") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "align-content:safe flex-end") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "content:none") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "align-items:last baseline") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "justify-content:baseline") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "justify-items:safe center") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "justify-items:safe end") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "place-content:safe center") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "place-content:safe end") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "place-items:safe center") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "place-items:safe end") != null);
+}
+
+test "compile: missing basis, translate, scale, transform-box, scheme utilities" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "basis-auto", "basis-full", "translate-none", "translate-3d", "scale-3d", "transform-border", "transform-content", "transform-fill", "transform-stroke", "transform-view", "scheme-only-dark", "scheme-only-light" };
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "flex-basis:auto") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "flex-basis:100%") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "translate:none") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "scale-3d") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "transform-box:border-box") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "transform-box:content-box") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "transform-box:fill-box") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "transform-box:stroke-box") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "transform-box:view-box") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "color-scheme:only dark") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "color-scheme:only light") != null);
+}
+
+test "compile: missing misc static utilities" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "fill-none", "stroke-none", "outline-solid", "via-none", "duration-initial", "mask-none" };
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "fill:none") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "stroke:none") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "outline-style:solid") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--tw-gradient-via-stops:initial") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "mask-image:none") != null);
+}

@@ -227,6 +227,8 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "flex-auto", &[_]Declaration{.{ .property = "flex", .value = "auto" }} },
     .{ "flex-initial", &[_]Declaration{.{ .property = "flex", .value = "0 1 auto" }} },
     .{ "flex-none", &[_]Declaration{.{ .property = "flex", .value = "none" }} },
+    .{ "basis-auto", &[_]Declaration{.{ .property = "flex-basis", .value = "auto" }} },
+    .{ "basis-full", &[_]Declaration{.{ .property = "flex-basis", .value = "100%" }} },
 
     // ─── Grid Auto Flow ───
     .{ "grid-flow-row", &[_]Declaration{.{ .property = "grid-auto-flow", .value = "row" }} },
@@ -244,6 +246,7 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "justify-around", &[_]Declaration{.{ .property = "justify-content", .value = "space-around" }} },
     .{ "justify-evenly", &[_]Declaration{.{ .property = "justify-content", .value = "space-evenly" }} },
     .{ "justify-stretch", &[_]Declaration{.{ .property = "justify-content", .value = "stretch" }} },
+    .{ "justify-baseline", &[_]Declaration{.{ .property = "justify-content", .value = "baseline" }} },
     .{ "justify-start-safe", &[_]Declaration{.{ .property = "justify-content", .value = "safe flex-start" }} },
     .{ "justify-end-safe", &[_]Declaration{.{ .property = "justify-content", .value = "safe flex-end" }} },
     .{ "justify-center-safe", &[_]Declaration{.{ .property = "justify-content", .value = "safe center" }} },
@@ -253,6 +256,8 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "justify-items-end", &[_]Declaration{.{ .property = "justify-items", .value = "end" }} },
     .{ "justify-items-center", &[_]Declaration{.{ .property = "justify-items", .value = "center" }} },
     .{ "justify-items-stretch", &[_]Declaration{.{ .property = "justify-items", .value = "stretch" }} },
+    .{ "justify-items-center-safe", &[_]Declaration{.{ .property = "justify-items", .value = "safe center" }} },
+    .{ "justify-items-end-safe", &[_]Declaration{.{ .property = "justify-items", .value = "safe end" }} },
     .{ "justify-items-normal", &[_]Declaration{.{ .property = "justify-items", .value = "normal" }} },
 
     // ─── Justify Self ───
@@ -274,6 +279,12 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "content-evenly", &[_]Declaration{.{ .property = "align-content", .value = "space-evenly" }} },
     .{ "content-baseline", &[_]Declaration{.{ .property = "align-content", .value = "baseline" }} },
     .{ "content-stretch", &[_]Declaration{.{ .property = "align-content", .value = "stretch" }} },
+    .{ "content-center-safe", &[_]Declaration{.{ .property = "align-content", .value = "safe center" }} },
+    .{ "content-end-safe", &[_]Declaration{.{ .property = "align-content", .value = "safe flex-end" }} },
+    .{ "content-none", &[_]Declaration{
+        .{ .property = "--tw-content", .value = "none" },
+        .{ .property = "content", .value = "none" },
+    } },
 
     // ─── Align Items ───
     .{ "items-start", &[_]Declaration{.{ .property = "align-items", .value = "flex-start" }} },
@@ -281,6 +292,7 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "items-center", &[_]Declaration{.{ .property = "align-items", .value = "center" }} },
     .{ "items-baseline", &[_]Declaration{.{ .property = "align-items", .value = "baseline" }} },
     .{ "items-stretch", &[_]Declaration{.{ .property = "align-items", .value = "stretch" }} },
+    .{ "items-baseline-last", &[_]Declaration{.{ .property = "align-items", .value = "last baseline" }} },
     .{ "items-start-safe", &[_]Declaration{.{ .property = "align-items", .value = "safe flex-start" }} },
     .{ "items-end-safe", &[_]Declaration{.{ .property = "align-items", .value = "safe flex-end" }} },
     .{ "items-center-safe", &[_]Declaration{.{ .property = "align-items", .value = "safe center" }} },
@@ -306,6 +318,8 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "place-content-evenly", &[_]Declaration{.{ .property = "place-content", .value = "space-evenly" }} },
     .{ "place-content-baseline", &[_]Declaration{.{ .property = "place-content", .value = "baseline" }} },
     .{ "place-content-stretch", &[_]Declaration{.{ .property = "place-content", .value = "stretch" }} },
+    .{ "place-content-center-safe", &[_]Declaration{.{ .property = "place-content", .value = "safe center" }} },
+    .{ "place-content-end-safe", &[_]Declaration{.{ .property = "place-content", .value = "safe end" }} },
 
     // ─── Place Items ───
     .{ "place-items-start", &[_]Declaration{.{ .property = "place-items", .value = "start" }} },
@@ -313,6 +327,8 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "place-items-center", &[_]Declaration{.{ .property = "place-items", .value = "center" }} },
     .{ "place-items-baseline", &[_]Declaration{.{ .property = "place-items", .value = "baseline" }} },
     .{ "place-items-stretch", &[_]Declaration{.{ .property = "place-items", .value = "stretch" }} },
+    .{ "place-items-center-safe", &[_]Declaration{.{ .property = "place-items", .value = "safe center" }} },
+    .{ "place-items-end-safe", &[_]Declaration{.{ .property = "place-items", .value = "safe end" }} },
 
     // ─── Place Self ───
     .{ "place-self-auto", &[_]Declaration{.{ .property = "place-self", .value = "auto" }} },
@@ -468,6 +484,10 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "bg-left-bottom", &[_]Declaration{.{ .property = "background-position", .value = "left bottom" }} },
     .{ "bg-left", &[_]Declaration{.{ .property = "background-position", .value = "left" }} },
     .{ "bg-left-top", &[_]Declaration{.{ .property = "background-position", .value = "left top" }} },
+    .{ "bg-top-left", &[_]Declaration{.{ .property = "background-position", .value = "left top" }} },
+    .{ "bg-top-right", &[_]Declaration{.{ .property = "background-position", .value = "right top" }} },
+    .{ "bg-bottom-left", &[_]Declaration{.{ .property = "background-position", .value = "left bottom" }} },
+    .{ "bg-bottom-right", &[_]Declaration{.{ .property = "background-position", .value = "right bottom" }} },
 
     // ─── Border Style ───
     .{ "border-solid", &[_]Declaration{
@@ -501,6 +521,10 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "outline-dashed", &[_]Declaration{.{ .property = "outline-style", .value = "dashed" }} },
     .{ "outline-dotted", &[_]Declaration{.{ .property = "outline-style", .value = "dotted" }} },
     .{ "outline-double", &[_]Declaration{.{ .property = "outline-style", .value = "double" }} },
+    .{ "outline-solid", &[_]Declaration{
+        .{ .property = "--tw-outline-style", .value = "solid" },
+        .{ .property = "outline-style", .value = "solid" },
+    } },
 
     // ─── Mix Blend Mode ───
     .{ "mix-blend-normal", &[_]Declaration{.{ .property = "mix-blend-mode", .value = "normal" }} },
@@ -586,6 +610,10 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     } },
     .{ "transition-discrete", &[_]Declaration{.{ .property = "transition-behavior", .value = "allow-discrete" }} },
     .{ "transition-normal", &[_]Declaration{.{ .property = "transition-behavior", .value = "normal" }} },
+    .{ "duration-initial", &[_]Declaration{
+        .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
+        .{ .property = "--tw-duration", .value = "initial" },
+    } },
 
     // ─── Will Change ───
     .{ "will-change-auto", &[_]Declaration{.{ .property = "will-change", .value = "auto" }} },
@@ -597,6 +625,11 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "contain-none", &[_]Declaration{.{ .property = "contain", .value = "none" }} },
     .{ "contain-content", &[_]Declaration{.{ .property = "contain", .value = "content" }} },
     .{ "contain-strict", &[_]Declaration{.{ .property = "contain", .value = "strict" }} },
+    .{ "contain-size", &[_]Declaration{.{ .property = "contain", .value = "size" }} },
+    .{ "contain-inline-size", &[_]Declaration{.{ .property = "contain", .value = "inline-size" }} },
+    .{ "contain-layout", &[_]Declaration{.{ .property = "contain", .value = "layout" }} },
+    .{ "contain-paint", &[_]Declaration{.{ .property = "contain", .value = "paint" }} },
+    .{ "contain-style", &[_]Declaration{.{ .property = "contain", .value = "style" }} },
 
     // ─── Forced Color Adjust ───
     .{ "forced-color-adjust-auto", &[_]Declaration{.{ .property = "forced-color-adjust", .value = "auto" }} },
@@ -698,6 +731,8 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "scheme-light", &[_]Declaration{.{ .property = "color-scheme", .value = "light" }} },
     .{ "scheme-light-dark", &[_]Declaration{.{ .property = "color-scheme", .value = "light dark" }} },
     .{ "scheme-dark-light", &[_]Declaration{.{ .property = "color-scheme", .value = "dark light" }} },
+    .{ "scheme-only-dark", &[_]Declaration{.{ .property = "color-scheme", .value = "only dark" }} },
+    .{ "scheme-only-light", &[_]Declaration{.{ .property = "color-scheme", .value = "only light" }} },
 
     // ─── Container ───
     .{ "container", &[_]Declaration{.{ .property = "width", .value = "100%" }} },
@@ -721,6 +756,32 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "transform-gpu", &[_]Declaration{.{ .property = "transform", .value = "translateZ(0) var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,)" }} },
     .{ "transform-flat", &[_]Declaration{.{ .property = "transform-style", .value = "flat" }} },
     .{ "transform-3d", &[_]Declaration{.{ .property = "transform-style", .value = "preserve-3d" }} },
+    .{ "translate-none", &[_]Declaration{.{ .property = "translate", .value = "none" }} },
+    .{ "translate-3d", &[_]Declaration{
+        .{ .property = "--tw-translate-x", .value = "0" },
+        .{ .property = "--tw-translate-y", .value = "0" },
+        .{ .property = "--tw-translate-z", .value = "0" },
+        .{ .property = "translate", .value = "var(--tw-translate-x) var(--tw-translate-y) var(--tw-translate-z)" },
+    } },
+    .{ "translate-full", &[_]Declaration{
+        .{ .property = "--tw-translate-x", .value = "100%" },
+        .{ .property = "--tw-translate-y", .value = "100%" },
+    } },
+    .{ "-translate-full", &[_]Declaration{
+        .{ .property = "--tw-translate-x", .value = "-100%" },
+        .{ .property = "--tw-translate-y", .value = "-100%" },
+    } },
+    .{ "scale-3d", &[_]Declaration{
+        .{ .property = "--tw-scale-x", .value = "1" },
+        .{ .property = "--tw-scale-y", .value = "1" },
+        .{ .property = "--tw-scale-z", .value = "1" },
+        .{ .property = "scale", .value = "var(--tw-scale-x) var(--tw-scale-y) var(--tw-scale-z)" },
+    } },
+    .{ "transform-border", &[_]Declaration{.{ .property = "transform-box", .value = "border-box" }} },
+    .{ "transform-content", &[_]Declaration{.{ .property = "transform-box", .value = "content-box" }} },
+    .{ "transform-fill", &[_]Declaration{.{ .property = "transform-box", .value = "fill-box" }} },
+    .{ "transform-stroke", &[_]Declaration{.{ .property = "transform-box", .value = "stroke-box" }} },
+    .{ "transform-view", &[_]Declaration{.{ .property = "transform-box", .value = "view-box" }} },
     .{ "backface-hidden", &[_]Declaration{.{ .property = "backface-visibility", .value = "hidden" }} },
     .{ "backface-visible", &[_]Declaration{.{ .property = "backface-visibility", .value = "visible" }} },
 
@@ -741,6 +802,14 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "inset-shadow-none", &[_]Declaration{.{ .property = "box-shadow", .value = "0 0 #0000" }} },
     .{ "inset-shadow-initial", &[_]Declaration{.{ .property = "box-shadow", .value = "var(--tw-inset-shadow)" }} },
     .{ "text-shadow-none", &[_]Declaration{.{ .property = "text-shadow", .value = "none" }} },
+    .{ "drop-shadow-none", &[_]Declaration{
+        .{ .property = "--tw-drop-shadow", .value = " " },
+        .{ .property = "filter", .value = "var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,)" },
+    } },
+    .{ "fill-none", &[_]Declaration{.{ .property = "fill", .value = "none" }} },
+    .{ "stroke-none", &[_]Declaration{.{ .property = "stroke", .value = "none" }} },
+    .{ "via-none", &[_]Declaration{.{ .property = "--tw-gradient-via-stops", .value = "initial" }} },
+    .{ "mask-none", &[_]Declaration{.{ .property = "mask-image", .value = "none" }} },
     .{ "text-shadow-initial", &[_]Declaration{.{ .property = "text-shadow", .value = "var(--tw-text-shadow)" }} },
     .{ "ring-inset", &[_]Declaration{.{ .property = "--tw-ring-inset", .value = "inset" }} },
 
@@ -838,6 +907,41 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "mask-bottom", &[_]Declaration{ .{ .property = "-webkit-mask-position", .value = "bottom" }, .{ .property = "mask-position", .value = "bottom" } } },
     .{ "mask-left", &[_]Declaration{ .{ .property = "-webkit-mask-position", .value = "left" }, .{ .property = "mask-position", .value = "left" } } },
     .{ "mask-right", &[_]Declaration{ .{ .property = "-webkit-mask-position", .value = "right" }, .{ .property = "mask-position", .value = "right" } } },
+    .{ "mask-top-left", &[_]Declaration{ .{ .property = "-webkit-mask-position", .value = "left top" }, .{ .property = "mask-position", .value = "left top" } } },
+    .{ "mask-top-right", &[_]Declaration{ .{ .property = "-webkit-mask-position", .value = "right top" }, .{ .property = "mask-position", .value = "right top" } } },
+    .{ "mask-bottom-left", &[_]Declaration{ .{ .property = "-webkit-mask-position", .value = "left bottom" }, .{ .property = "mask-position", .value = "left bottom" } } },
+    .{ "mask-bottom-right", &[_]Declaration{ .{ .property = "-webkit-mask-position", .value = "right bottom" }, .{ .property = "mask-position", .value = "right bottom" } } },
+
+    // ─── Mask Composite Shorthands ───
+    .{ "mask-add", &[_]Declaration{.{ .property = "mask-composite", .value = "add" }} },
+    .{ "mask-subtract", &[_]Declaration{.{ .property = "mask-composite", .value = "subtract" }} },
+    .{ "mask-intersect", &[_]Declaration{.{ .property = "mask-composite", .value = "intersect" }} },
+    .{ "mask-exclude", &[_]Declaration{.{ .property = "mask-composite", .value = "exclude" }} },
+
+    // ─── Mask Mode Shorthands ───
+    .{ "mask-alpha", &[_]Declaration{.{ .property = "mask-mode", .value = "alpha" }} },
+    .{ "mask-luminance", &[_]Declaration{.{ .property = "mask-mode", .value = "luminance" }} },
+    .{ "mask-match", &[_]Declaration{.{ .property = "mask-mode", .value = "match-source" }} },
+    .{ "mask-no-clip", &[_]Declaration{.{ .property = "mask-clip", .value = "no-clip" }} },
+
+    // ─── Mask Radial Shape/Size ───
+    .{ "mask-circle", &[_]Declaration{.{ .property = "--tw-mask-radial-shape", .value = "circle" }} },
+    .{ "mask-ellipse", &[_]Declaration{.{ .property = "--tw-mask-radial-shape", .value = "ellipse" }} },
+    .{ "mask-radial-closest-side", &[_]Declaration{.{ .property = "--tw-mask-radial-size", .value = "closest-side" }} },
+    .{ "mask-radial-farthest-side", &[_]Declaration{.{ .property = "--tw-mask-radial-size", .value = "farthest-side" }} },
+    .{ "mask-radial-closest-corner", &[_]Declaration{.{ .property = "--tw-mask-radial-size", .value = "closest-corner" }} },
+    .{ "mask-radial-farthest-corner", &[_]Declaration{.{ .property = "--tw-mask-radial-size", .value = "farthest-corner" }} },
+
+    // ─── Mask Radial Position ───
+    .{ "mask-radial-at-center", &[_]Declaration{.{ .property = "--tw-mask-radial-position", .value = "center" }} },
+    .{ "mask-radial-at-top", &[_]Declaration{.{ .property = "--tw-mask-radial-position", .value = "top" }} },
+    .{ "mask-radial-at-top-left", &[_]Declaration{.{ .property = "--tw-mask-radial-position", .value = "top left" }} },
+    .{ "mask-radial-at-top-right", &[_]Declaration{.{ .property = "--tw-mask-radial-position", .value = "top right" }} },
+    .{ "mask-radial-at-bottom", &[_]Declaration{.{ .property = "--tw-mask-radial-position", .value = "bottom" }} },
+    .{ "mask-radial-at-bottom-left", &[_]Declaration{.{ .property = "--tw-mask-radial-position", .value = "bottom left" }} },
+    .{ "mask-radial-at-bottom-right", &[_]Declaration{.{ .property = "--tw-mask-radial-position", .value = "bottom right" }} },
+    .{ "mask-radial-at-left", &[_]Declaration{.{ .property = "--tw-mask-radial-position", .value = "left" }} },
+    .{ "mask-radial-at-right", &[_]Declaration{.{ .property = "--tw-mask-radial-position", .value = "right" }} },
 });
 
 // ─── Functional Utility Set ────────────────────────────────────────────────
