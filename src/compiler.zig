@@ -349,71 +349,66 @@ pub const Context = struct {
 
         // Build the escaped selector
         const escaped = try emitter_mod.escapeCssIdentifier(self.alloc, raw);
-        var selector = try std.fmt.allocPrint(self.alloc, ".{s}", .{escaped});
+        const selector = try std.fmt.allocPrint(self.alloc, ".{s}", .{escaped});
 
-        // Space utilities: rewrite to child margin selectors matching Tailwind v4 output
-        // .space-y-4 > :not(:last-child) { margin-block-end: value }
+        // Space utilities: use CSS nesting with :where(& > :not(:last-child))
+        // .space-y-4 { :where(& > :not(:last-child)) { margin-block-end: value } }
+        var nested_children: ?[]const Rule = null;
         if (final_decls.len == 1 and std.mem.eql(u8, final_decls[0].property, "__space_value")) {
             const space_value = final_decls[0].value;
             const is_y = std.mem.indexOf(u8, parsed.root, "space-y") != null;
-
-            // Determine reverse var name
             const reverse_var = if (is_y) "--tw-space-y-reverse" else "--tw-space-x-reverse";
             const margin_start_prop = if (is_y) "margin-block-start" else "margin-inline-start";
             const margin_end_prop = if (is_y) "margin-block-end" else "margin-inline-end";
 
-            selector = try std.fmt.allocPrint(self.alloc, ".{s}>:not(:last-child)", .{escaped});
-
             var space_decls = try self.alloc.alloc(Declaration, 3);
             space_decls[0] = Declaration{ .property = reverse_var, .value = "0" };
             space_decls[1] = Declaration{
-                .property = margin_end_prop,
-                .value = try std.fmt.allocPrint(self.alloc, "calc({s} * calc(1 - var({s})))", .{ space_value, reverse_var }),
-            };
-            space_decls[2] = Declaration{
                 .property = margin_start_prop,
                 .value = try std.fmt.allocPrint(self.alloc, "calc({s} * var({s}))", .{ space_value, reverse_var }),
             };
-            final_decls = space_decls;
+            space_decls[2] = Declaration{
+                .property = margin_end_prop,
+                .value = try std.fmt.allocPrint(self.alloc, "calc({s} * calc(1 - var({s})))", .{ space_value, reverse_var }),
+            };
+            final_decls = &.{};
+            var children = try self.alloc.alloc(Rule, 1);
+            children[0] = Rule{ .kind = .style, .selector = ":where(& > :not(:last-child))", .declarations = space_decls };
+            nested_children = children;
         }
 
-        // All divide-* utilities use child selectors in Tailwind v4
-        // .divide-{color/style} > :not(:last-child) { border-color/style: ... }
+        // All divide-* utilities use CSS nesting with :where(& > :not(:last-child))
         if (std.mem.startsWith(u8, parsed.root, "divide") and
             !std.mem.eql(u8, final_decls[0].property, "__divide_value"))
         {
-            selector = try std.fmt.allocPrint(self.alloc, ".{s}>:not(:last-child)", .{escaped});
+            var children = try self.alloc.alloc(Rule, 1);
+            children[0] = Rule{ .kind = .style, .selector = ":where(& > :not(:last-child))", .declarations = final_decls };
+            final_decls = &.{};
+            nested_children = children;
         }
 
-        // Divide width utilities: rewrite to child border selectors matching Tailwind v4
-        // .divide-y-2 > :not(:last-child) { border-top/bottom-width: ... }
+        // Divide width utilities: use CSS nesting
         if (final_decls.len == 1 and std.mem.eql(u8, final_decls[0].property, "__divide_value")) {
             const divide_value = final_decls[0].value;
             const is_y = std.mem.indexOf(u8, parsed.root, "divide-y") != null;
-
             const reverse_var = if (is_y) "--tw-divide-y-reverse" else "--tw-divide-x-reverse";
 
-            selector = try std.fmt.allocPrint(self.alloc, ".{s}>:not(:last-child)", .{escaped});
-
+            var divide_decls: []Declaration = undefined;
             if (is_y) {
-                var divide_decls = try self.alloc.alloc(Declaration, 4);
+                divide_decls = try self.alloc.alloc(Declaration, 5);
                 divide_decls[0] = Declaration{ .property = reverse_var, .value = "0" };
                 divide_decls[1] = Declaration{ .property = "border-bottom-style", .value = "var(--tw-border-style)" };
                 divide_decls[2] = Declaration{ .property = "border-top-style", .value = "var(--tw-border-style)" };
                 divide_decls[3] = Declaration{
-                    .property = "border-bottom-width",
+                    .property = "border-top-width",
                     .value = try std.fmt.allocPrint(self.alloc, "calc({s} * var({s}))", .{ divide_value, reverse_var }),
                 };
-                // Need 5 decls total
-                var full_decls = try self.alloc.alloc(Declaration, 5);
-                @memcpy(full_decls[0..4], divide_decls);
-                full_decls[4] = Declaration{
-                    .property = "border-top-width",
+                divide_decls[4] = Declaration{
+                    .property = "border-bottom-width",
                     .value = try std.fmt.allocPrint(self.alloc, "calc({s} * calc(1 - var({s})))", .{ divide_value, reverse_var }),
                 };
-                final_decls = full_decls;
             } else {
-                var divide_decls = try self.alloc.alloc(Declaration, 5);
+                divide_decls = try self.alloc.alloc(Declaration, 5);
                 divide_decls[0] = Declaration{ .property = reverse_var, .value = "0" };
                 divide_decls[1] = Declaration{ .property = "border-right-style", .value = "var(--tw-border-style)" };
                 divide_decls[2] = Declaration{ .property = "border-left-style", .value = "var(--tw-border-style)" };
@@ -425,8 +420,11 @@ pub const Context = struct {
                     .property = "border-left-width",
                     .value = try std.fmt.allocPrint(self.alloc, "calc({s} * calc(1 - var({s})))", .{ divide_value, reverse_var }),
                 };
-                final_decls = divide_decls;
             }
+            final_decls = &.{};
+            var children = try self.alloc.alloc(Rule, 1);
+            children[0] = Rule{ .kind = .style, .selector = ":where(& > :not(:last-child))", .declarations = divide_decls };
+            nested_children = children;
         }
 
         // Create base rule
@@ -434,6 +432,7 @@ pub const Context = struct {
             .kind = .style,
             .selector = selector,
             .declarations = final_decls,
+            .children = nested_children orelse &.{},
         };
 
         // Apply variants
@@ -1987,6 +1986,26 @@ test "compile: ring color with opacity uses color-mix" {
     defer alloc.free(result);
     try std.testing.expect(std.mem.indexOf(u8, result, "--tw-ring-color:color-mix(in srgb,#fff 10%,transparent)") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "--tw-ring-color:color-mix(in oklab,var(--color-white) 10%,transparent)") != null);
+}
+
+test "compile: space-y uses :where() CSS nesting" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"space-y-4"};
+    const result = try compile(alloc, &candidates, null, false, false, null, null, null);
+    defer alloc.free(result);
+    // Should use .space-y-4 as the selector, NOT .space-y-4>:not(:last-child)
+    try std.testing.expect(std.mem.indexOf(u8, result, ".space-y-4 {\n") != null);
+    // Should contain :where(& > :not(:last-child)) nested block
+    try std.testing.expect(std.mem.indexOf(u8, result, ":where(& > :not(:last-child))") != null);
+}
+
+test "compile: divide-y uses :where() CSS nesting" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"divide-y"};
+    const result = try compile(alloc, &candidates, null, false, false, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, ".divide-y {\n") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, ":where(& > :not(:last-child))") != null);
 }
 
 test "compile: text-sm line-height uses calc ratio" {
