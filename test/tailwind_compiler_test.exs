@@ -18,7 +18,7 @@ defmodule TailwindCompilerTest do
     test "compiles color utilities with opacity" do
       {:ok, css} = TailwindCompiler.compile(["bg-red-500", "bg-blue-500/50"])
       assert css =~ "background-color:var(--color-red-500)"
-      assert css =~ "background-color:#"
+      assert css =~ "background-color:color-mix(in srgb,"
     end
 
     test "compiles with variants" do
@@ -330,9 +330,8 @@ defmodule TailwindCompilerTest do
           preflight: false
         )
 
-      # Should resolve to a pre-resolved hex with alpha (e.g., #4d9aff80)
-      # The utility selector should NOT use var(--color-primary) since opacity was applied
-      assert css =~ ~r/\.bg-primary\\\/50\{background-color:#[0-9a-f]+\}/
+      # Should use color-mix() with the raw oklch value as srgb fallback
+      assert css =~ "background-color:color-mix(in srgb,"
     end
 
     test "plugin colors work with border utilities", %{plugin_css: plugin_css} do
