@@ -8577,3 +8577,41 @@ test "tw: inset-bs with arbitrary value" {
 
     try std.testing.expect(std.mem.indexOf(u8, result, "inset-block-start:20px") != null);
 }
+
+// ─── theme() fallback value support ────────────────────────────────────────
+
+test "tw: theme() with fallback value on missing var" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = ".test{color:theme(--nonexistent, red);}";
+    const result = try compiler.compile(alloc, &candidates, null, false, true, custom, null, null);
+    defer alloc.free(result);
+
+    // When theme var doesn't exist, fallback should be used
+    try std.testing.expect(std.mem.indexOf(u8, result, "color:red") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
+}
+
+test "tw: theme() with fallback on resolved var uses resolved value" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = ".test{color:theme(colors.red.500, blue);}";
+    const result = try compiler.compile(alloc, &candidates, null, false, true, custom, null, null);
+    defer alloc.free(result);
+
+    // When theme var exists, resolved value should be used (not fallback)
+    try std.testing.expect(std.mem.indexOf(u8, result, "oklch(") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
+}
+
+test "tw: theme() with comma in fallback value" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = ".test{font-family:theme(--nonexistent, Arial, sans-serif);}";
+    const result = try compiler.compile(alloc, &candidates, null, false, true, custom, null, null);
+    defer alloc.free(result);
+
+    // Fallback with commas should be preserved
+    try std.testing.expect(std.mem.indexOf(u8, result, "font-family:Arial, sans-serif") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
+}

@@ -688,7 +688,7 @@ pub const Context = struct {
 
         while (pos < css.len) {
             if (pos + 6 <= css.len and std.mem.eql(u8, css[pos .. pos + 6], "theme(")) {
-                // Find the closing paren
+                // Find the closing paren (balanced)
                 const start = pos + 6;
                 var depth: usize = 1;
                 var end: usize = start;
@@ -699,15 +699,31 @@ pub const Context = struct {
                 }
 
                 if (depth == 0) {
-                    const path = std.mem.trim(u8, css[start..end], " \t");
+                    const inner = std.mem.trim(u8, css[start..end], " \t");
 
-                    // Convert dot-path to CSS variable name
-                    // e.g., "colors.blue.900" → "--color-blue-900"
-                    // e.g., "spacing" → "--spacing"
+                    // Split path from fallback on first comma at depth 0
+                    var fallback: ?[]const u8 = null;
+                    var path: []const u8 = inner;
+                    var comma_depth: usize = 0;
+                    for (inner, 0..) |c, i| {
+                        if (c == '(') comma_depth += 1;
+                        if (c == ')') {
+                            if (comma_depth > 0) comma_depth -= 1;
+                        }
+                        if (c == ',' and comma_depth == 0) {
+                            path = std.mem.trim(u8, inner[0..i], " \t");
+                            fallback = std.mem.trim(u8, inner[i + 1 ..], " \t");
+                            break;
+                        }
+                    }
+
                     if (self.resolveThemePath(path)) |value| {
                         try result.appendSlice(self.alloc, value);
+                    } else if (fallback) |fb| {
+                        // Use fallback value when theme path is unresolved
+                        try result.appendSlice(self.alloc, fb);
                     } else {
-                        // If unresolved, keep original
+                        // If unresolved and no fallback, keep original
                         try result.appendSlice(self.alloc, css[pos .. end + 1]);
                     }
                     pos = end + 1;
