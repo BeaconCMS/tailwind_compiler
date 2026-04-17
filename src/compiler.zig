@@ -315,6 +315,12 @@ pub const Context = struct {
         // Resolve to CSS declarations
         const declarations = try self.resolveDeclarations(&parsed) orelse return;
 
+        // Scan declaration values for var(--...) references to theme variables
+        // and mark them as used so they appear in @layer theme output.
+        for (declarations) |decl| {
+            self.markVarReferences(decl.value);
+        }
+
         // Register @property declarations for this utility
         const props = utilities.getRequiredProperties(parsed.root);
         for (props) |prop| {
@@ -602,6 +608,31 @@ pub const Context = struct {
     /// Resolve a single utility class name to its CSS declarations (property:value pairs).
     /// This is used by @apply processing to resolve each class independently.
     /// Returns null if the class cannot be resolved.
+    /// Scan a CSS value string for var(--...) references and mark the
+    /// referenced theme variables as used so they appear in @layer theme.
+    fn markVarReferences(self: *Context, value: []const u8) void {
+        var pos: usize = 0;
+        while (pos + 6 < value.len) {
+            if (std.mem.eql(u8, value[pos .. pos + 6], "var(--")) {
+                const start = pos + 4; // start of "--..."
+                var end = start;
+                // Find the closing ) or , (for fallback)
+                while (end < value.len and value[end] != ')' and value[end] != ',') {
+                    end += 1;
+                }
+                if (end > start) {
+                    const var_name = value[start..end];
+                    if (self.theme.get(var_name) != null) {
+                        self.theme.markUsed(self.alloc.dupe(u8, var_name) catch return);
+                    }
+                }
+                pos = end;
+            } else {
+                pos += 1;
+            }
+        }
+    }
+
     fn resolveClassDeclarations(self: *Context, class_name: []const u8) !?[]const Declaration {
         // Parse the candidate
         const parsed = try candidate_mod.parseCandidate(
