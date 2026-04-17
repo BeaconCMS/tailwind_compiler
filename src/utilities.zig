@@ -2347,8 +2347,8 @@ fn resolveSpacing(
             } else if (std.mem.eql(u8, val.value, "px")) {
                 css_value = if (is_neg) "-1px" else "1px";
             } else if (val.fraction) |frac| {
-                // Fraction: e.g. 1/2 -> 50%
-                css_value = try resolveFraction(alloc, frac, is_neg);
+                // Fraction: e.g. 1/2 -> calc(1 / 2 * 100%)
+                css_value = try resolveFractionCalc(alloc, frac, is_neg);
             } else if (isSizingRoot(root) and !is_neg and theme.resolve(val.value, "--max-width")) {
                 // Theme has a --max-width-{value} variable (e.g., --max-width-720)
                 const var_name = try std.fmt.allocPrint(alloc, "--max-width-{s}", .{val.value});

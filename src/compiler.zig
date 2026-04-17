@@ -1463,7 +1463,7 @@ test "compile: fraction value" {
     const result = try compile(alloc, &candidates, null, false, true, null, null, null);
     defer alloc.free(result);
 
-    try std.testing.expect(std.mem.indexOf(u8, result, "width:50%") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "width:calc(1 / 2 * 100%)") != null);
 }
 
 test "compile: special spacing keywords" {
