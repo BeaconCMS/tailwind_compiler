@@ -8407,3 +8407,173 @@ test "tw neg: neg_should not parse invalid values s" {
     try std.testing.expect(std.mem.indexOf(u8, result, "@layer utilities{") == null or
         std.mem.indexOf(u8, result, "@layer utilities{}") != null);
 }
+
+// ─── Block-direction border utilities (border-bs, border-be) ───────────────
+
+test "tw: border-bs default width" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"border-bs"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-block-start-style") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-block-start-width") != null);
+}
+
+test "tw: border-be default width" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"border-be"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-block-end-style") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-block-end-width") != null);
+}
+
+test "tw: border-bs with value" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"border-bs-2"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-block-start-width:2px") != null);
+}
+
+test "tw: border-be with value" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"border-be-4"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-block-end-width:4px") != null);
+}
+
+test "tw: border-bs with color" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"border-bs-red-500"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-block-start-color") != null);
+}
+
+test "tw: border-be with color" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"border-be-blue-500"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-block-end-color") != null);
+}
+
+test "tw: border-bs color with opacity modifier" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"border-bs-red-500/50"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-block-start-color") != null);
+}
+
+// ─── Block-direction inset utilities (inset-bs, inset-be) ────────────���─────
+
+test "tw: inset-bs-auto" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"inset-bs-auto"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "inset-block-start:auto") != null);
+}
+
+test "tw: inset-be-auto" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"inset-be-auto"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "inset-block-end:auto") != null);
+}
+
+test "tw: inset-bs-full" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"inset-bs-full"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "inset-block-start:100%") != null);
+}
+
+test "tw: inset-be-full" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"inset-be-full"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "inset-block-end:100%") != null);
+}
+
+test "tw: -inset-bs-full" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"-inset-bs-full"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "inset-block-start:-100%") != null);
+}
+
+test "tw: -inset-be-full" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"-inset-be-full"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "inset-block-end:-100%") != null);
+}
+
+test "tw: inset-bs with spacing value" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"inset-bs-4"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "inset-block-start") != null);
+}
+
+test "tw: inset-be with spacing value" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"inset-be-4"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "inset-block-end") != null);
+}
+
+test "tw: -inset-bs with spacing value" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"-inset-bs-4"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "inset-block-start") != null);
+}
+
+test "tw: inset-bs with fraction" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"inset-bs-1/2"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "inset-block-start") != null);
+    // Fractions produce calc(1/2 * 100%)
+    try std.testing.expect(std.mem.indexOf(u8, result, "calc(") != null);
+}
+
+test "tw: inset-bs with arbitrary value" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"inset-bs-[20px]"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "inset-block-start:20px") != null);
+}
