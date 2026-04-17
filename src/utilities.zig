@@ -2683,7 +2683,7 @@ fn resolveRounded(alloc: Allocator, root: []const u8, value: ?Value, theme: *The
             if (std.mem.eql(u8, val.value, "none")) {
                 css_value = "0";
             } else if (std.mem.eql(u8, val.value, "full")) {
-                css_value = "3.40282e38px";
+                css_value = "calc(infinity * 1px)";
             } else {
                 // Look up in theme --radius-{value}
                 const radius_var = try std.fmt.allocPrint(alloc, "--radius-{s}", .{val.value});
