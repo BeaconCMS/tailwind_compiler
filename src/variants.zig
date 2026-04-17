@@ -620,6 +620,48 @@ fn buildFunctionalAttrSelector(alloc: Allocator, value: []const u8) !?[]const u8
     return null;
 }
 
+/// Wrap a rule body (declarations + children) into a CSS-nested child rule using
+/// `&nested_sel` as the selector, optionally guarded by `@media (hover:hover)`.
+/// Returns the outer rule that retains `outer_selector`.
+fn makeNestedCompoundRule(
+    alloc: Allocator,
+    outer_selector: ?[]const u8,
+    nested_sel: []const u8,
+    inner: Rule,
+    hover_guard: bool,
+) !Rule {
+    const inner_rule = Rule{
+        .kind = .style,
+        .selector = nested_sel,
+        .declarations = inner.declarations,
+        .children = inner.children,
+        .variant_order = inner.variant_order,
+    };
+
+    const outer_children: []Rule = try alloc.alloc(Rule, 1);
+    if (hover_guard) {
+        // Wrap the nested selector in @media (hover:hover)
+        const media_children = try alloc.alloc(Rule, 1);
+        media_children[0] = inner_rule;
+        outer_children[0] = Rule{
+            .kind = .media,
+            .at_rule = "@media (hover:hover)",
+            .children = media_children,
+            .variant_order = inner.variant_order,
+        };
+    } else {
+        outer_children[0] = inner_rule;
+    }
+
+    return Rule{
+        .kind = .style,
+        .selector = outer_selector,
+        .declarations = &.{},
+        .children = outer_children,
+        .variant_order = inner.variant_order,
+    };
+}
+
 fn applyCompoundVariant(
     alloc: Allocator,
     inner: Rule,
@@ -630,7 +672,7 @@ fn applyCompoundVariant(
     const root = variant.root;
 
     if (std.mem.eql(u8, root, "group")) {
-        // group-hover: wrap selector to match ancestor
+        // group-hover, group-focus, etc.: nest selector as &:is(:where(.group):pseudo *)
         if (variant.value) |val| {
             if (val.kind == .named) {
                 const group_class = if (variant.modifier) |mod|
@@ -639,34 +681,21 @@ fn applyCompoundVariant(
                     ".group";
 
                 if (pseudo_class_map.get(val.value)) |pseudo| {
-                    const sel = try std.fmt.allocPrint(alloc, "{s}:is(:where({s}){s} *)", .{
-                        inner.selector orelse "",
+                    const nested_sel = try std.fmt.allocPrint(alloc, "&:is(:where({s}){s} *)", .{
                         group_class,
                         pseudo,
                     });
-
-                    return Rule{
-                        .kind = .style,
-                        .selector = sel,
-                        .declarations = inner.declarations,
-                        .children = inner.children,
-                        .variant_order = inner.variant_order,
-                    };
+                    // Only hover needs the @media (hover:hover) guard
+                    const hover_guard = std.mem.eql(u8, val.value, "hover");
+                    return makeNestedCompoundRule(alloc, inner.selector, nested_sel, inner, hover_guard);
                 } else if (try buildFunctionalAttrSelector(alloc, val.value)) |attr_sel| {
                     // group-aria-checked, group-aria-[sort=ascending],
                     // group-data-visible, group-data-[state=active]
-                    const sel = try std.fmt.allocPrint(alloc, "{s}:is(:where({s}{s}) *)", .{
-                        inner.selector orelse "",
+                    const nested_sel = try std.fmt.allocPrint(alloc, "&:is(:where({s}{s}) *)", .{
                         group_class,
                         attr_sel,
                     });
-                    return Rule{
-                        .kind = .style,
-                        .selector = sel,
-                        .declarations = inner.declarations,
-                        .children = inner.children,
-                        .variant_order = inner.variant_order,
-                    };
+                    return makeNestedCompoundRule(alloc, inner.selector, nested_sel, inner, false);
                 }
             }
         }
@@ -681,33 +710,21 @@ fn applyCompoundVariant(
                     ".peer";
 
                 if (pseudo_class_map.get(val.value)) |pseudo| {
-                    const sel = try std.fmt.allocPrint(alloc, "{s}:is(:where({s}){s} ~ *)", .{
-                        inner.selector orelse "",
+                    const nested_sel = try std.fmt.allocPrint(alloc, "&:is(:where({s}){s} ~ *)", .{
                         peer_class,
                         pseudo,
                     });
-                    return Rule{
-                        .kind = .style,
-                        .selector = sel,
-                        .declarations = inner.declarations,
-                        .children = inner.children,
-                        .variant_order = inner.variant_order,
-                    };
+                    // Only hover needs the @media (hover:hover) guard
+                    const hover_guard = std.mem.eql(u8, val.value, "hover");
+                    return makeNestedCompoundRule(alloc, inner.selector, nested_sel, inner, hover_guard);
                 } else if (try buildFunctionalAttrSelector(alloc, val.value)) |attr_sel| {
                     // peer-aria-checked, peer-aria-[sort=ascending],
                     // peer-data-visible, peer-data-[state=active]
-                    const sel = try std.fmt.allocPrint(alloc, "{s}:is(:where({s}{s}) ~ *)", .{
-                        inner.selector orelse "",
+                    const nested_sel = try std.fmt.allocPrint(alloc, "&:is(:where({s}{s}) ~ *)", .{
                         peer_class,
                         attr_sel,
                     });
-                    return Rule{
-                        .kind = .style,
-                        .selector = sel,
-                        .declarations = inner.declarations,
-                        .children = inner.children,
-                        .variant_order = inner.variant_order,
-                    };
+                    return makeNestedCompoundRule(alloc, inner.selector, nested_sel, inner, false);
                 }
             }
         }

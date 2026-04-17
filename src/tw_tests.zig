@@ -8790,3 +8790,56 @@ test "tw: theme() with comma in fallback value" {
     try std.testing.expect(std.mem.indexOf(u8, result, "font-family:Arial, sans-serif") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
 }
+
+test "tw debug: group-hover:flex actual CSS content" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"group-hover:flex"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+    // Check CSS nesting is used (not flat selector)
+    // Expect: .group-hover\:flex{&:is(:where(.group):hover *){@media (hover:hover){display:flex}}}
+    try std.testing.expect(std.mem.indexOf(u8, result, ".group-hover\\:flex{") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "&:is(:where(.group):hover *)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@media (hover:hover)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "display:flex") != null);
+    // NOT flat selector: ".group-hover\:flex:is(..." should not appear
+    try std.testing.expect(std.mem.indexOf(u8, result, ".group-hover\\:flex:is(") == null);
+}
+
+test "tw debug: group-hover/mega:opacity-100 CSS content" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"group-hover/mega:opacity-100"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+    // Check correct named group class and hover guard
+    try std.testing.expect(std.mem.indexOf(u8, result, ".group-hover\\/mega\\:opacity-100{") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "&:is(:where(.group\\/mega):hover *)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@media (hover:hover)") != null);
+}
+
+test "tw debug: group-focus:flex has nested & but no hover guard" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"group-focus:flex"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+    // CSS nesting should be used
+    try std.testing.expect(std.mem.indexOf(u8, result, ".group-focus\\:flex{") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "&:is(:where(.group):focus *)") != null);
+    // No hover guard
+    try std.testing.expect(std.mem.indexOf(u8, result, "@media (hover:hover)") == null);
+}
+
+test "tw debug: group-open:rotate-45 uses CSS nesting" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"group-open:rotate-45"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+    // Outer class selector
+    try std.testing.expect(std.mem.indexOf(u8, result, ".group-open\\:rotate-45{") != null);
+    // Nested & selector with open pseudo
+    try std.testing.expect(std.mem.indexOf(u8, result, "&:is(:where(.group):is([open]") != null);
+    // No hover guard
+    try std.testing.expect(std.mem.indexOf(u8, result, "@media (hover:hover)") == null);
+    // NOT flat
+    try std.testing.expect(std.mem.indexOf(u8, result, ".group-open\\:rotate-45:is(") == null);
+}

@@ -829,17 +829,21 @@ fn parseVariantSegment(
                     .value = switch (inner_variant.kind) {
                         .static => Value{
                             .kind = .named,
-                            .value = if (compound_modifier != null) full_inner else inner_variant.root,
+                            // Use only the inner variant root (e.g. "hover" not "hover/mega")
+                            // so pseudo_class_map lookup works correctly.
+                            .value = inner_variant.root,
                         },
                         .functional => Value{
                             // For functional inner variants (e.g., data-[state=active], aria-checked),
-                            // store the full inner variant string as the value so that
+                            // store only the inner variant string (without /modifier) so that
                             // applyCompoundVariant can reconstruct the correct selector.
                             .kind = .named,
-                            .value = full_inner,
+                            .value = inner_variant_str,
                         },
                         else => null,
                     },
+                    // Named modifier (e.g. "mega" in group-hover/mega) carried separately
+                    .modifier = if (compound_modifier) |cm| Modifier{ .kind = .named, .value = cm } else null,
                     .selector = inner_variant.selector,
                 };
             }
@@ -864,8 +868,10 @@ fn parseVariantSegment(
                     .root = prefix[0 .. prefix.len - 1],
                     .value = Value{
                         .kind = .named,
-                        .value = full_inner,
+                        // Use inner_variant_str (without /modifier) for the value
+                        .value = inner_variant_str,
                     },
+                    .modifier = if (compound_modifier) |cm| Modifier{ .kind = .named, .value = cm } else null,
                 };
             }
 
