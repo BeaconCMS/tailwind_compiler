@@ -8696,6 +8696,44 @@ test "tw: ease registers @property for --tw-ease" {
     try std.testing.expect(std.mem.indexOf(u8, result, "@property --tw-ease") != null);
 }
 
+// ─── @keyframes passthrough tests ──────────────────────────────────────────
+
+test "tw: @keyframes in custom_css passes through" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = "@keyframes fadeIn{from{opacity:0}to{opacity:1}}.animated{animation:fadeIn 1s;}";
+    const result = try compiler.compile(alloc, &candidates, null, false, true, custom, null, null);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "@keyframes fadeIn") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "opacity:0") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "opacity:1") != null);
+}
+
+test "tw: @keyframes with theme() in custom_css" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = "@keyframes pulse{0%{background:theme(colors.red.500)}100%{background:theme(colors.blue.500)}}";
+    const result = try compiler.compile(alloc, &candidates, null, false, true, custom, null, null);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "@keyframes pulse") != null);
+    // theme() should be resolved inside @keyframes
+    try std.testing.expect(std.mem.indexOf(u8, result, "oklch(") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
+}
+
+test "tw: @keyframes in plugin_css passes through" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const plugin = "@keyframes slideIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}.slide{animation:slideIn 0.5s;}";
+    const result = try compiler.compile(alloc, &candidates, null, false, true, null, null, plugin);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "@keyframes slideIn") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "translateX") != null);
+}
+
 test "tw: theme() with comma in fallback value" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{"flex"};
