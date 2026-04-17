@@ -1544,6 +1544,12 @@ pub fn getRequiredProperties(root: []const u8) []const AtProperty {
             .{ .name = "--tw-leading", .syntax = "*", .inherits = false, .initial_value = null },
         };
     }
+    // font-weight
+    if (std.mem.eql(u8, root, "font")) {
+        return &[_]AtProperty{
+            .{ .name = "--tw-font-weight", .syntax = "*", .inherits = false, .initial_value = null },
+        };
+    }
     // tracking (letter-spacing)
     if (std.mem.eql(u8, root, "tracking")) {
         return &[_]AtProperty{
@@ -5074,7 +5080,17 @@ fn resolveShadowColor(alloc: Allocator, value: ?Value, modifier: ?Modifier, them
         },
     }
     const decls = try alloc.alloc(Declaration, 1);
-    decls[0] = try makeColorDecl(alloc, "--tw-shadow-color", css_value, modifier, theme);
+    if (modifier) |mod| {
+        const mix = try applyColorMix(alloc, css_value, mod, theme);
+        // Shadow colors wrap the enhanced value with --tw-shadow-alpha
+        var enhanced = mix.enhanced;
+        if (enhanced) |e| {
+            enhanced = try std.fmt.allocPrint(alloc, "color-mix(in oklab,{s} var(--tw-shadow-alpha),transparent)", .{e});
+        }
+        decls[0] = Declaration{ .property = "--tw-shadow-color", .value = mix.base, .supports_value = enhanced };
+    } else {
+        decls[0] = Declaration{ .property = "--tw-shadow-color", .value = css_value };
+    }
     return decls;
 }
 

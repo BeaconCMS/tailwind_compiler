@@ -621,8 +621,12 @@ pub const Context = struct {
                 }
                 if (end > start) {
                     const var_name = value[start..end];
-                    if (self.theme.get(var_name) != null) {
-                        self.theme.markUsed(self.alloc.dupe(u8, var_name) catch return);
+                    if (self.theme.get(var_name)) |theme_val| {
+                        if (!self.theme.used_variables.contains(var_name)) {
+                            self.theme.markUsed(self.alloc.dupe(u8, var_name) catch return);
+                            // Recursively mark var() references in the theme value itself
+                            self.markVarReferences(theme_val);
+                        }
                     }
                 }
                 pos = end;
@@ -1108,6 +1112,11 @@ pub const Context = struct {
 
     /// Emit the final CSS output.
     pub fn emit(self: *Context) ![]const u8 {
+        // Mark theme variables referenced by the preflight CSS
+        if (self.include_preflight) {
+            self.markVarReferences(emitter_mod.preflight_css);
+        }
+
         // Sort rules
         std.mem.sort(CompiledRule, self.rules.items, {}, struct {
             fn lessThan(_: void, a: CompiledRule, b: CompiledRule) bool {
@@ -2025,6 +2034,48 @@ test "compile: text-sm line-height uses calc ratio" {
     const result = try compile(alloc, &candidates, null, false, true, null, null, null);
     defer alloc.free(result);
     try std.testing.expect(std.mem.indexOf(u8, result, "--text-sm--line-height:calc(1.25 / 0.875)") != null);
+}
+
+// ─── Final parity tests ───────────────────────────────────────────────────
+
+test "compile: shadow-color enhanced uses --tw-shadow-alpha" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"shadow-black/10"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    // Enhanced value should wrap with --tw-shadow-alpha
+    try std.testing.expect(std.mem.indexOf(u8, result, "color-mix(in oklab,color-mix(in oklab,var(--color-black) 10%,transparent) var(--tw-shadow-alpha),transparent)") != null);
+}
+
+test "compile: --font-sans and --font-mono appear in theme output with preflight" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    // Preflight references var(--default-font-family) which references var(--font-sans)
+    const result = try compile(alloc, &candidates, null, true, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--font-sans:") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--font-mono:") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--default-font-family:") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--default-mono-font-family:") != null);
+}
+
+test "compile: font-bold emits --tw-font-weight @property" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"font-bold"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@property --tw-font-weight") != null);
+}
+
+test "compile: placeholder variant uses CSS nesting" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"placeholder:text-slate-500"};
+    const result = try compile(alloc, &candidates, null, false, false, null, null, null);
+    defer alloc.free(result);
+    // Should use .placeholder\:text-slate-500 { &::placeholder { ... } }
+    // NOT .placeholder\:text-slate-500::placeholder
+    try std.testing.expect(std.mem.indexOf(u8, result, ".placeholder\\:text-slate-500 {\n") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "&::placeholder") != null);
 }
 
 // ─── Missing variant tests ────────────────────────────────────────────────

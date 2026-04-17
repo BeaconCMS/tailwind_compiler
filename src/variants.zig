@@ -147,13 +147,21 @@ fn applyStaticVariant(
         };
     }
 
-    // Pseudo-element variants
+    // Pseudo-element variants — use CSS nesting: .sel { &::pseudo { ... } }
     if (pseudo_element_map.get(name)) |pseudo| {
-        return Rule{
+        const child_sel = try std.fmt.allocPrint(alloc, "&{s}", .{pseudo});
+        const children = try alloc.alloc(Rule, 1);
+        children[0] = Rule{
             .kind = .style,
-            .selector = try appendPseudo(alloc, inner.selector orelse "", pseudo),
+            .selector = child_sel,
             .declarations = inner.declarations,
             .children = inner.children,
+        };
+        return Rule{
+            .kind = .style,
+            .selector = inner.selector,
+            .declarations = &.{},
+            .children = children,
             .variant_order = inner.variant_order,
         };
     }
