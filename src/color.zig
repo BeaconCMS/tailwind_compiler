@@ -355,7 +355,7 @@ pub fn resolveColorMixWithKey(alloc: Allocator, color_value: []const u8, alpha_p
 }
 
 fn fallbackColorMix(alloc: Allocator, color_value: []const u8, alpha_percent: u8) ![]const u8 {
-    return std.fmt.allocPrint(alloc, "color-mix(in oklab,{s} {d}%,transparent)", .{ color_value, alpha_percent });
+    return std.fmt.allocPrint(alloc, "color-mix(in oklab, {s} {d}%, transparent)", .{ color_value, alpha_percent });
 }
 
 /// Parse "oklch(L% C H)" where L is 0-100%, C is 0-0.4+, H is 0-360

@@ -527,7 +527,7 @@ pub const CssEmitter = struct {
         if (!has_any) return;
 
         try self.writeNewline();
-        try self.buf.appendSlice(self.alloc, "@supports (color:color-mix(in lab,red,red))");
+        try self.buf.appendSlice(self.alloc, "@supports (color: color-mix(in lab, red, red))");
         try self.writeSpace();
         try self.buf.append(self.alloc, '{');
         self.indent += 1;

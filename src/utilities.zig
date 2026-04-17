@@ -580,38 +580,38 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "transition-none", &[_]Declaration{.{ .property = "transition-property", .value = "none" }} },
     .{ "transition-all", &[_]Declaration{
         .{ .property = "transition-property", .value = "all" },
-        .{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" },
-        .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
+        .{ .property = "transition-timing-function", .value = "var(--tw-ease, var(--default-transition-timing-function))" },
+        .{ .property = "transition-duration", .value = "var(--tw-duration, var(--default-transition-duration))" },
     } },
     .{ "transition", &[_]Declaration{
         .{ .property = "transition-property", .value = "color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to,opacity,box-shadow,transform,translate,scale,rotate,filter,-webkit-backdrop-filter,backdrop-filter,display,content-visibility,overlay,pointer-events" },
-        .{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" },
-        .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
+        .{ .property = "transition-timing-function", .value = "var(--tw-ease, var(--default-transition-timing-function))" },
+        .{ .property = "transition-duration", .value = "var(--tw-duration, var(--default-transition-duration))" },
     } },
     .{ "transition-colors", &[_]Declaration{
         .{ .property = "transition-property", .value = "color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to" },
-        .{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" },
-        .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
+        .{ .property = "transition-timing-function", .value = "var(--tw-ease, var(--default-transition-timing-function))" },
+        .{ .property = "transition-duration", .value = "var(--tw-duration, var(--default-transition-duration))" },
     } },
     .{ "transition-opacity", &[_]Declaration{
         .{ .property = "transition-property", .value = "opacity" },
-        .{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" },
-        .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
+        .{ .property = "transition-timing-function", .value = "var(--tw-ease, var(--default-transition-timing-function))" },
+        .{ .property = "transition-duration", .value = "var(--tw-duration, var(--default-transition-duration))" },
     } },
     .{ "transition-shadow", &[_]Declaration{
         .{ .property = "transition-property", .value = "box-shadow" },
-        .{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" },
-        .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
+        .{ .property = "transition-timing-function", .value = "var(--tw-ease, var(--default-transition-timing-function))" },
+        .{ .property = "transition-duration", .value = "var(--tw-duration, var(--default-transition-duration))" },
     } },
     .{ "transition-transform", &[_]Declaration{
         .{ .property = "transition-property", .value = "transform,translate,scale,rotate" },
-        .{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" },
-        .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
+        .{ .property = "transition-timing-function", .value = "var(--tw-ease, var(--default-transition-timing-function))" },
+        .{ .property = "transition-duration", .value = "var(--tw-duration, var(--default-transition-duration))" },
     } },
     .{ "transition-discrete", &[_]Declaration{.{ .property = "transition-behavior", .value = "allow-discrete" }} },
     .{ "transition-normal", &[_]Declaration{.{ .property = "transition-behavior", .value = "normal" }} },
     .{ "duration-initial", &[_]Declaration{
-        .{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" },
+        .{ .property = "transition-duration", .value = "var(--tw-duration, var(--default-transition-duration))" },
         .{ .property = "--tw-duration", .value = "initial" },
     } },
 
@@ -802,7 +802,7 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     // ─── Shadow ───
     .{ "shadow-initial", &[_]Declaration{.{ .property = "box-shadow", .value = "var(--tw-shadow)" }} },
     .{ "shadow-inner", &[_]Declaration{
-        .{ .property = "--tw-shadow", .value = "inset 0 2px 4px 0 var(--tw-shadow-color,#0000000d)" },
+        .{ .property = "--tw-shadow", .value = "inset 0 2px 4px 0 var(--tw-shadow-color, #0000000d)" },
         .{ .property = "box-shadow", .value = "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)" },
     } },
     .{ "inset-shadow-none", &[_]Declaration{.{ .property = "box-shadow", .value = "0 0 #0000" }} },
@@ -3154,7 +3154,7 @@ fn applyColorMix(alloc: Allocator, color: []const u8, mod: Modifier, theme: ?*Th
             const f = std.fmt.parseFloat(f64, mod.value) catch {
                 // Non-numeric modifier: use as-is
                 const p = try std.fmt.allocPrint(alloc, "{s}", .{mod.value});
-                const base = try std.fmt.allocPrint(alloc, "color-mix(in oklab,{s} {s},transparent)", .{ color, p });
+                const base = try std.fmt.allocPrint(alloc, "color-mix(in oklab, {s} {s}, transparent)", .{ color, p });
                 return ColorMixResult{ .base = base };
             };
             const pct = @as(u32, @intFromFloat(@round(f * 100.0)));
@@ -3169,8 +3169,8 @@ fn applyColorMix(alloc: Allocator, color: []const u8, mod: Modifier, theme: ?*Th
         if (theme) |t| {
             if (t.get(var_name)) |raw_color| {
                 return ColorMixResult{
-                    .base = try std.fmt.allocPrint(alloc, "color-mix(in srgb,{s} {s},transparent)", .{ raw_color, percent }),
-                    .enhanced = try std.fmt.allocPrint(alloc, "color-mix(in oklab,{s} {s},transparent)", .{ color, percent }),
+                    .base = try std.fmt.allocPrint(alloc, "color-mix(in srgb, {s} {s}, transparent)", .{ raw_color, percent }),
+                    .enhanced = try std.fmt.allocPrint(alloc, "color-mix(in oklab, {s} {s}, transparent)", .{ color, percent }),
                 };
             }
         }
@@ -3178,7 +3178,7 @@ fn applyColorMix(alloc: Allocator, color: []const u8, mod: Modifier, theme: ?*Th
 
     // Direct color value (hex, oklch, etc.) — no var() enhancement available
     return ColorMixResult{
-        .base = try std.fmt.allocPrint(alloc, "color-mix(in srgb,{s} {s},transparent)", .{ color, percent }),
+        .base = try std.fmt.allocPrint(alloc, "color-mix(in srgb, {s} {s}, transparent)", .{ color, percent }),
     };
 }
 
@@ -3254,7 +3254,7 @@ fn resolveText(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--text-{s}", .{val.value}));
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--text-{s}--line-height", .{val.value}));
                 const font_size = try std.fmt.allocPrint(alloc, "var(--text-{s})", .{val.value});
-                const line_height = try std.fmt.allocPrint(alloc, "var(--tw-leading,var(--text-{s}--line-height))", .{val.value});
+                const line_height = try std.fmt.allocPrint(alloc, "var(--tw-leading, var(--text-{s}--line-height))", .{val.value});
                 const decls = try alloc.alloc(Declaration, 2);
                 decls[0] = Declaration{ .property = "font-size", .value = font_size };
                 decls[1] = Declaration{ .property = "line-height", .value = line_height };
@@ -4044,7 +4044,7 @@ fn resolveRing(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
     const val = value orelse {
         // ring with no value = 1px ring, but reject modifiers on bare ring
         if (modifier != null) return null;
-        const ring_val = "var(--tw-ring-inset,) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color,currentcolor)";
+        const ring_val = "var(--tw-ring-inset,) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor)";
         const decls = try alloc.alloc(Declaration, 2);
         decls[0] = Declaration{ .property = "--tw-ring-shadow", .value = ring_val };
         decls[1] = Declaration{ .property = "box-shadow", .value = COMPOSABLE_BOX_SHADOW };
@@ -4060,7 +4060,7 @@ fn resolveRing(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
                 (val.data_type != null and std.mem.eql(u8, val.data_type.?, "length"));
             if (is_width) {
                 if (modifier != null) return null; // Width mode doesn't accept modifiers
-                const ring_val = try std.fmt.allocPrint(alloc, "var(--tw-ring-inset,) 0 0 0 calc({s} + var(--tw-ring-offset-width)) var(--tw-ring-color,currentcolor)", .{val.value});
+                const ring_val = try std.fmt.allocPrint(alloc, "var(--tw-ring-inset,) 0 0 0 calc({s} + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor)", .{val.value});
                 const decls = try alloc.alloc(Declaration, 2);
                 decls[0] = Declaration{ .property = "--tw-ring-shadow", .value = ring_val };
                 decls[1] = Declaration{ .property = "box-shadow", .value = COMPOSABLE_BOX_SHADOW };
@@ -4096,7 +4096,7 @@ fn resolveRing(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
             // Try as width — modifiers not allowed in width mode
             if (isPositiveInteger(val.value)) {
                 if (modifier != null) return null;
-                const ring_val = try std.fmt.allocPrint(alloc, "var(--tw-ring-inset,) 0 0 0 calc({s}px + var(--tw-ring-offset-width)) var(--tw-ring-color,currentcolor)", .{val.value});
+                const ring_val = try std.fmt.allocPrint(alloc, "var(--tw-ring-inset,) 0 0 0 calc({s}px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor)", .{val.value});
                 const decls = try alloc.alloc(Declaration, 2);
                 decls[0] = Declaration{ .property = "--tw-ring-shadow", .value = ring_val };
                 decls[1] = Declaration{ .property = "box-shadow", .value = COMPOSABLE_BOX_SHADOW };
@@ -4732,7 +4732,7 @@ fn resolveConicGradient(alloc: Allocator, value: ?Value) !?[]const Declaration {
 
 // ─── Gradient Color Stops ──────────────────────────────────────────────────
 
-const GRADIENT_STOPS_COMPOSITION = "var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))";
+const GRADIENT_STOPS_COMPOSITION = "var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))";
 const GRADIENT_VIA_STOPS_COMPOSITION = "var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-via) var(--tw-gradient-via-position), var(--tw-gradient-to) var(--tw-gradient-to-position)";
 
 fn resolveGradientStop(alloc: Allocator, root: []const u8, value: ?Value, modifier: ?Modifier, theme: *Theme) !?[]const Declaration {
@@ -5367,8 +5367,8 @@ fn resolveTransition(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const D
         theme.markUsed(var_name);
         const decls = try alloc.alloc(Declaration, 3);
         decls[0] = Declaration{ .property = "transition-property", .value = prop_value };
-        decls[1] = Declaration{ .property = "transition-timing-function", .value = "var(--tw-ease,var(--default-transition-timing-function))" };
-        decls[2] = Declaration{ .property = "transition-duration", .value = "var(--tw-duration,var(--default-transition-duration))" };
+        decls[1] = Declaration{ .property = "transition-timing-function", .value = "var(--tw-ease, var(--default-transition-timing-function))" };
+        decls[2] = Declaration{ .property = "transition-duration", .value = "var(--tw-duration, var(--default-transition-duration))" };
         return decls;
     }
 
@@ -5432,7 +5432,7 @@ fn resolveShadowColor(alloc: Allocator, value: ?Value, modifier: ?Modifier, them
         // Shadow colors wrap the enhanced value with --tw-shadow-alpha
         var enhanced = mix.enhanced;
         if (enhanced) |e| {
-            enhanced = try std.fmt.allocPrint(alloc, "color-mix(in oklab,{s} var(--tw-shadow-alpha),transparent)", .{e});
+            enhanced = try std.fmt.allocPrint(alloc, "color-mix(in oklab, {s} var(--tw-shadow-alpha), transparent)", .{e});
         }
         decls[0] = Declaration{ .property = "--tw-shadow-color", .value = mix.base, .supports_value = enhanced };
     } else {
@@ -5446,7 +5446,7 @@ fn resolveShadowColor(alloc: Allocator, value: ?Value, modifier: ?Modifier, them
 /// Convert colors in a shadow value and wrap in var(--tw-shadow-color,...).
 /// Handles rgb() → hex8 conversion, hex colors, and shadows with no color.
 /// e.g. "0 10px 15px -3px rgb(0 0 0 / 0.1)" -> "0 10px 15px -3px var(--tw-shadow-color,#0000001a)"
-/// e.g. "0 -36px 50px 0" -> "0 -36px 50px 0 var(--tw-shadow-color,currentcolor)"
+/// e.g. "0 -36px 50px 0" -> "0 -36px 50px 0 var(--tw-shadow-color, currentcolor)"
 fn convertShadowColors(alloc: Allocator, raw: []const u8) ![]const u8 {
     var result = try std.ArrayList(u8).initCapacity(alloc, raw.len);
     var has_color = false;
@@ -5470,7 +5470,7 @@ fn convertShadowColors(alloc: Allocator, raw: []const u8) ![]const u8 {
             const rgb_str = raw[i..j];
             // Convert to hex and wrap
             const hex = try rgbToHex8(alloc, rgb_str);
-            try result.appendSlice(alloc, "var(--tw-shadow-color,");
+            try result.appendSlice(alloc, "var(--tw-shadow-color, ");
             try result.appendSlice(alloc, hex);
             try result.append(alloc, ')');
             has_color = true;
@@ -5481,7 +5481,7 @@ fn convertShadowColors(alloc: Allocator, raw: []const u8) ![]const u8 {
             while (j < raw.len and isHexChar(raw[j])) : (j += 1) {}
             if (j > i + 1) {
                 const hex_str = raw[i..j];
-                try result.appendSlice(alloc, "var(--tw-shadow-color,");
+                try result.appendSlice(alloc, "var(--tw-shadow-color, ");
                 try result.appendSlice(alloc, hex_str);
                 try result.append(alloc, ')');
                 has_color = true;
@@ -5498,7 +5498,7 @@ fn convertShadowColors(alloc: Allocator, raw: []const u8) ![]const u8 {
 
     // If no color was found, append default shadow color variable
     if (!has_color) {
-        try result.appendSlice(alloc, " var(--tw-shadow-color,currentcolor)");
+        try result.appendSlice(alloc, " var(--tw-shadow-color, currentcolor)");
     }
 
     return result.toOwnedSlice(alloc);
@@ -5566,7 +5566,7 @@ fn convertShadowColorsArbitrary(alloc: Allocator, raw: []const u8) ![]const u8 {
                 j += 1;
             }
             const color_str = raw[i..j];
-            try result.appendSlice(alloc, "var(--tw-shadow-color,");
+            try result.appendSlice(alloc, "var(--tw-shadow-color, ");
             try result.appendSlice(alloc, color_str);
             try result.append(alloc, ')');
             has_color = true;
@@ -5577,7 +5577,7 @@ fn convertShadowColorsArbitrary(alloc: Allocator, raw: []const u8) ![]const u8 {
             while (j < raw.len and isHexChar(raw[j])) : (j += 1) {}
             if (j > i + 1) {
                 const hex_str = raw[i..j];
-                try result.appendSlice(alloc, "var(--tw-shadow-color,");
+                try result.appendSlice(alloc, "var(--tw-shadow-color, ");
                 try result.appendSlice(alloc, hex_str);
                 try result.append(alloc, ')');
                 has_color = true;
@@ -5655,7 +5655,7 @@ fn convertDropShadowColors(alloc: Allocator, raw: []const u8) ![]const u8 {
             }
             const rgb_str = raw[i..j];
             const hex = try rgbToHex8(alloc, rgb_str);
-            try result.appendSlice(alloc, "var(--tw-drop-shadow-color,");
+            try result.appendSlice(alloc, "var(--tw-drop-shadow-color, ");
             try result.appendSlice(alloc, hex);
             try result.append(alloc, ')');
             i = j;

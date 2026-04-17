@@ -1848,7 +1848,7 @@ test "compile: plugin_css colors work with opacity modifiers" {
     const result = try compile(alloc, &candidates, null, false, true, null, null, plugin);
     defer alloc.free(result);
     // Should use color-mix with the raw oklch value
-    try std.testing.expect(std.mem.indexOf(u8, result, "background-color:color-mix(in srgb,oklch(62.3% 0.214 259.815) 50%,transparent)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-color:color-mix(in srgb, oklch(62.3% 0.214 259.815) 50%, transparent)") != null);
 }
 
 test "compile: plugin_css null is no-op" {
@@ -2029,10 +2029,10 @@ test "compile: bg color with opacity uses color-mix" {
     const result = try compile(alloc, &candidates, null, false, true, null, null, null);
     defer alloc.free(result);
     // Base: color-mix in srgb with raw value
-    try std.testing.expect(std.mem.indexOf(u8, result, "background-color:color-mix(in srgb,#fff 10%,transparent)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-color:color-mix(in srgb, #fff 10%, transparent)") != null);
     // Enhanced: @supports with color-mix in oklab using var()
-    try std.testing.expect(std.mem.indexOf(u8, result, "@supports (color:color-mix(in lab,red,red))") != null);
-    try std.testing.expect(std.mem.indexOf(u8, result, "background-color:color-mix(in oklab,var(--color-white) 10%,transparent)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@supports (color: color-mix(in lab, red, red))") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-color:color-mix(in oklab, var(--color-white) 10%, transparent)") != null);
 }
 
 test "compile: border color with opacity uses color-mix" {
@@ -2040,8 +2040,8 @@ test "compile: border color with opacity uses color-mix" {
     const candidates = [_][]const u8{"border-cyan-400/20"};
     const result = try compile(alloc, &candidates, null, false, true, null, null, null);
     defer alloc.free(result);
-    try std.testing.expect(std.mem.indexOf(u8, result, "border-color:color-mix(in srgb,") != null);
-    try std.testing.expect(std.mem.indexOf(u8, result, "border-color:color-mix(in oklab,var(--color-cyan-400) 20%,transparent)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-color:color-mix(in srgb, ") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-color:color-mix(in oklab, var(--color-cyan-400) 20%, transparent)") != null);
 }
 
 test "compile: gradient from with opacity uses color-mix" {
@@ -2049,8 +2049,8 @@ test "compile: gradient from with opacity uses color-mix" {
     const candidates = [_][]const u8{"from-violet-500/10"};
     const result = try compile(alloc, &candidates, null, false, true, null, null, null);
     defer alloc.free(result);
-    try std.testing.expect(std.mem.indexOf(u8, result, "--tw-gradient-from:color-mix(in srgb,") != null);
-    try std.testing.expect(std.mem.indexOf(u8, result, "--tw-gradient-from:color-mix(in oklab,var(--color-violet-500) 10%,transparent)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--tw-gradient-from:color-mix(in srgb, ") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--tw-gradient-from:color-mix(in oklab, var(--color-violet-500) 10%, transparent)") != null);
 }
 
 test "compile: ring color with opacity uses color-mix" {
@@ -2058,8 +2058,8 @@ test "compile: ring color with opacity uses color-mix" {
     const candidates = [_][]const u8{"ring-white/10"};
     const result = try compile(alloc, &candidates, null, false, true, null, null, null);
     defer alloc.free(result);
-    try std.testing.expect(std.mem.indexOf(u8, result, "--tw-ring-color:color-mix(in srgb,#fff 10%,transparent)") != null);
-    try std.testing.expect(std.mem.indexOf(u8, result, "--tw-ring-color:color-mix(in oklab,var(--color-white) 10%,transparent)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--tw-ring-color:color-mix(in srgb, #fff 10%, transparent)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--tw-ring-color:color-mix(in oklab, var(--color-white) 10%, transparent)") != null);
 }
 
 test "compile: space-y uses :where() CSS nesting" {
@@ -2109,7 +2109,7 @@ test "compile: shadow-color enhanced uses --tw-shadow-alpha" {
     const result = try compile(alloc, &candidates, null, false, true, null, null, null);
     defer alloc.free(result);
     // Enhanced value should wrap with --tw-shadow-alpha
-    try std.testing.expect(std.mem.indexOf(u8, result, "color-mix(in oklab,color-mix(in oklab,var(--color-black) 10%,transparent) var(--tw-shadow-alpha),transparent)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "color-mix(in oklab, color-mix(in oklab, var(--color-black) 10%, transparent) var(--tw-shadow-alpha), transparent)") != null);
 }
 
 test "compile: --font-sans and --font-mono appear in theme output with preflight" {
@@ -2362,7 +2362,7 @@ test "compile: theme() in shadow arbitrary value resolves" {
     try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
     try std.testing.expect(std.mem.indexOf(u8, result, "oklch(76.5% 0.177 163.223)") != null);
     // The resolved color should be wrapped in var(--tw-shadow-color, ...)
-    try std.testing.expect(std.mem.indexOf(u8, result, "var(--tw-shadow-color,oklch(76.5% 0.177 163.223))") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--tw-shadow-color, oklch(76.5% 0.177 163.223))") != null);
 }
 
 test "compile: theme() with opacity in shadow arbitrary value wraps color in shadow-color var" {
@@ -2372,7 +2372,7 @@ test "compile: theme() with opacity in shadow arbitrary value wraps color in sha
     defer alloc.free(result);
     try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
     // The color-mix result should be wrapped in var(--tw-shadow-color, ...)
-    try std.testing.expect(std.mem.indexOf(u8, result, "var(--tw-shadow-color,color-mix(in oklab, oklch(76.5% 0.177 163.223) 50%, transparent))") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--tw-shadow-color, color-mix(in oklab, oklch(76.5% 0.177 163.223) 50%, transparent))") != null);
 }
 
 // ─── Format parity tests (issues #1-7) ──────────────────────────────────────
