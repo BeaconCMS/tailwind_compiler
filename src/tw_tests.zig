@@ -8604,6 +8604,98 @@ test "tw: theme() with fallback on resolved var uses resolved value" {
     try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
 }
 
+// ─── @property registration tests ──────────────────────────────────────────
+
+test "tw: skew-x registers @property for --tw-skew-x" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"skew-x-6"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "@property --tw-skew-x") != null);
+}
+
+test "tw: blur registers @property for --tw-blur" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"blur-sm"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "@property --tw-blur") != null);
+}
+
+test "tw: brightness registers @property for --tw-brightness" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"brightness-50"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "@property --tw-brightness") != null);
+}
+
+test "tw: backdrop-blur registers @property for --tw-backdrop-blur" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"backdrop-blur-sm"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "@property --tw-backdrop-blur") != null);
+}
+
+test "tw: touch-pan-x registers @property for --tw-pan-x" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"touch-pan-x"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "@property --tw-pan-x") != null);
+}
+
+test "tw: space-x registers @property for --tw-space-x-reverse" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"space-x-4"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "@property --tw-space-x-reverse") != null);
+}
+
+test "tw: divide-x registers @property for --tw-divide-x-reverse" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"divide-x"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "@property --tw-divide-x-reverse") != null);
+}
+
+test "tw: border registers @property for --tw-border-style" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"border"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "@property --tw-border-style") != null);
+}
+
+test "tw: duration registers @property for --tw-duration" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"duration-300"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "@property --tw-duration") != null);
+}
+
+test "tw: ease registers @property for --tw-ease" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"ease-in"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    try std.testing.expect(std.mem.indexOf(u8, result, "@property --tw-ease") != null);
+}
+
 test "tw: theme() with comma in fallback value" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{"flex"};

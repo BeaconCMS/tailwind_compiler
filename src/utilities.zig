@@ -1638,6 +1638,8 @@ pub fn getRequiredProperties(root: []const u8) []const AtProperty {
     if (std.mem.eql(u8, root, "inset-shadow")) {
         return &[_]AtProperty{
             .{ .name = "--tw-inset-shadow", .syntax = "*", .inherits = false, .initial_value = "0 0 #0000" },
+            .{ .name = "--tw-inset-shadow-color", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-inset-shadow-alpha", .syntax = "<percentage>", .inherits = false, .initial_value = "100%" },
         };
     }
     // inset-ring
@@ -1659,6 +1661,8 @@ pub fn getRequiredProperties(root: []const u8) []const AtProperty {
     if (std.mem.eql(u8, root, "text-shadow")) {
         return &[_]AtProperty{
             .{ .name = "--tw-text-shadow", .syntax = "*", .inherits = false, .initial_value = "0 0 #0000" },
+            .{ .name = "--tw-text-shadow-color", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-text-shadow-alpha", .syntax = "<percentage>", .inherits = false, .initial_value = "100%" },
         };
     }
     // drop-shadow
@@ -1737,6 +1741,115 @@ pub fn getRequiredProperties(root: []const u8) []const AtProperty {
     if (std.mem.eql(u8, root, "outline")) {
         return &[_]AtProperty{
             .{ .name = "--tw-outline-style", .syntax = "*", .inherits = false, .initial_value = "solid" },
+        };
+    }
+    // skew
+    if (std.mem.eql(u8, root, "skew-x") or std.mem.eql(u8, root, "-skew-x") or
+        std.mem.eql(u8, root, "skew-y") or std.mem.eql(u8, root, "-skew-y") or
+        std.mem.eql(u8, root, "skew") or std.mem.eql(u8, root, "-skew"))
+    {
+        return &[_]AtProperty{
+            .{ .name = "--tw-skew-x", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-skew-y", .syntax = "*", .inherits = false, .initial_value = null },
+        };
+    }
+    // filter utilities
+    if (std.mem.eql(u8, root, "blur") or std.mem.eql(u8, root, "brightness") or
+        std.mem.eql(u8, root, "contrast") or std.mem.eql(u8, root, "grayscale") or
+        std.mem.eql(u8, root, "hue-rotate") or std.mem.eql(u8, root, "invert") or
+        std.mem.eql(u8, root, "saturate") or std.mem.eql(u8, root, "sepia"))
+    {
+        return &[_]AtProperty{
+            .{ .name = "--tw-blur", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-brightness", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-contrast", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-grayscale", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-hue-rotate", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-invert", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-opacity", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-saturate", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-sepia", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-drop-shadow", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-drop-shadow-color", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-drop-shadow-alpha", .syntax = "<percentage>", .inherits = false, .initial_value = "100%" },
+            .{ .name = "--tw-drop-shadow-size", .syntax = "*", .inherits = false, .initial_value = null },
+        };
+    }
+    // backdrop-filter utilities
+    if (std.mem.eql(u8, root, "backdrop-blur") or std.mem.eql(u8, root, "backdrop-brightness") or
+        std.mem.eql(u8, root, "backdrop-contrast") or std.mem.eql(u8, root, "backdrop-grayscale") or
+        std.mem.eql(u8, root, "backdrop-hue-rotate") or std.mem.eql(u8, root, "backdrop-invert") or
+        std.mem.eql(u8, root, "backdrop-saturate") or std.mem.eql(u8, root, "backdrop-sepia") or
+        std.mem.eql(u8, root, "backdrop-opacity"))
+    {
+        return &[_]AtProperty{
+            .{ .name = "--tw-backdrop-blur", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-backdrop-brightness", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-backdrop-contrast", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-backdrop-grayscale", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-backdrop-hue-rotate", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-backdrop-invert", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-backdrop-opacity", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-backdrop-saturate", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-backdrop-sepia", .syntax = "*", .inherits = false, .initial_value = null },
+        };
+    }
+    // touch-action composable properties
+    if (std.mem.eql(u8, root, "touch-pan-x") or std.mem.eql(u8, root, "touch-pan-left") or
+        std.mem.eql(u8, root, "touch-pan-right") or std.mem.eql(u8, root, "touch-pan-y") or
+        std.mem.eql(u8, root, "touch-pan-up") or std.mem.eql(u8, root, "touch-pan-down") or
+        std.mem.eql(u8, root, "touch-pinch-zoom"))
+    {
+        return &[_]AtProperty{
+            .{ .name = "--tw-pan-x", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-pan-y", .syntax = "*", .inherits = false, .initial_value = null },
+            .{ .name = "--tw-pinch-zoom", .syntax = "*", .inherits = false, .initial_value = null },
+        };
+    }
+    // space-between reverse
+    if (std.mem.eql(u8, root, "space-x") or std.mem.eql(u8, root, "space-x-reverse")) {
+        return &[_]AtProperty{
+            .{ .name = "--tw-space-x-reverse", .syntax = "*", .inherits = false, .initial_value = "0" },
+        };
+    }
+    if (std.mem.eql(u8, root, "space-y") or std.mem.eql(u8, root, "space-y-reverse")) {
+        return &[_]AtProperty{
+            .{ .name = "--tw-space-y-reverse", .syntax = "*", .inherits = false, .initial_value = "0" },
+        };
+    }
+    // divide reverse
+    if (std.mem.eql(u8, root, "divide-x") or std.mem.eql(u8, root, "divide-x-reverse")) {
+        return &[_]AtProperty{
+            .{ .name = "--tw-divide-x-reverse", .syntax = "*", .inherits = false, .initial_value = "0" },
+        };
+    }
+    if (std.mem.eql(u8, root, "divide-y") or std.mem.eql(u8, root, "divide-y-reverse")) {
+        return &[_]AtProperty{
+            .{ .name = "--tw-divide-y-reverse", .syntax = "*", .inherits = false, .initial_value = "0" },
+        };
+    }
+    // border-style
+    if (std.mem.eql(u8, root, "border") or std.mem.eql(u8, root, "border-x") or
+        std.mem.eql(u8, root, "border-y") or std.mem.eql(u8, root, "border-s") or
+        std.mem.eql(u8, root, "border-e") or std.mem.eql(u8, root, "border-bs") or
+        std.mem.eql(u8, root, "border-be") or std.mem.eql(u8, root, "border-t") or
+        std.mem.eql(u8, root, "border-r") or std.mem.eql(u8, root, "border-b") or
+        std.mem.eql(u8, root, "border-l"))
+    {
+        return &[_]AtProperty{
+            .{ .name = "--tw-border-style", .syntax = "*", .inherits = false, .initial_value = "solid" },
+        };
+    }
+    // duration
+    if (std.mem.eql(u8, root, "duration")) {
+        return &[_]AtProperty{
+            .{ .name = "--tw-duration", .syntax = "*", .inherits = false, .initial_value = null },
+        };
+    }
+    // ease
+    if (std.mem.eql(u8, root, "ease")) {
+        return &[_]AtProperty{
+            .{ .name = "--tw-ease", .syntax = "*", .inherits = false, .initial_value = null },
         };
     }
     // scroll snap strictness
