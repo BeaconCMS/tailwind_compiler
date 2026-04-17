@@ -727,9 +727,10 @@ for (const header of document.querySelectorAll('.panel-header')) {
 // ── Load WASM ───────────────────────────────────────────────
 
 async function init() {
+  const bust = '?v=' + Date.now();
   const paths = [
-    'tailwind_compiler.wasm',
-    '../zig-out/bin/tailwind_compiler.wasm',
+    'tailwind_compiler.wasm' + bust,
+    '../zig-out/bin/tailwind_compiler.wasm' + bust,
   ];
 
   let instance;
