@@ -844,16 +844,27 @@ pub const Context = struct {
         return null;
     }
 
-    /// Apply an opacity modifier to a resolved color value.
-    /// E.g., "oklch(63.7% 0.237 25.331)" with "50%" → "oklch(63.7% 0.237 25.331 / 50%)"
+    /// Apply an opacity modifier to a resolved color value using color-mix().
+    /// E.g., "oklch(63.7% 0.237 25.331)" with ".25" → "color-mix(in oklab, oklch(63.7% 0.237 25.331) 25%, transparent)"
+    /// E.g., "oklch(63.7% 0.237 25.331)" with "50%" → "color-mix(in oklab, oklch(63.7% 0.237 25.331) 50%, transparent)"
     fn maybeApplyOpacity(self: *Context, value: []const u8, opacity: ?[]const u8) ?[]const u8 {
         const op = opacity orelse return value;
-        // If value is an oklch/rgb/hsl function, inject opacity before the closing paren
-        if (std.mem.lastIndexOfScalar(u8, value, ')')) |close| {
-            return std.fmt.allocPrint(self.alloc, "{s} / {s})", .{ value[0..close], op }) catch return value;
+        // Determine the percentage string for color-mix
+        if (std.mem.endsWith(u8, op, "%")) {
+            // Already a percentage — use as-is
+            return std.fmt.allocPrint(self.alloc, "color-mix(in oklab, {s} {s}, transparent)", .{ value, op }) catch return value;
         }
-        // For hex or other values, use color-mix as fallback
-        return std.fmt.allocPrint(self.alloc, "color-mix(in oklab,{s} {s},transparent)", .{ value, op }) catch return value;
+        // Decimal fraction (e.g. ".25", ".5", "0.08") — convert to percentage
+        const fraction = std.fmt.parseFloat(f64, op) catch {
+            // Fallback: use as-is with color-mix
+            return std.fmt.allocPrint(self.alloc, "color-mix(in oklab, {s} {s}, transparent)", .{ value, op }) catch return value;
+        };
+        const pct = fraction * 100.0;
+        // Format as integer percentage if it's a whole number, otherwise with decimals
+        if (pct == @trunc(pct)) {
+            return std.fmt.allocPrint(self.alloc, "color-mix(in oklab, {s} {d:.0}%, transparent)", .{ value, pct }) catch return value;
+        }
+        return std.fmt.allocPrint(self.alloc, "color-mix(in oklab, {s} {d}%, transparent)", .{ value, pct }) catch return value;
     }
 
     /// Map theme() namespace to CSS variable prefix.
@@ -1533,7 +1544,7 @@ test "compile: theme layer emits used variables" {
     const result = try compile(alloc, &candidates, null, false, true, null, null, null);
     defer alloc.free(result);
 
-    try std.testing.expect(std.mem.indexOf(u8, result, "@layer theme{:root{") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@layer theme{:root,:host{") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "--color-red-500:") != null);
 }
 
@@ -1918,10 +1929,11 @@ test "compile: pretty print with variants" {
     const result = try compile(alloc, &candidates, null, false, false, null, null, null);
     defer alloc.free(result);
 
-    // Media query and nested rule should be indented
-    try std.testing.expect(std.mem.indexOf(u8, result, "  @media (hover:hover) {\n") != null);
-    try std.testing.expect(std.mem.indexOf(u8, result, "    .hover\\:flex:hover {\n") != null);
-    try std.testing.expect(std.mem.indexOf(u8, result, "      display: flex;\n") != null);
+    // CSS nesting format: outer class wraps the @media and &:hover pseudo-class
+    try std.testing.expect(std.mem.indexOf(u8, result, "  .hover\\:flex {\n") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "    @media (hover:hover) {\n") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "      &:hover {\n") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "        display: flex;\n") != null);
 }
 
 // ─── Parity tests ─────────────────────────────────────────────────────────
@@ -2169,9 +2181,10 @@ test "compile: theme() with opacity modifier" {
     const custom = ":root{--bg:theme(colors.red.500 / 50%);}";
     const result = try compile(alloc, &candidates, null, false, true, custom, null, null);
     defer alloc.free(result);
-    // Should resolve with opacity applied
+    // Should resolve with color-mix opacity applied
     try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
     try std.testing.expect(std.mem.indexOf(u8, result, "--bg:") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "color-mix(in oklab, oklch(63.7% 0.237 25.331) 50%, transparent)") != null);
 }
 
 // ─── @apply edge case tests ───────────────────────────────────────────────
@@ -2305,7 +2318,8 @@ test "compile: theme() in arbitrary bg gradient value resolves with slash opacit
     const result = try compile(alloc, &candidates, null, false, true, null, null, null);
     defer alloc.free(result);
     try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
-    try std.testing.expect(std.mem.indexOf(u8, result, "oklch(87.9% 0.169 91.605)") != null);
+    // Should use color-mix format with 30% opacity
+    try std.testing.expect(std.mem.indexOf(u8, result, "color-mix(in oklab, oklch(87.9% 0.169 91.605) 30%, transparent)") != null);
 }
 
 test "compile: theme() in arbitrary property resolves" {
@@ -2324,7 +2338,19 @@ test "compile: theme() slash opacity without spaces resolves in resolveThemePath
     const result = try compile(alloc, &candidates, null, false, true, custom, null, null);
     defer alloc.free(result);
     try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
-    try std.testing.expect(std.mem.indexOf(u8, result, "oklch(63.7%") != null);
+    // Should use color-mix format with 50% opacity
+    try std.testing.expect(std.mem.indexOf(u8, result, "color-mix(in oklab, oklch(63.7% 0.237 25.331) 50%, transparent)") != null);
+}
+
+test "compile: theme() opacity uses color-mix format for decimal opacity" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = ":root{--bg:theme(colors.amber.400/.25);}";
+    const result = try compile(alloc, &candidates, null, false, true, custom, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
+    // Should use color-mix format, NOT oklch(... / .25)
+    try std.testing.expect(std.mem.indexOf(u8, result, "color-mix(in oklab, oklch(82.8% 0.189 84.429) 25%, transparent)") != null);
 }
 
 test "compile: theme() in shadow arbitrary value resolves" {
@@ -2334,6 +2360,18 @@ test "compile: theme() in shadow arbitrary value resolves" {
     defer alloc.free(result);
     try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
     try std.testing.expect(std.mem.indexOf(u8, result, "oklch(76.5% 0.177 163.223)") != null);
+    // The resolved color should be wrapped in var(--tw-shadow-color, ...)
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--tw-shadow-color,oklch(76.5% 0.177 163.223))") != null);
+}
+
+test "compile: theme() with opacity in shadow arbitrary value wraps color in shadow-color var" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"shadow-[0_0_12px_theme(colors.emerald.400/.5)]"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
+    // The color-mix result should be wrapped in var(--tw-shadow-color, ...)
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--tw-shadow-color,color-mix(in oklab, oklch(76.5% 0.177 163.223) 50%, transparent))") != null);
 }
 
 // ─── Format parity tests (issues #1-7) ──────────────────────────────────────
@@ -2437,4 +2475,71 @@ test "compile: aspect-square uses 1 / 1 not 1" {
     try std.testing.expect(std.mem.indexOf(u8, result, "aspect-ratio:1 / 1") != null);
     // Should NOT just be "1" without the fraction
     try std.testing.expect(std.mem.indexOf(u8, result, "aspect-ratio:1}") == null);
+}
+
+// ─── Issue: theme layer selector should be :root, :host ──────────────────
+
+test "compile: theme layer uses :root,:host selector (minified)" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"bg-red-500"};
+    // minify=true -> compact output
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    // Should use ":root,:host{" in minified output
+    try std.testing.expect(std.mem.indexOf(u8, result, ":root,:host{") != null);
+    // Must NOT use plain ":root{" (without :host)
+    try std.testing.expect(std.mem.indexOf(u8, result, "@layer theme{:root{") == null);
+}
+
+test "compile: theme layer uses :root, :host selector (pretty)" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"bg-blue-500"};
+    // minify=false -> pretty output
+    const result = try compile(alloc, &candidates, null, false, false, null, null, null);
+    defer alloc.free(result);
+    // Should contain ":root, :host" (with space) in pretty-printed output
+    try std.testing.expect(std.mem.indexOf(u8, result, ":root, :host") != null);
+    // Must NOT use plain ":root {" (without :host)
+    try std.testing.expect(std.mem.indexOf(u8, result, ":root {") == null);
+}
+
+// ─── Issue: theme() inline resolution should NOT mark variables as used ───
+
+test "compile: theme() inline resolution does not add variable to theme layer" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    // theme(colors.emerald.500) resolves to the raw oklch value inline.
+    // --color-emerald-500 should NOT appear in @layer theme since no var() reference exists.
+    const custom = ".test{color:theme(colors.emerald.500);}";
+    const result = try compile(alloc, &candidates, null, false, true, custom, null, null);
+    defer alloc.free(result);
+    // The value should be resolved inline
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "oklch(") != null);
+    // --color-emerald-500 must NOT be emitted in the theme layer
+    try std.testing.expect(std.mem.indexOf(u8, result, "--color-emerald-500:") == null);
+}
+
+test "compile: theme() CSS var shorthand does not pollute theme layer" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    // theme(--color-red-500) resolves inline; --color-red-500 should not appear in @layer theme
+    const custom = ".test{color:theme(--color-red-500);}";
+    const result = try compile(alloc, &candidates, null, false, true, custom, null, null);
+    defer alloc.free(result);
+    // Resolved to the oklch value inline
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "oklch(") != null);
+    // The variable must NOT appear in @layer theme (only flex was used as a utility)
+    try std.testing.expect(std.mem.indexOf(u8, result, "--color-red-500:") == null);
+}
+
+test "compile: bg-emerald-500 still adds variable to theme layer (var() path)" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"bg-emerald-500"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    // Standard utility should still emit var(--color-emerald-500) and put it in theme layer
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--color-emerald-500)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--color-emerald-500:") != null);
 }

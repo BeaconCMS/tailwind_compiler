@@ -72,56 +72,51 @@ fn applyStaticVariant(
 
     // Selector-based pseudo-class variants
     if (std.mem.eql(u8, name, "hover")) {
-        // hover is special: both @media (hover:hover) and :hover selector
-        const hover_rule = Rule{
-            .kind = .style,
-            .selector = try appendPseudo(alloc, inner.selector orelse "", ":hover"),
-            .declarations = inner.declarations,
-            .children = inner.children,
-            .variant_order = inner.variant_order,
-        };
-        const media_children = try alloc.alloc(Rule, 1);
-        media_children[0] = hover_rule;
-        return Rule{
-            .kind = .media,
-            .at_rule = "@media (hover:hover)",
-            .children = media_children,
-            .variant_order = inner.variant_order,
-        };
+        // hover uses CSS nesting: .class { &:hover { @media (hover:hover) { ... } } }
+        const nested_sel = try std.fmt.allocPrint(alloc, "&:hover", .{});
+        return makeNestedCompoundRule(alloc, inner.selector, nested_sel, inner, true);
     }
 
-    // Simple pseudo-class variants
+    // Simple pseudo-class variants — use CSS nesting: .sel { &:pseudo { ... } }
     if (pseudo_class_map.get(name)) |pseudo| {
-        // If inner is a non-style rule (media, container, supports), apply pseudo to children
+        // If inner is a non-style rule (media, container, supports), wrap the whole inner
+        // inside a nested &:pseudo style rule.
         if (inner.kind != .style and inner.children.len > 0) {
-            var new_children = try alloc.alloc(Rule, inner.children.len);
-            for (inner.children, 0..) |child, ci| {
-                if (child.kind == .style) {
-                    new_children[ci] = Rule{
-                        .kind = .style,
-                        .selector = try appendPseudo(alloc, child.selector orelse "", pseudo),
-                        .declarations = child.declarations,
-                        .children = child.children,
-                        .variant_order = child.variant_order,
-                    };
-                } else {
-                    new_children[ci] = child;
-                }
-            }
+            const nested_sel = try std.fmt.allocPrint(alloc, "&{s}", .{pseudo});
+            const nested_children = try alloc.alloc(Rule, 1);
+            nested_children[0] = inner;
+            const pseudo_rule = Rule{
+                .kind = .style,
+                .selector = nested_sel,
+                .declarations = &.{},
+                .children = nested_children,
+                .variant_order = inner.variant_order,
+            };
+            const outer_children = try alloc.alloc(Rule, 1);
+            outer_children[0] = pseudo_rule;
             return Rule{
-                .kind = inner.kind,
-                .at_rule = inner.at_rule,
+                .kind = .style,
                 .selector = inner.selector,
-                .declarations = inner.declarations,
-                .children = new_children,
+                .declarations = &.{},
+                .children = outer_children,
                 .variant_order = inner.variant_order,
             };
         }
-        return Rule{
+        // Simple case: .sel { &:pseudo { decls } }
+        const nested_sel = try std.fmt.allocPrint(alloc, "&{s}", .{pseudo});
+        const nested_children = try alloc.alloc(Rule, 1);
+        nested_children[0] = Rule{
             .kind = .style,
-            .selector = try appendPseudo(alloc, inner.selector orelse "", pseudo),
+            .selector = nested_sel,
             .declarations = inner.declarations,
             .children = inner.children,
+            .variant_order = inner.variant_order,
+        };
+        return Rule{
+            .kind = .style,
+            .selector = inner.selector,
+            .declarations = &.{},
+            .children = nested_children,
             .variant_order = inner.variant_order,
         };
     }
@@ -376,59 +371,25 @@ fn applyFunctionalVariant(
         }
     }
 
-    // aria-* variant
+    // aria-* variant — use CSS nesting: .sel { &[aria-x] { ... } }
     if (std.mem.eql(u8, root, "aria")) {
         if (variant.value) |val| {
-            switch (val.kind) {
-                .arbitrary => {
-                    const sel = try std.fmt.allocPrint(alloc, "{s}[aria-{s}]", .{ inner.selector orelse "", val.value });
-                    return Rule{
-                        .kind = .style,
-                        .selector = sel,
-                        .declarations = inner.declarations,
-                        .children = inner.children,
-                        .variant_order = inner.variant_order,
-                    };
-                },
-                .named => {
-                    const sel = try std.fmt.allocPrint(alloc, "{s}[aria-{s}=\"true\"]", .{ inner.selector orelse "", val.value });
-                    return Rule{
-                        .kind = .style,
-                        .selector = sel,
-                        .declarations = inner.declarations,
-                        .children = inner.children,
-                        .variant_order = inner.variant_order,
-                    };
-                },
-            }
+            const nested_sel = switch (val.kind) {
+                .arbitrary => try std.fmt.allocPrint(alloc, "&[aria-{s}]", .{val.value}),
+                .named => try std.fmt.allocPrint(alloc, "&[aria-{s}=\"true\"]", .{val.value}),
+            };
+            return makeNestedCompoundRule(alloc, inner.selector, nested_sel, inner, false);
         }
     }
 
-    // data-* variant
+    // data-* variant — use CSS nesting: .sel { &[data-x] { ... } }
     if (std.mem.eql(u8, root, "data")) {
         if (variant.value) |val| {
-            switch (val.kind) {
-                .arbitrary => {
-                    const sel = try std.fmt.allocPrint(alloc, "{s}[data-{s}]", .{ inner.selector orelse "", val.value });
-                    return Rule{
-                        .kind = .style,
-                        .selector = sel,
-                        .declarations = inner.declarations,
-                        .children = inner.children,
-                        .variant_order = inner.variant_order,
-                    };
-                },
-                .named => {
-                    const sel = try std.fmt.allocPrint(alloc, "{s}[data-{s}]", .{ inner.selector orelse "", val.value });
-                    return Rule{
-                        .kind = .style,
-                        .selector = sel,
-                        .declarations = inner.declarations,
-                        .children = inner.children,
-                        .variant_order = inner.variant_order,
-                    };
-                },
-            }
+            const nested_sel = switch (val.kind) {
+                .arbitrary => try std.fmt.allocPrint(alloc, "&[data-{s}]", .{val.value}),
+                .named => try std.fmt.allocPrint(alloc, "&[data-{s}]", .{val.value}),
+            };
+            return makeNestedCompoundRule(alloc, inner.selector, nested_sel, inner, false);
         }
     }
 
@@ -459,72 +420,36 @@ fn applyFunctionalVariant(
         }
     }
 
-    // nth-* variants
+    // nth-* variants — use CSS nesting: .sel { &:nth-child(n) { ... } }
     if (std.mem.eql(u8, root, "nth")) {
         if (variant.value) |val| {
-            const arg = switch (val.kind) {
-                .arbitrary => val.value,
-                .named => val.value,
-            };
-            const sel = try std.fmt.allocPrint(alloc, "{s}:nth-child({s})", .{ inner.selector orelse "", arg });
-            return Rule{
-                .kind = .style,
-                .selector = sel,
-                .declarations = inner.declarations,
-                .children = inner.children,
-                .variant_order = inner.variant_order,
-            };
+            const arg = val.value;
+            const nested_sel = try std.fmt.allocPrint(alloc, "&:nth-child({s})", .{arg});
+            return makeNestedCompoundRule(alloc, inner.selector, nested_sel, inner, false);
         }
     }
 
     if (std.mem.eql(u8, root, "nth-last")) {
         if (variant.value) |val| {
-            const arg = switch (val.kind) {
-                .arbitrary => val.value,
-                .named => val.value,
-            };
-            const sel = try std.fmt.allocPrint(alloc, "{s}:nth-last-child({s})", .{ inner.selector orelse "", arg });
-            return Rule{
-                .kind = .style,
-                .selector = sel,
-                .declarations = inner.declarations,
-                .children = inner.children,
-                .variant_order = inner.variant_order,
-            };
+            const arg = val.value;
+            const nested_sel = try std.fmt.allocPrint(alloc, "&:nth-last-child({s})", .{arg});
+            return makeNestedCompoundRule(alloc, inner.selector, nested_sel, inner, false);
         }
     }
 
     if (std.mem.eql(u8, root, "nth-of-type")) {
         if (variant.value) |val| {
-            const arg = switch (val.kind) {
-                .arbitrary => val.value,
-                .named => val.value,
-            };
-            const sel = try std.fmt.allocPrint(alloc, "{s}:nth-of-type({s})", .{ inner.selector orelse "", arg });
-            return Rule{
-                .kind = .style,
-                .selector = sel,
-                .declarations = inner.declarations,
-                .children = inner.children,
-                .variant_order = inner.variant_order,
-            };
+            const arg = val.value;
+            const nested_sel = try std.fmt.allocPrint(alloc, "&:nth-of-type({s})", .{arg});
+            return makeNestedCompoundRule(alloc, inner.selector, nested_sel, inner, false);
         }
     }
 
     if (std.mem.eql(u8, root, "nth-last-of-type")) {
         if (variant.value) |val| {
-            const arg = switch (val.kind) {
-                .arbitrary => val.value,
-                .named => val.value,
-            };
-            const sel = try std.fmt.allocPrint(alloc, "{s}:nth-last-of-type({s})", .{ inner.selector orelse "", arg });
-            return Rule{
-                .kind = .style,
-                .selector = sel,
-                .declarations = inner.declarations,
-                .children = inner.children,
-                .variant_order = inner.variant_order,
-            };
+            const arg = val.value;
+            const nested_sel = try std.fmt.allocPrint(alloc, "&:nth-last-of-type({s})", .{arg});
+            return makeNestedCompoundRule(alloc, inner.selector, nested_sel, inner, false);
         }
     }
 

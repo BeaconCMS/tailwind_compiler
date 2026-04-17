@@ -270,7 +270,11 @@ pub const CssEmitter = struct {
         try self.buf.append(self.alloc, '{');
         self.indent += 1;
         try self.writeNewline();
-        try self.buf.appendSlice(self.alloc, ":root");
+        if (self.minify) {
+            try self.buf.appendSlice(self.alloc, ":root,:host");
+        } else {
+            try self.buf.appendSlice(self.alloc, ":root, :host");
+        }
         try self.writeSpace();
         try self.buf.append(self.alloc, '{');
         self.indent += 1;
