@@ -1833,6 +1833,100 @@ test "compile: pretty print with variants" {
     try std.testing.expect(std.mem.indexOf(u8, result, "      display: flex;\n") != null);
 }
 
+// ─── Parity tests ─────────────────────────────────────────────────────────
+
+test "compile: bg-[size:...] emits background-size" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"bg-[size:auto]"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-size:auto") != null);
+    // Must NOT emit background-color
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-color:auto") == null);
+}
+
+test "compile: bg-[radial-gradient(...)] emits background-image" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"bg-[radial-gradient(circle,red,blue)]"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-image:radial-gradient(circle,red,blue)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-color:") == null);
+}
+
+test "compile: bg-[url(...)] emits background-image" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"bg-[url('/img/bg.png')]"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-image:url('/img/bg.png')") != null);
+}
+
+test "compile: bg-[linear-gradient(...)] emits background-image" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"bg-[linear-gradient(to_right,red,blue)]"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-image:linear-gradient(to right,red,blue)") != null);
+}
+
+test "compile: bg-[position:center] emits background-position" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"bg-[position:center]"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-position:center") != null);
+}
+
+test "compile: rounded-full uses calc(infinity * 1px)" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"rounded-full"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "calc(infinity * 1px)") != null);
+}
+
+test "compile: w-1/2 uses calc expression" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"w-1/2"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "calc(1 / 2 * 100%)") != null);
+}
+
+test "compile: w-2/5 uses calc expression" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"w-2/5"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "calc(2 / 5 * 100%)") != null);
+}
+
+test "compile: transition emits --default-transition-duration in theme layer" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"transition"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--default-transition-duration:150ms") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--default-transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1)") != null);
+}
+
+test "compile: text-xs line-height uses calc ratio" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"text-xs"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--text-xs--line-height:calc(1 / 0.75)") != null);
+}
+
+test "compile: text-sm line-height uses calc ratio" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"text-sm"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "--text-sm--line-height:calc(1.25 / 0.875)") != null);
+}
+
 // ─── Missing variant tests ────────────────────────────────────────────────
 
 test "compile: any-hover variant" {

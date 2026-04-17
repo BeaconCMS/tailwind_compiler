@@ -2432,6 +2432,34 @@ fn resolveColor(
 ) !?[]const Declaration {
     const val = value orelse return null;
 
+    // For bg-* arbitrary values, check data_type hint and detect image/gradient values
+    if (val.kind == .arbitrary and std.mem.eql(u8, root, "bg")) {
+        // Type hint: bg-[size:...], bg-[position:...], bg-[image:...]
+        if (val.data_type) |dt| {
+            const property = if (std.mem.eql(u8, dt, "size"))
+                "background-size"
+            else if (std.mem.eql(u8, dt, "position"))
+                "background-position"
+            else if (std.mem.eql(u8, dt, "image"))
+                "background-image"
+            else if (std.mem.eql(u8, dt, "color"))
+                "background-color"
+            else
+                @as([]const u8, "background-color");
+
+            const decls = try alloc.alloc(Declaration, 1);
+            decls[0] = Declaration{ .property = property, .value = val.value };
+            return decls;
+        }
+
+        // Auto-detect gradient/url values → background-image
+        if (isImageValue(val.value)) {
+            const decls = try alloc.alloc(Declaration, 1);
+            decls[0] = Declaration{ .property = "background-image", .value = val.value };
+            return decls;
+        }
+    }
+
     const property = colorProperty(root);
     var css_value: []const u8 = undefined;
 
@@ -2485,6 +2513,18 @@ fn colorProperty(root: []const u8) []const u8 {
         .{ "placeholder", "color" },
     });
     return map.get(root) orelse root;
+}
+
+/// Detect if an arbitrary value is an image/gradient (should use background-image, not background-color).
+fn isImageValue(value: []const u8) bool {
+    return std.mem.startsWith(u8, value, "url(") or
+        std.mem.startsWith(u8, value, "linear-gradient(") or
+        std.mem.startsWith(u8, value, "radial-gradient(") or
+        std.mem.startsWith(u8, value, "conic-gradient(") or
+        std.mem.startsWith(u8, value, "repeating-linear-gradient(") or
+        std.mem.startsWith(u8, value, "repeating-radial-gradient(") or
+        std.mem.startsWith(u8, value, "repeating-conic-gradient(") or
+        std.mem.startsWith(u8, value, "image-set(");
 }
 
 fn resolveZIndex(alloc: Allocator, value: ?Value, negative: bool) !?[]const Declaration {
