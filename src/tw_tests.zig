@@ -8869,3 +8869,130 @@ test "tw debug: group-open:rotate-45 uses CSS nesting" {
     // NOT flat
     try std.testing.expect(std.mem.indexOf(u8, result, ".group-open\\:rotate-45:is(") == null);
 }
+
+test "tw: arbitrary [font-feature-settings:'ss01','cv11'] compiles to literal css" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"[font-feature-settings:'ss01','cv11']"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+    // Should generate font-feature-settings property with the literal value
+    try std.testing.expect(std.mem.indexOf(u8, result, "font-feature-settings") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "'ss01','cv11'") != null);
+}
+
+test "tw: arbitrary [font-variation-settings:'SOFT'_100] compiles to literal css" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"[font-variation-settings:'SOFT'_100]"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+    // Underscores in arbitrary values are decoded to spaces
+    try std.testing.expect(std.mem.indexOf(u8, result, "font-variation-settings") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "'SOFT' 100") != null);
+}
+
+test "tw: leading-none uses literal 1 not var(--leading-none)" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"leading-none"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+    // leading-none should generate line-height:1 (literal), NOT var(--leading-none)
+    try std.testing.expect(std.mem.indexOf(u8, result, "line-height:1") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--leading-none)") == null);
+}
+
+// ─── Variant CSS Nesting Tests ─────────────────────────────────────────────
+
+test "tw variant nesting: hover uses CSS nesting with & and @media (hover:hover)" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"hover:bg-amber-200"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+    // Outer class selector is the base class
+    try std.testing.expect(std.mem.indexOf(u8, result, ".hover\\:bg-amber-200{") != null);
+    // Nested &:hover inside
+    try std.testing.expect(std.mem.indexOf(u8, result, "&:hover{") != null);
+    // @media (hover:hover) inside that
+    try std.testing.expect(std.mem.indexOf(u8, result, "@media (hover:hover)") != null);
+    // NOT flat: .hover\:bg-amber-200:hover should not appear
+    try std.testing.expect(std.mem.indexOf(u8, result, ".hover\\:bg-amber-200:hover") == null);
+    // NOT @media wrapping the outer class
+    try std.testing.expect(std.mem.indexOf(u8, result, "@media (hover:hover){.hover\\:bg-amber-200") == null);
+}
+
+test "tw variant nesting: last uses CSS nesting with &:last-child" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"last:border-r-0"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+    // Outer class selector
+    try std.testing.expect(std.mem.indexOf(u8, result, ".last\\:border-r-0{") != null);
+    // Nested &:last-child inside
+    try std.testing.expect(std.mem.indexOf(u8, result, "&:last-child{") != null);
+    // NOT flat selector
+    try std.testing.expect(std.mem.indexOf(u8, result, ".last\\:border-r-0:last-child") == null);
+}
+
+test "tw variant nesting: open uses CSS nesting with &:is([open],...)" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"open:pb-8"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+    // Outer class selector
+    try std.testing.expect(std.mem.indexOf(u8, result, ".open\\:pb-8{") != null);
+    // Nested & with the is() pseudo
+    try std.testing.expect(std.mem.indexOf(u8, result, "&:is([open]") != null);
+    // NOT flat selector
+    try std.testing.expect(std.mem.indexOf(u8, result, ".open\\:pb-8:is(") == null);
+}
+
+test "tw variant nesting: aria-pressed uses CSS nesting with &[aria-pressed]" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"aria-pressed:bg-amber-300"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+    // Outer class selector
+    try std.testing.expect(std.mem.indexOf(u8, result, ".aria-pressed\\:bg-amber-300{") != null);
+    // Nested &[aria-pressed="true"] inside
+    try std.testing.expect(std.mem.indexOf(u8, result, "&[aria-pressed=\"true\"]{") != null);
+    // NOT flat selector
+    try std.testing.expect(std.mem.indexOf(u8, result, ".aria-pressed\\:bg-amber-300[aria-pressed") == null);
+}
+
+test "tw variant nesting: focus uses CSS nesting with &:focus" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"focus:flex"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+    // Outer class selector
+    try std.testing.expect(std.mem.indexOf(u8, result, ".focus\\:flex{") != null);
+    // Nested &:focus inside
+    try std.testing.expect(std.mem.indexOf(u8, result, "&:focus{") != null);
+    // NOT flat selector
+    try std.testing.expect(std.mem.indexOf(u8, result, ".focus\\:flex:focus") == null);
+}
+
+test "tw variant nesting: disabled uses CSS nesting with &:disabled" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"disabled:opacity-50"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+    // Outer class selector
+    try std.testing.expect(std.mem.indexOf(u8, result, ".disabled\\:opacity-50{") != null);
+    // Nested &:disabled inside
+    try std.testing.expect(std.mem.indexOf(u8, result, "&:disabled{") != null);
+    // NOT flat selector
+    try std.testing.expect(std.mem.indexOf(u8, result, ".disabled\\:opacity-50:disabled") == null);
+}
+
+test "tw variant nesting: data-state uses CSS nesting with &[data-state]" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"data-state:flex"};
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+    // Outer class selector
+    try std.testing.expect(std.mem.indexOf(u8, result, ".data-state\\:flex{") != null);
+    // Nested &[data-state] inside
+    try std.testing.expect(std.mem.indexOf(u8, result, "&[data-state]{") != null);
+    // NOT flat selector
+    try std.testing.expect(std.mem.indexOf(u8, result, ".data-state\\:flex[data-state]") == null);
+}

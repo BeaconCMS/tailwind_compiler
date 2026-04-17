@@ -3318,12 +3318,14 @@ fn resolveLeading(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decl
             css_value = val.value;
         },
         .named => {
-            // Try theme --leading-{value}
-            if (theme.resolve(val.value, "--leading")) {
+            // "none" is always literal 1 — never resolved via theme variable,
+            // even though --leading-none exists in the theme for @property registration.
+            if (std.mem.eql(u8, val.value, "none")) {
+                css_value = "1";
+            } else if (theme.resolve(val.value, "--leading")) {
+                // Try theme --leading-{value}
                 theme.markUsed(try std.fmt.allocPrint(alloc, "--leading-{s}", .{val.value}));
                 css_value = try std.fmt.allocPrint(alloc, "var(--leading-{s})", .{val.value});
-            } else if (std.mem.eql(u8, val.value, "none")) {
-                css_value = "1";
             } else if (isValidSpacingMultiplier(val.value)) {
                 // Bare number = spacing multiplier
                 theme.markUsed("--spacing");
