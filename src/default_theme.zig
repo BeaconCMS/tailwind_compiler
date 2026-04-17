@@ -529,4 +529,6 @@ pub const text_shadows = [_]ThemeEntry{
 pub const defaults = [_]ThemeEntry{
     .{ .key = "--default-transition-duration", .value = "150ms" },
     .{ .key = "--default-transition-timing-function", .value = "cubic-bezier(0.4, 0, 0.2, 1)" },
+    .{ .key = "--default-font-family", .value = "var(--font-sans)" },
+    .{ .key = "--default-mono-font-family", .value = "var(--font-mono)" },
 };

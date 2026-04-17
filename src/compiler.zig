@@ -2008,6 +2008,17 @@ test "compile: divide-y uses :where() CSS nesting" {
     try std.testing.expect(std.mem.indexOf(u8, result, ":where(& > :not(:last-child))") != null);
 }
 
+test "compile: preflight includes var() font-family references" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const result = try compile(alloc, &candidates, null, true, true, null, null, null);
+    defer alloc.free(result);
+    // html,:host should have var(--default-font-family,...) font reference
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--default-font-family,") != null);
+    // code,kbd,samp,pre should have var(--default-mono-font-family,...) font reference
+    try std.testing.expect(std.mem.indexOf(u8, result, "var(--default-mono-font-family,") != null);
+}
+
 test "compile: text-sm line-height uses calc ratio" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{"text-sm"};
