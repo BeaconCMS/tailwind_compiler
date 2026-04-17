@@ -731,6 +731,37 @@ fn applyCompoundVariant(
     }
 
     if (std.mem.eql(u8, root, "has")) {
+        // Handle arbitrary selector: has-[:checked], has-[>img], has-[&>img], etc.
+        // variant.selector is set when the inner variant was an arbitrary [selector] form.
+        if (variant.selector) |raw_sel| {
+            const sel_template = try candidate_mod.decodeArbitraryValue(alloc, raw_sel);
+            // Build the nested :has() selector based on selector type
+            const nested_sel: []const u8 = blk: {
+                if (sel_template.len > 0) {
+                    const first = sel_template[0];
+                    if (first == '>' or first == '+' or first == '~') {
+                        // Relative selector: has-[>img] -> &:has(> img)
+                        break :blk try std.fmt.allocPrint(alloc, "&:has({s})", .{sel_template});
+                    }
+                    if (std.mem.indexOf(u8, sel_template, "&") != null) {
+                        // Self-referencing selector: has-[&>img] -> replace & with * for :has() context
+                        var replaced = try std.ArrayList(u8).initCapacity(alloc, sel_template.len + 4);
+                        for (sel_template) |c| {
+                            if (c == '&') {
+                                try replaced.appendSlice(alloc, "*");
+                            } else {
+                                try replaced.append(alloc, c);
+                            }
+                        }
+                        break :blk try std.fmt.allocPrint(alloc, "&:has({s})", .{try replaced.toOwnedSlice(alloc)});
+                    }
+                }
+                // Default: pseudo-class or element selector - wrap with *:is()
+                break :blk try std.fmt.allocPrint(alloc, "&:has(*:is({s}))", .{sel_template});
+            };
+            return makeNestedCompoundRule(alloc, inner.selector, nested_sel, inner, false);
+        }
+
         if (variant.value) |val| {
             const has_arg = switch (val.kind) {
                 .arbitrary => val.value,

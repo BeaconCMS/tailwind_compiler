@@ -408,16 +408,16 @@ pub const Context = struct {
                     .value = try std.fmt.allocPrint(self.alloc, "calc({s} * calc(1 - var({s})))", .{ divide_value, reverse_var }),
                 };
             } else {
-                divide_decls = try self.alloc.alloc(Declaration, 5);
+                // Use logical properties (border-inline-*) to match Tailwind v4 official output
+                divide_decls = try self.alloc.alloc(Declaration, 4);
                 divide_decls[0] = Declaration{ .property = reverse_var, .value = "0" };
-                divide_decls[1] = Declaration{ .property = "border-right-style", .value = "var(--tw-border-style)" };
-                divide_decls[2] = Declaration{ .property = "border-left-style", .value = "var(--tw-border-style)" };
-                divide_decls[3] = Declaration{
-                    .property = "border-right-width",
+                divide_decls[1] = Declaration{ .property = "border-inline-style", .value = "var(--tw-border-style)" };
+                divide_decls[2] = Declaration{
+                    .property = "border-inline-start-width",
                     .value = try std.fmt.allocPrint(self.alloc, "calc({s} * var({s}))", .{ divide_value, reverse_var }),
                 };
-                divide_decls[4] = Declaration{
-                    .property = "border-left-width",
+                divide_decls[3] = Declaration{
+                    .property = "border-inline-end-width",
                     .value = try std.fmt.allocPrint(self.alloc, "calc({s} * calc(1 - var({s})))", .{ divide_value, reverse_var }),
                 };
             }
@@ -578,23 +578,26 @@ pub const Context = struct {
                 return utilities.lookupStatic(parsed.root);
             },
             .functional => {
-                return utilities.resolveFunctional(
+                const decls = try utilities.resolveFunctional(
                     self.alloc,
                     parsed.root,
                     parsed.value,
                     parsed.modifier,
                     &self.theme,
                     parsed.negative,
-                );
+                ) orelse return null;
+                // Resolve any theme() calls embedded in declaration values
+                return try self.resolveThemeInDeclarations(decls);
             },
             .arbitrary => {
                 // Arbitrary property: [color:red]
                 if (parsed.property) |prop| {
                     if (parsed.value) |val| {
+                        const resolved_value = try self.resolveThemeCalls(val.value);
                         const decls = try self.alloc.alloc(Declaration, 1);
                         decls[0] = Declaration{
                             .property = prop,
-                            .value = val.value,
+                            .value = resolved_value,
                         };
                         return decls;
                     }
@@ -602,6 +605,31 @@ pub const Context = struct {
                 return null;
             },
         }
+    }
+
+    /// Resolve theme() calls in declaration values, returning updated declarations.
+    fn resolveThemeInDeclarations(self: *Context, decls: []const Declaration) ![]const Declaration {
+        // Quick check: if no "theme(" in any value, return as-is
+        var has_theme = false;
+        for (decls) |decl| {
+            if (std.mem.indexOf(u8, decl.value, "theme(") != null) {
+                has_theme = true;
+                break;
+            }
+        }
+        if (!has_theme) return decls;
+
+        // Create a mutable copy with resolved theme() values
+        const result = try self.alloc.alloc(Declaration, decls.len);
+        for (decls, 0..) |decl, i| {
+            result[i] = Declaration{
+                .property = decl.property,
+                .value = try self.resolveThemeCalls(decl.value),
+                .important = decl.important,
+                .supports_value = decl.supports_value,
+            };
+        }
+        return result;
     }
 
     /// Resolve a single utility class name to its CSS declarations (property:value pairs).
@@ -747,12 +775,20 @@ pub const Context = struct {
     ///       "borderRadius.lg" → look up "--radius-lg"
     ///       "fontSize.lg" → look up "--text-lg"
     fn resolveThemePath(self: *Context, raw_path: []const u8) ?[]const u8 {
-        // Handle opacity modifier: "colors.red.500 / 50%"
+        // Handle opacity modifier: "colors.red.500 / 50%" or "colors.red.500/.5"
         var path = raw_path;
         var opacity: ?[]const u8 = null;
         if (std.mem.indexOf(u8, raw_path, " / ")) |slash_pos| {
             path = std.mem.trim(u8, raw_path[0..slash_pos], " \t");
             opacity = std.mem.trim(u8, raw_path[slash_pos + 3 ..], " \t");
+        } else if (std.mem.indexOfScalar(u8, raw_path, '/')) |slash_pos| {
+            // Handle slash without spaces: "colors.amber.300/.3"
+            const after = raw_path[slash_pos + 1 ..];
+            // Only treat as opacity if the part after slash starts with a digit or decimal point
+            if (after.len > 0 and (after[0] == '.' or (after[0] >= '0' and after[0] <= '9'))) {
+                path = std.mem.trim(u8, raw_path[0..slash_pos], " \t");
+                opacity = std.mem.trim(u8, after, " \t");
+            }
         }
 
         // CSS variable shorthand: theme(--color-red-500) → look up directly
@@ -2250,4 +2286,155 @@ test "compile: missing functional utility roots" {
     try std.testing.expect(std.mem.indexOf(u8, result, "transform:rotate(45deg)") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "perspective-origin:top left") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "container-type:inline-size") != null);
+}
+
+// ─── theme() in arbitrary values and properties ───────────────────────────
+
+test "compile: theme() in arbitrary bg gradient value resolves without opacity" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"bg-[radial-gradient(ellipse_at_top,theme(colors.emerald.400),transparent)]"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "oklch(76.5% 0.177 163.223)") != null);
+}
+
+test "compile: theme() in arbitrary bg gradient value resolves with slash opacity" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"bg-[radial-gradient(ellipse_at_top,theme(colors.amber.300/.3),transparent)]"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "oklch(87.9% 0.169 91.605)") != null);
+}
+
+test "compile: theme() in arbitrary property resolves" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"[background-image:repeating-linear-gradient(45deg,theme(colors.sky.300),transparent)]"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "oklch(82.8% 0.111 230.318)") != null);
+}
+
+test "compile: theme() slash opacity without spaces resolves in resolveThemePath" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"flex"};
+    const custom = ":root{--test:theme(colors.red.500/.5);}";
+    const result = try compile(alloc, &candidates, null, false, true, custom, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "oklch(63.7%") != null);
+}
+
+test "compile: theme() in shadow arbitrary value resolves" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"shadow-[0_0_12px_theme(colors.emerald.400)]"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "theme(") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "oklch(76.5% 0.177 163.223)") != null);
+}
+
+// ─── Format parity tests (issues #1-7) ──────────────────────────────────────
+
+test "compile: group-open variant uses CSS nesting with &" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"group-open:rotate-45"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    // Should use nested CSS: .group-open\:rotate-45 { &:is(...) { rotate: 45deg; } }
+    // NOT flat: .group-open\:rotate-45:is(...) { rotate: 45deg; }
+    try std.testing.expect(std.mem.indexOf(u8, result, ".group-open\\:rotate-45{") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "&:is(:where(.group):is([open]") != null);
+    // flat selector should NOT appear
+    try std.testing.expect(std.mem.indexOf(u8, result, ".group-open\\:rotate-45:is(") == null);
+}
+
+test "compile: peer-checked variant uses CSS nesting with &" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"peer-checked:bg-amber-300"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    // Should use nested CSS: .peer-checked\:bg-amber-300 { &:is(...) { ... } }
+    try std.testing.expect(std.mem.indexOf(u8, result, ".peer-checked\\:bg-amber-300{") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "&:is(:where(.peer):checked ~ *)") != null);
+    // flat selector should NOT appear
+    try std.testing.expect(std.mem.indexOf(u8, result, ".peer-checked\\:bg-amber-300:is(") == null);
+}
+
+test "compile: divide-x uses logical properties" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"divide-x"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    // Should use border-inline-style (not border-right-style/border-left-style)
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-inline-style:var(--tw-border-style)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-inline-start-width:") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-inline-end-width:") != null);
+    // Should NOT use old properties
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-right-style") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-left-style") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-right-width") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "border-left-width") == null);
+}
+
+test "compile: opacity uses percentage notation" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "opacity-0", "opacity-30", "opacity-40", "opacity-60", "opacity-100" };
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    // Should use % notation
+    try std.testing.expect(std.mem.indexOf(u8, result, "opacity:0%") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "opacity:30%") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "opacity:40%") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "opacity:60%") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "opacity:100%") != null);
+    // Should NOT use old decimal notation
+    try std.testing.expect(std.mem.indexOf(u8, result, "opacity:.3") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "opacity:.4") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "opacity:.6") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "opacity:1}") == null);
+}
+
+test "compile: text-transparent uses transparent not #0000" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"text-transparent"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "color:transparent") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "color:#0000") == null);
+}
+
+test "compile: bg-clip-text does not include -webkit- prefix" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"bg-clip-text"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "background-clip:text") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "-webkit-background-clip") == null);
+}
+
+test "compile: duration values use ms not s" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "duration-300", "duration-500", "duration-700" };
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "transition-duration:300ms") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "transition-duration:500ms") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "transition-duration:700ms") != null);
+    // Should NOT use seconds format
+    try std.testing.expect(std.mem.indexOf(u8, result, "transition-duration:.3s") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "transition-duration:.5s") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "transition-duration:.7s") == null);
+}
+
+test "compile: aspect-square uses 1 / 1 not 1" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"aspect-square"};
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "aspect-ratio:1 / 1") != null);
+    // Should NOT just be "1" without the fraction
+    try std.testing.expect(std.mem.indexOf(u8, result, "aspect-ratio:1}") == null);
 }

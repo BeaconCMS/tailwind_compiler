@@ -454,7 +454,7 @@ pub const static_utilities = std.StaticStringMap([]const Declaration).initCompti
     .{ "bg-clip-border", &[_]Declaration{.{ .property = "background-clip", .value = "border-box" }} },
     .{ "bg-clip-padding", &[_]Declaration{.{ .property = "background-clip", .value = "padding-box" }} },
     .{ "bg-clip-content", &[_]Declaration{.{ .property = "background-clip", .value = "content-box" }} },
-    .{ "bg-clip-text", &[_]Declaration{ .{ .property = "-webkit-background-clip", .value = "text" }, .{ .property = "background-clip", .value = "text" } } },
+    .{ "bg-clip-text", &[_]Declaration{.{ .property = "background-clip", .value = "text" }} },
 
     // ─── Background Origin ───
     .{ "bg-origin-border", &[_]Declaration{.{ .property = "background-origin", .value = "border-box" }} },
@@ -1861,6 +1861,12 @@ pub fn getRequiredProperties(root: []const u8) []const AtProperty {
             .{ .name = "--tw-scroll-snap-strictness", .syntax = "*", .inherits = false, .initial_value = "proximity" },
         };
     }
+    // ring-inset
+    if (std.mem.eql(u8, root, "ring-inset")) {
+        return &[_]AtProperty{
+            .{ .name = "--tw-ring-inset", .syntax = "*", .inherits = false, .initial_value = null },
+        };
+    }
     return &[_]AtProperty{};
 }
 
@@ -2840,7 +2846,7 @@ fn resolveColor(
             if (std.mem.eql(u8, val.value, "inherit")) {
                 css_value = "inherit";
             } else if (std.mem.eql(u8, val.value, "transparent")) {
-                css_value = "#0000";
+                css_value = "transparent";
             } else if (std.mem.eql(u8, val.value, "current")) {
                 css_value = "currentColor";
             } else if (theme.resolve(val.value, "--color")) {
@@ -2938,33 +2944,15 @@ fn resolveOpacity(alloc: Allocator, value: ?Value) !?[]const Declaration {
 
     switch (val.kind) {
         .arbitrary => {
-            // Strip leading zero: 0.1 -> .1
-            if (std.mem.startsWith(u8, val.value, "0.")) {
-                css_value = val.value[1..];
-            } else {
-                css_value = val.value;
-            }
+            // Use value as-is for arbitrary (e.g. opacity-[.5], opacity-[50%])
+            css_value = val.value;
         },
         .named => {
             if (isPositiveInteger(val.value)) {
-                // Convert percentage to decimal: opacity-50 -> 0.5, opacity-80 -> 0.8
+                // Use percentage notation: opacity-30 -> 30%, opacity-100 -> 100%
                 const num = std.fmt.parseInt(u32, val.value, 10) catch return null;
                 if (num > 100) return null;
-                if (num == 0) {
-                    css_value = "0";
-                } else if (num == 100) {
-                    css_value = "1";
-                } else if (num % 10 == 0) {
-                    // 80 -> .8, 50 -> .5, 10 -> .1
-                    css_value = try std.fmt.allocPrint(alloc, ".{d}", .{num / 10});
-                } else {
-                    // 75 -> .75, 25 -> .25, 5 -> .05
-                    if (num < 10) {
-                        css_value = try std.fmt.allocPrint(alloc, ".0{d}", .{num});
-                    } else {
-                        css_value = try std.fmt.allocPrint(alloc, ".{d}", .{num});
-                    }
-                }
+                css_value = try std.fmt.allocPrint(alloc, "{d}%", .{num});
             } else {
                 return null;
             }
@@ -3122,33 +3110,13 @@ fn resolveDelay(alloc: Allocator, value: ?Value) !?[]const Declaration {
 
 // ─── Duration/Delay Formatting Helper ──────────────────────────────────────
 
+/// Format a millisecond integer value as a CSS duration in ms.
+/// Tailwind v4 uses ms notation: 300ms, 500ms, 75ms, 0ms.
 fn formatMsToSeconds(alloc: Allocator, ms: u32) ![]const u8 {
     if (ms == 0) {
         return "0s";
-    } else if (ms < 100) {
-        return std.fmt.allocPrint(alloc, "{d}ms", .{ms});
-    } else if (ms % 1000 == 0) {
-        return std.fmt.allocPrint(alloc, "{d}s", .{ms / 1000});
-    } else {
-        // Convert to seconds as a decimal, stripping trailing zeros
-        // e.g., 300 -> ".3s", 150 -> ".15s", 1500 -> "1.5s"
-        // TW omits leading zero: .3s not 0.3s
-        const whole = ms / 1000;
-        var frac = ms % 1000;
-        var digits: u32 = 3;
-        while (digits > 0 and frac % 10 == 0) {
-            frac /= 10;
-            digits -= 1;
-        }
-        if (whole == 0) {
-            if (digits == 1) return std.fmt.allocPrint(alloc, ".{d}s", .{frac});
-            if (digits == 2) return std.fmt.allocPrint(alloc, ".{d:0>2}s", .{frac});
-            return std.fmt.allocPrint(alloc, ".{d:0>3}s", .{frac});
-        }
-        if (digits == 1) return std.fmt.allocPrint(alloc, "{d}.{d}s", .{ whole, frac });
-        if (digits == 2) return std.fmt.allocPrint(alloc, "{d}.{d:0>2}s", .{ whole, frac });
-        return std.fmt.allocPrint(alloc, "{d}.{d:0>3}s", .{ whole, frac });
     }
+    return std.fmt.allocPrint(alloc, "{d}ms", .{ms});
 }
 
 // ─── Color Opacity Helper ──────────────────────────────────────────────────
@@ -3256,7 +3224,7 @@ fn resolveText(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *The
                 if (std.mem.eql(u8, val.value, "inherit")) {
                     css_value = "inherit";
                 } else if (std.mem.eql(u8, val.value, "transparent")) {
-                    css_value = "#0000";
+                    css_value = "transparent";
                 } else if (std.mem.eql(u8, val.value, "current")) {
                     css_value = "currentColor";
                 } else {
@@ -3454,7 +3422,7 @@ fn resolveBorder(alloc: Allocator, root: []const u8, value: ?Value, modifier: ?M
                 return decls;
             } else if (std.mem.eql(u8, val.value, "transparent")) {
                 const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = color_property, .value = "#0000" };
+                decls[0] = Declaration{ .property = color_property, .value = "transparent" };
                 return decls;
             } else if (std.mem.eql(u8, val.value, "current")) {
                 const decls = try alloc.alloc(Declaration, 1);
@@ -3549,9 +3517,9 @@ fn resolveAspect(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decla
 
     switch (val.kind) {
         .arbitrary => {
-            // Simplify "1/1" to "1"
+            // Simplify "1/1" to "1 / 1"
             if (std.mem.eql(u8, val.value, "1/1")) {
-                css_value = "1";
+                css_value = "1 / 1";
             } else {
                 css_value = val.value;
             }
@@ -3560,7 +3528,7 @@ fn resolveAspect(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decla
             if (std.mem.eql(u8, val.value, "auto")) {
                 css_value = "auto";
             } else if (std.mem.eql(u8, val.value, "square")) {
-                css_value = "1";
+                css_value = "1 / 1";
             } else if (val.fraction != null) {
                 // Fraction like 4/3
                 css_value = val.fraction.?;
@@ -4038,8 +4006,9 @@ fn resolveShadow(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Decla
 
     switch (val.kind) {
         .arbitrary => {
-            // Replace underscores with spaces
-            shadow_value = try replaceUnderscores(alloc, val.value);
+            // Replace underscores with spaces, then wrap any color values in var(--tw-shadow-color,...)
+            const replaced = try replaceUnderscores(alloc, val.value);
+            shadow_value = try convertShadowColorsArbitrary(alloc, replaced);
         },
         .named => {
             if (std.mem.eql(u8, val.value, "none")) {
@@ -5008,7 +4977,7 @@ fn resolveOutline(alloc: Allocator, value: ?Value, modifier: ?Modifier, theme: *
                 return decls;
             } else if (std.mem.eql(u8, val.value, "transparent")) {
                 const decls = try alloc.alloc(Declaration, 1);
-                decls[0] = Declaration{ .property = "outline-color", .value = "#0000" };
+                decls[0] = Declaration{ .property = "outline-color", .value = "transparent" };
                 return decls;
             } else if (std.mem.eql(u8, val.value, "current")) {
                 const decls = try alloc.alloc(Declaration, 1);
@@ -5444,7 +5413,7 @@ fn resolveShadowColor(alloc: Allocator, value: ?Value, modifier: ?Modifier, them
             if (std.mem.eql(u8, val.value, "inherit")) {
                 css_value = "inherit";
             } else if (std.mem.eql(u8, val.value, "transparent")) {
-                css_value = "#0000";
+                css_value = "transparent";
             } else if (std.mem.eql(u8, val.value, "current")) {
                 css_value = "currentColor";
             } else if (theme.resolve(val.value, "--color")) {
@@ -5535,6 +5504,93 @@ fn convertShadowColors(alloc: Allocator, raw: []const u8) ![]const u8 {
 
 fn isHexChar(c: u8) bool {
     return (c >= '0' and c <= '9') or (c >= 'a' and c <= 'f') or (c >= 'A' and c <= 'F');
+}
+
+/// CSS color function prefixes that should be wrapped in var(--tw-shadow-color, ...).
+const css_color_functions = [_][]const u8{
+    "oklch(",
+    "oklab(",
+    "color-mix(",
+    "color(",
+    "hsl(",
+    "hsla(",
+    "hwb(",
+    "lch(",
+    "lab(",
+    "rgba(",
+    "rgb(",
+};
+
+/// Check if the string at position i in raw starts with a CSS color function.
+/// Returns the length of the matching prefix (including '('), or 0.
+fn matchColorFunction(raw: []const u8, i: usize) usize {
+    for (css_color_functions) |prefix| {
+        if (i + prefix.len <= raw.len and
+            std.mem.eql(u8, raw[i .. i + prefix.len], prefix))
+        {
+            return prefix.len;
+        }
+    }
+    return 0;
+}
+
+/// Scan a shadow value from an arbitrary user input and wrap any CSS color
+/// functions or #hex values in var(--tw-shadow-color, ...).
+/// Unlike convertShadowColors, this does NOT append a default shadow-color
+/// variable when no color is detected; instead it returns the value unchanged.
+fn convertShadowColorsArbitrary(alloc: Allocator, raw: []const u8) ![]const u8 {
+    var result = try std.ArrayList(u8).initCapacity(alloc, raw.len + 64);
+    var has_color = false;
+    var i: usize = 0;
+    while (i < raw.len) {
+        const color_prefix_len = matchColorFunction(raw, i);
+        if (color_prefix_len > 0) {
+            // Find the closing paren for the whole function (depth-tracked)
+            var depth: usize = 0;
+            var j = i;
+            while (j < raw.len) {
+                if (raw[j] == '(') depth += 1;
+                if (raw[j] == ')') {
+                    depth -= 1;
+                    if (depth == 0) {
+                        j += 1;
+                        break;
+                    }
+                }
+                j += 1;
+            }
+            const color_str = raw[i..j];
+            try result.appendSlice(alloc, "var(--tw-shadow-color,");
+            try result.appendSlice(alloc, color_str);
+            try result.append(alloc, ')');
+            has_color = true;
+            i = j;
+        } else if (raw[i] == '#') {
+            // Hex color
+            var j = i + 1;
+            while (j < raw.len and isHexChar(raw[j])) : (j += 1) {}
+            if (j > i + 1) {
+                const hex_str = raw[i..j];
+                try result.appendSlice(alloc, "var(--tw-shadow-color,");
+                try result.appendSlice(alloc, hex_str);
+                try result.append(alloc, ')');
+                has_color = true;
+                i = j;
+            } else {
+                try result.append(alloc, raw[i]);
+                i += 1;
+            }
+        } else {
+            try result.append(alloc, raw[i]);
+            i += 1;
+        }
+    }
+
+    // For arbitrary values: if no color was detected, return the raw value unchanged
+    if (!has_color) {
+        return raw;
+    }
+    return result.toOwnedSlice(alloc);
 }
 
 /// Split a comma-separated drop-shadow value and wrap each part in drop-shadow().

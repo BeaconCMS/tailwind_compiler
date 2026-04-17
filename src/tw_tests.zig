@@ -3453,6 +3453,32 @@ test "tw: has" {
     try std.testing.expect(std.mem.indexOf(u8, result, "peer-has-hocus\\/sibling-name\\:flex") != null);
 }
 
+test "tw: has-[arbitrary] wraps with :has(*:is(...))" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "has-[:checked]:text-stone-100" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    // The class selector must be present
+    try std.testing.expect(std.mem.indexOf(u8, result, "has-\\[\\:checked\\]\\:text-stone-100") != null);
+    // The declarations must be nested inside :has(*:is(:checked)) { ... }
+    try std.testing.expect(std.mem.indexOf(u8, result, ":has(*:is(:checked))") != null);
+}
+
+test "tw: selection emits both descendant and self rules" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "selection:bg-amber-300" };
+    const result = try compile(alloc, &candidates);
+    defer alloc.free(result);
+
+    // The class selector must be present
+    try std.testing.expect(std.mem.indexOf(u8, result, "selection\\:bg-amber-300") != null);
+    // Must have descendant rule (& *::selection)
+    try std.testing.expect(std.mem.indexOf(u8, result, "& *::selection") != null);
+    // Must have self rule (&::selection)
+    try std.testing.expect(std.mem.indexOf(u8, result, "&::selection") != null);
+}
+
 test "tw: aria" {
     const alloc = std.testing.allocator;
     const candidates = [_][]const u8{ "aria-checked:flex", "aria-[invalid=spelling]:flex", "aria-[valuenow=1]:flex", "aria-[valuenow_=_\"1\"]:flex", "group-aria-[modal]:flex", "group-aria-checked:flex", "group-aria-[valuenow=1]:flex", "group-aria-[modal]/parent-name:flex", "group-aria-checked/parent-name:flex", "group-aria-[valuenow=1]/parent-name:flex", "peer-aria-[modal]:flex", "peer-aria-checked:flex", "peer-aria-[valuenow=1]:flex", "peer-aria-[modal]/sibling-name:flex", "peer-aria-checked/sibling-name:flex", "peer-aria-[valuenow=1]/sibling-name:flex" };

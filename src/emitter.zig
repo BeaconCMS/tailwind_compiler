@@ -344,6 +344,34 @@ pub const CssEmitter = struct {
         self.indent -= 1;
         try self.writeNewline();
         try self.buf.append(self.alloc, '}');
+
+        // @supports fallback for browsers that don't support @property
+        try self.writeNewline();
+        try self.buf.appendSlice(self.alloc, "@supports ((-webkit-hyphens:none) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b))))");
+        try self.writeSpace();
+        try self.buf.append(self.alloc, '{');
+        self.indent += 1;
+        try self.writeNewline();
+        try self.buf.appendSlice(self.alloc, "*,::before,::after,::backdrop");
+        try self.writeSpace();
+        try self.buf.append(self.alloc, '{');
+        self.indent += 1;
+        for (props, 0..) |prop, i| {
+            if (i > 0 and self.minify) try self.buf.append(self.alloc, ';');
+            try self.writeNewline();
+            try self.buf.appendSlice(self.alloc, prop[0]);
+            try self.buf.append(self.alloc, ':');
+            try self.writeSpace();
+            try self.buf.appendSlice(self.alloc, prop[1]);
+            if (!self.minify) try self.buf.append(self.alloc, ';');
+        }
+        self.indent -= 1;
+        try self.writeNewline();
+        try self.buf.append(self.alloc, '}');
+        self.indent -= 1;
+        try self.writeNewline();
+        try self.buf.append(self.alloc, '}');
+
         self.indent -= 1;
         try self.writeNewline();
         try self.buf.append(self.alloc, '}');
