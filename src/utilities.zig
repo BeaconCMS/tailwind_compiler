@@ -1230,6 +1230,26 @@ pub const functional_utility_set = std.StaticStringMap(void).initComptime(.{
     .{ "indent", {} },
     .{ "-indent", {} },
     .{ "transition", {} },
+    // Missing functional utility roots
+    .{ "align", {} },
+    .{ "cursor", {} },
+    .{ "flex", {} },
+    .{ "contain", {} },
+    .{ "filter", {} },
+    .{ "backdrop-filter", {} },
+    .{ "font-features", {} },
+    .{ "will-change", {} },
+    .{ "transform", {} },
+    .{ "perspective-origin", {} },
+    .{ "skew", {} },
+    .{ "-skew", {} },
+    .{ "mask", {} },
+    .{ "mask-conic", {} },
+    .{ "mask-linear", {} },
+    .{ "mask-radial", {} },
+    .{ "mask-radial-at", {} },
+    .{ "@container", {} },
+    .{ "-scale", {} },
 });
 
 // ─── Default Value Roots ───────────────────────────────────────────────────
@@ -1282,6 +1302,7 @@ const default_value_roots = std.StaticStringMap(void).initComptime(.{
     .{ "rounded-se", {} },
     .{ "rounded-es", {} },
     .{ "rounded-ee", {} },
+    .{ "@container", {} },
 });
 
 // ─── Fraction Support ──────────────────────────────────────────────────────
@@ -1827,6 +1848,24 @@ const ResolverTag = enum {
     border_spacing,
     indent,
     transition,
+    // Simple passthrough (arbitrary value → single CSS property)
+    vertical_align,
+    cursor_fn,
+    flex_fn,
+    contain_fn,
+    filter_fn,
+    backdrop_filter_fn,
+    font_features,
+    will_change_fn,
+    transform_fn,
+    perspective_origin,
+    skew,
+    mask_fn,
+    mask_conic,
+    mask_linear,
+    mask_radial,
+    mask_radial_at,
+    container_type,
 };
 
 const functional_dispatch = std.StaticStringMap(ResolverTag).initComptime(.{
@@ -2128,6 +2167,26 @@ const functional_dispatch = std.StaticStringMap(ResolverTag).initComptime(.{
     .{ "indent", .indent },
     .{ "transition", .transition },
     .{ "-indent", .indent },
+    // ── Missing functional utility roots ──
+    .{ "align", .vertical_align },
+    .{ "cursor", .cursor_fn },
+    .{ "flex", .flex_fn },
+    .{ "contain", .contain_fn },
+    .{ "filter", .filter_fn },
+    .{ "backdrop-filter", .backdrop_filter_fn },
+    .{ "font-features", .font_features },
+    .{ "will-change", .will_change_fn },
+    .{ "transform", .transform_fn },
+    .{ "perspective-origin", .perspective_origin },
+    .{ "skew", .skew },
+    .{ "-skew", .skew },
+    .{ "mask", .mask_fn },
+    .{ "mask-conic", .mask_conic },
+    .{ "mask-linear", .mask_linear },
+    .{ "mask-radial", .mask_radial },
+    .{ "mask-radial-at", .mask_radial_at },
+    .{ "@container", .container_type },
+    .{ "-scale", .scale },
 });
 
 /// Resolve a functional utility to CSS declarations.
@@ -2290,6 +2349,58 @@ pub fn resolveFunctional(
         .border_spacing => resolveBorderSpacing(alloc, root, value, theme),
         .indent => resolveIndent(alloc, value, theme),
         .transition => resolveTransition(alloc, value, theme),
+        .vertical_align => resolveSingleProp(alloc, value, "vertical-align"),
+        .cursor_fn => resolveSingleProp(alloc, value, "cursor"),
+        .contain_fn => resolveArbitraryOnly(alloc, value, "contain"),
+        .font_features => resolveArbitraryOnly(alloc, value, "font-feature-settings"),
+        .will_change_fn => resolveArbitraryOnly(alloc, value, "will-change"),
+        .perspective_origin => resolveSingleProp(alloc, value, "perspective-origin"),
+        .mask_radial_at => resolveArbitraryOnly(alloc, value, "--tw-mask-radial-position"),
+        .filter_fn => resolveArbitraryOnly(alloc, value, "filter"),
+        .backdrop_filter_fn => resolveArbitraryOnly(alloc, value, "backdrop-filter"),
+        .flex_fn => blk: {
+            const val = value orelse break :blk null;
+            if (val.kind != .arbitrary) break :blk null;
+            if (modifier != null) break :blk null;
+            const decls = try alloc.alloc(Declaration, 1);
+            decls[0] = Declaration{ .property = "flex", .value = val.value };
+            break :blk decls;
+        },
+        .transform_fn => resolveSingleProp(alloc, value, "transform"),
+        .skew => blk: {
+            const val = value orelse break :blk null;
+            const css_value = if (val.kind == .arbitrary)
+                val.value
+            else if (val.kind == .named and isPositiveInteger(val.value))
+                try std.fmt.allocPrint(alloc, "{s}deg", .{val.value})
+            else
+                break :blk null;
+            const neg_val = if (negative) try std.fmt.allocPrint(alloc, "calc({s} * -1)", .{css_value}) else css_value;
+            const decls = try alloc.alloc(Declaration, 1);
+            decls[0] = Declaration{ .property = "transform", .value = try std.fmt.allocPrint(alloc, "skewX({s}) skewY({s})", .{ neg_val, neg_val }) };
+            break :blk decls;
+        },
+        .mask_fn => blk: {
+            const val = value orelse break :blk null;
+            if (val.kind != .arbitrary) break :blk null;
+            const decls = try alloc.alloc(Declaration, 2);
+            decls[0] = Declaration{ .property = "-webkit-mask-image", .value = val.value };
+            decls[1] = Declaration{ .property = "mask-image", .value = val.value };
+            break :blk decls;
+        },
+        .mask_conic => resolveArbitraryOnly(alloc, value, "--tw-mask-conic-angle"),
+        .mask_linear => resolveArbitraryOnly(alloc, value, "--tw-mask-linear-angle"),
+        .mask_radial => resolveArbitraryOnly(alloc, value, "--tw-mask-radial-shape"),
+        .container_type => blk: {
+            const val = value orelse {
+                const decls = try alloc.alloc(Declaration, 1);
+                decls[0] = Declaration{ .property = "container-type", .value = "inline-size" };
+                break :blk decls;
+            };
+            const decls = try alloc.alloc(Declaration, 1);
+            decls[0] = Declaration{ .property = "container-type", .value = val.value };
+            break :blk decls;
+        },
     };
 }
 
@@ -4797,6 +4908,14 @@ fn resolveSingleProp(alloc: Allocator, value: ?Value, property: []const u8) !?[]
     return decls;
 }
 
+fn resolveArbitraryOnly(alloc: Allocator, value: ?Value, property: []const u8) !?[]const Declaration {
+    const val = value orelse return null;
+    if (val.kind != .arbitrary) return null;
+    const decls = try alloc.alloc(Declaration, 1);
+    decls[0] = Declaration{ .property = property, .value = val.value };
+    return decls;
+}
+
 // ─── Inset Shadow ──────────────────────────────────────────────────────────
 
 fn resolveInsetShadow(alloc: Allocator, value: ?Value, theme: *Theme) !?[]const Declaration {
@@ -5429,7 +5548,9 @@ test "isFunctionalUtility" {
     try std.testing.expect(isFunctionalUtility("p"));
     try std.testing.expect(isFunctionalUtility("text"));
     try std.testing.expect(isFunctionalUtility("z"));
-    try std.testing.expect(!isFunctionalUtility("flex"));
+    try std.testing.expect(isFunctionalUtility("flex"));
+    try std.testing.expect(isFunctionalUtility("cursor"));
+    try std.testing.expect(isFunctionalUtility("transform"));
     try std.testing.expect(!isFunctionalUtility("nonexistent"));
 }
 

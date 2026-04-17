@@ -2209,3 +2209,29 @@ test "compile: missing misc static utilities" {
     try std.testing.expect(std.mem.indexOf(u8, result, "--tw-gradient-via-stops:initial") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "mask-image:none") != null);
 }
+
+test "compile: missing functional utility roots" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{
+        "align-[baseline]",
+        "cursor-[grab]",
+        "flex-[2_2_0%]",
+        "contain-[layout_paint]",
+        "font-features-[\"smcp\"]",
+        "will-change-[opacity]",
+        "transform-[rotate(45deg)]",
+        "perspective-origin-[top_left]",
+        "@container",
+    };
+    const result = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "vertical-align:baseline") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "cursor:grab") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "flex:2 2 0%") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "contain:layout paint") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "font-feature-settings:\"smcp\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "will-change:opacity") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "transform:rotate(45deg)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "perspective-origin:top left") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "container-type:inline-size") != null);
+}
