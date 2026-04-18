@@ -148,9 +148,37 @@ jobs:
           name: nif-${{ matrix.target }}
           path: release/tailwind_compiler-nif-*
 
+  build_wasm:
+    name: Build WASM
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+
+      - name: Build WASM
+        run: zig build -Doptimize=ReleaseFast -Dtarget=wasm32-freestanding
+
+      - name: Package WASM
+        run: |
+          mkdir -p release
+          cp zig-out/bin/tailwind_compiler.wasm release/tailwind_compiler.wasm
+          cd release
+          tar czf tailwind_compiler-wasm.tar.gz tailwind_compiler.wasm
+          openssl dgst -sha256 tailwind_compiler-wasm.tar.gz | sed 's/.*= //' | tee tailwind_compiler-wasm.tar.gz.sha256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm
+          path: release/tailwind_compiler-wasm*
+
   release:
     name: Create Release
-    needs: build_nif
+    needs: [build_nif, build_wasm]
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts

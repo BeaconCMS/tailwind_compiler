@@ -28,6 +28,32 @@ end
 
 Precompiled NIF binaries are available for `x86_64-linux`, `aarch64-linux`, `aarch64-macos`, and `x86_64-windows`. The correct binary is downloaded automatically during `mix compile` — no Zig toolchain required.
 
+### WASM binary
+
+A precompiled WebAssembly binary is also available with each release. This lets you run the full Tailwind compiler in any WASM runtime — browsers, Deno, Cloudflare Workers, etc.
+
+To install the WASM binary alongside the NIF during `mix compile`:
+
+```bash
+TAILWIND_COMPILER_WASM=true mix compile
+```
+
+Or set it in your environment permanently so it's always included:
+
+```elixir
+# config/config.exs
+System.put_env("TAILWIND_COMPILER_WASM", "true")
+```
+
+You can also download it on demand at runtime:
+
+```elixir
+{:ok, path} = TailwindCompiler.wasm_path()
+File.cp!(path, "priv/static/assets/tailwind_compiler.wasm")
+```
+
+The WASM binary exports three functions: `alloc`, `free`, and `compile`. See the [WASM Playground](https://beaconcms.github.io/tailwind_compiler/) source for a complete browser integration example.
+
 ### Building from source
 
 To compile from source instead of using a precompiled binary, add `zigler` to your deps and set the `TAILWIND_COMPILER_PATH` environment variable:

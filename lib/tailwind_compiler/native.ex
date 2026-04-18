@@ -10,8 +10,12 @@ defmodule TailwindCompiler.Native do
   Returns `true` if a precompiled NIF is available (cached or downloaded).
   Returns `false` if `TAILWIND_COMPILER_PATH` is set, or if no precompiled
   NIF could be found, in which case Zigler compilation is used as fallback.
+
+  When `TAILWIND_COMPILER_WASM` is set, also downloads the WASM binary
+  during compilation.
   """
   def use_precompiled? do
+    if install_wasm?(), do: ensure_wasm()
     not force_build?() and ensure_precompiled()
   end
 
@@ -20,6 +24,13 @@ defmodule TailwindCompiler.Native do
   """
   def force_build? do
     System.get_env("TAILWIND_COMPILER_PATH") != nil
+  end
+
+  @doc """
+  Whether to install the WASM binary during compilation.
+  """
+  def install_wasm? do
+    System.get_env("TAILWIND_COMPILER_WASM") != nil
   end
 
   @doc """
@@ -43,6 +54,34 @@ defmodule TailwindCompiler.Native do
     "#{arch()}-#{os()}"
   end
 
+  @doc """
+  Returns the path to the WASM binary, downloading it if necessary.
+
+  Returns `{:ok, path}` if the binary is available, `{:error, reason}` otherwise.
+  """
+  def wasm_path do
+    path = wasm_file_path()
+
+    if File.exists?(path) do
+      {:ok, path}
+    else
+      case download_wasm() do
+        :ok -> {:ok, path}
+        {:error, reason} -> {:error, reason}
+      end
+    end
+  end
+
+  @doc """
+  Same as `wasm_path/0` but raises on error.
+  """
+  def wasm_path! do
+    case wasm_path() do
+      {:ok, path} -> path
+      {:error, reason} -> raise "Could not get WASM binary: #{inspect(reason)}"
+    end
+  end
+
   # --- Private ---
 
   defp ensure_precompiled do
@@ -51,7 +90,18 @@ defmodule TailwindCompiler.Native do
     if File.exists?(so_path) do
       true
     else
-      download()
+      download_nif()
+    end
+  end
+
+  defp ensure_wasm do
+    path = wasm_file_path()
+
+    unless File.exists?(path) do
+      case download_wasm() do
+        :ok -> :ok
+        {:error, reason} -> log("Warning: could not download WASM binary: #{inspect(reason)}")
+      end
     end
   end
 
@@ -70,18 +120,26 @@ defmodule TailwindCompiler.Native do
     Path.join(build_priv_dir(), "native")
   end
 
+  defp wasm_dir do
+    Path.join(build_priv_dir(), "wasm")
+  end
+
+  defp wasm_file_path do
+    Path.join(wasm_dir(), "tailwind_compiler.wasm")
+  end
+
   defp build_priv_dir do
     Path.join([Mix.Project.build_path(), "lib", "tailwind_compiler", "priv"])
   end
 
-  defp download do
+  defp download_nif do
     target_triple = target()
 
     if String.contains?(target_triple, "unknown") do
       log("Unsupported platform: #{target_triple}, skipping precompiled NIF download")
       false
     else
-      url = download_url(target_triple)
+      url = nif_download_url(target_triple)
       log("Downloading precompiled NIF for #{target_triple}...")
 
       dest = native_dir()
@@ -105,8 +163,33 @@ defmodule TailwindCompiler.Native do
     end
   end
 
-  defp download_url(target_triple) do
+  defp download_wasm do
+    url = wasm_download_url()
+    log("Downloading WASM binary...")
+
+    dest = wasm_dir()
+    File.mkdir_p!(dest)
+
+    case download_and_extract(url, dest) do
+      :ok ->
+        if File.exists?(wasm_file_path()) do
+          log("Successfully installed WASM binary")
+          :ok
+        else
+          {:error, "Archive did not contain tailwind_compiler.wasm"}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp nif_download_url(target_triple) do
     "https://github.com/#{@github_repo}/releases/download/v#{@version}/tailwind_compiler-nif-#{target_triple}.tar.gz"
+  end
+
+  defp wasm_download_url do
+    "https://github.com/#{@github_repo}/releases/download/v#{@version}/tailwind_compiler-wasm.tar.gz"
   end
 
   defp download_and_extract(url, dest) do
