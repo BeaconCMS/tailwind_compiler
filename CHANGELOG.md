@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.0.7] - 2026-04-18
+
+### Added
+
+- WASM binary included in release artifacts and downloadable via `TailwindCompiler.wasm_path/0`
+- Automatic WASM install during `mix compile` when `TAILWIND_COMPILER_WASM=true` is set
+- Explicit `@layer` order declarations for correct CSS cascade priority
+- `@supports` fallback block in `@layer properties` for older browsers
+- CSS nesting for all pseudo-class, aria, data, and compound variants (matching official Tailwind v4 output)
+- `has-[:checked]` variant with proper `&:has(*:is(:checked))` wrapping
+- Named group variants (`group-hover/mega`) with correct selectors
+- `@media (hover: hover)` guard on `group-hover` and `hover` variants
+- `selection:` variant descendant propagation (`& *::selection`)
+- Shadow DOM support via `:root, :host` in theme layer
+
+### Changed
+
+- `theme()` opacity now uses `color-mix(in oklab, ...)` instead of `oklch(... / opacity)`
+- `theme()` inline resolution no longer pollutes the theme layer with unused variables
+- Shadow arbitrary values with `theme()` colors now wrapped in `var(--tw-shadow-color, ...)`
+- `divide-x` uses logical properties (`border-inline-*`) instead of physical
+- Opacity values use percentage notation (`30%` not `.3`)
+- Duration values use `ms` notation (`300ms` not `.3s`)
+- `text-transparent` uses `transparent` keyword instead of `#0000`
+- `bg-clip-text` no longer emits `-webkit-` prefix
+- `aspect-square` outputs `1 / 1` instead of `1`
+- `leading-none` outputs literal `1` instead of `var(--leading-none)`
+- Spaces added after commas in `color-mix()`, `var()`, and `@supports` values
+
 ## [0.0.6] - 2026-04-15
 
 ### Added
@@ -45,6 +74,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - JSON theme overrides, custom CSS passthrough, preflight toggle
 - Arena allocator for efficient memory management
 
+[0.0.7]: https://github.com/beaconcms/tailwind_compiler/releases/tag/v0.0.7
 [0.0.6]: https://github.com/beaconcms/tailwind_compiler/releases/tag/v0.0.6
 [0.0.5]: https://github.com/beaconcms/tailwind_compiler/releases/tag/v0.0.5
 [0.0.4]: https://github.com/beaconcms/tailwind_compiler/releases/tag/v0.0.4
