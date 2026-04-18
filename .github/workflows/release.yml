@@ -160,7 +160,7 @@ jobs:
           version: 0.15.2
 
       - name: Build WASM
-        run: zig build -Doptimize=ReleaseFast -Dtarget=wasm32-freestanding
+        run: zig build -Doptimize=ReleaseSmall -Dtarget=wasm32-freestanding
 
       - name: Package WASM
         run: |
