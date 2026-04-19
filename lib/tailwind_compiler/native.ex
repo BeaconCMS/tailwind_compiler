@@ -34,6 +34,19 @@ defmodule TailwindCompiler.Native do
   end
 
   @doc """
+  Returns the custom WASM install path from `TAILWIND_COMPILER_WASM`, or `nil`
+  if the env var is unset or set to `"true"` (meaning use the default location).
+  """
+  def wasm_install_path do
+    case System.get_env("TAILWIND_COMPILER_WASM") do
+      nil -> nil
+      "true" -> nil
+      "1" -> nil
+      path -> path
+    end
+  end
+
+  @doc """
   Returns the NIF path (without extension) for `:erlang.load_nif/2`.
   Uses `:code.priv_dir/1` so it works at runtime (including in releases).
   """
@@ -95,13 +108,28 @@ defmodule TailwindCompiler.Native do
   end
 
   defp ensure_wasm do
-    path = wasm_file_path()
+    # Always download to the default cache location first
+    case wasm_path() do
+      {:ok, cached_path} ->
+        # If a custom path was given, copy there
+        case wasm_install_path() do
+          nil ->
+            :ok
 
-    unless File.exists?(path) do
-      case download_wasm() do
-        :ok -> :ok
-        {:error, reason} -> log("Warning: could not download WASM binary: #{inspect(reason)}")
-      end
+          custom ->
+            dest = if Path.extname(custom) == ".wasm" do
+              custom
+            else
+              Path.join(custom, "tailwind_compiler.wasm")
+            end
+
+            File.mkdir_p!(Path.dirname(dest))
+            File.cp!(cached_path, dest)
+            log("Installed WASM binary to #{dest}")
+        end
+
+      {:error, reason} ->
+        log("Warning: could not download WASM binary: #{inspect(reason)}")
     end
   end
 

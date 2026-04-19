@@ -35,14 +35,14 @@ A precompiled WebAssembly binary is also available with each release. This lets 
 To install the WASM binary alongside the NIF during `mix compile`:
 
 ```bash
+# Download to the default cache location
 TAILWIND_COMPILER_WASM=true mix compile
-```
 
-Or set it in your environment permanently so it's always included:
+# Download and copy to a specific directory
+TAILWIND_COMPILER_WASM=priv/static/assets mix compile
 
-```elixir
-# config/config.exs
-System.put_env("TAILWIND_COMPILER_WASM", "true")
+# Download and copy to a specific file path
+TAILWIND_COMPILER_WASM=priv/static/assets/tw.wasm mix compile
 ```
 
 You can also download it on demand at runtime:
