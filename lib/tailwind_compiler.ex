@@ -86,28 +86,6 @@ defmodule TailwindCompiler do
   end
 
   @doc """
-  Returns the path to the precompiled WASM binary, downloading it if necessary.
-
-  The WASM binary is a standalone WebAssembly module (~350KB) that can run the
-  full Tailwind CSS compiler in any WASM runtime (browser, Deno, Cloudflare Workers, etc.).
-
-  ## Examples
-
-      {:ok, path} = TailwindCompiler.wasm_path()
-      File.read!(path)
-      #=> <<0, 97, 115, 109, ...>>
-
-  """
-  @spec wasm_path() :: {:ok, String.t()} | {:error, term()}
-  defdelegate wasm_path, to: TailwindCompiler.Native
-
-  @doc """
-  Same as `wasm_path/0` but raises on error.
-  """
-  @spec wasm_path!() :: String.t()
-  defdelegate wasm_path!, to: TailwindCompiler.Native
-
-  @doc """
   Validate a list of token strings, returning only those recognized as valid
   Tailwind CSS utilities.
 

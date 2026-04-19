@@ -11,11 +11,14 @@ defmodule TailwindCompiler.Native do
   Returns `false` if `TAILWIND_COMPILER_PATH` is set, or if no precompiled
   NIF could be found, in which case Zigler compilation is used as fallback.
 
-  When `TAILWIND_COMPILER_WASM` is set, also downloads the WASM binary
-  during compilation.
+  When `TAILWIND_WASM_PATH` is set, also downloads and installs the WASM
+  binary to the specified path during compilation.
   """
   def use_precompiled? do
-    if install_wasm?(), do: ensure_wasm()
+    if wasm_path = System.get_env("TAILWIND_WASM_PATH") do
+      install_wasm!(wasm_path)
+    end
+
     not force_build?() and ensure_precompiled()
   end
 
@@ -24,26 +27,6 @@ defmodule TailwindCompiler.Native do
   """
   def force_build? do
     System.get_env("TAILWIND_COMPILER_PATH") != nil
-  end
-
-  @doc """
-  Whether to install the WASM binary during compilation.
-  """
-  def install_wasm? do
-    System.get_env("TAILWIND_COMPILER_WASM") != nil
-  end
-
-  @doc """
-  Returns the custom WASM install path from `TAILWIND_COMPILER_WASM`, or `nil`
-  if the env var is unset or set to `"true"` (meaning use the default location).
-  """
-  def wasm_install_path do
-    case System.get_env("TAILWIND_COMPILER_WASM") do
-      nil -> nil
-      "true" -> nil
-      "1" -> nil
-      path -> path
-    end
   end
 
   @doc """
@@ -67,34 +50,6 @@ defmodule TailwindCompiler.Native do
     "#{arch()}-#{os()}"
   end
 
-  @doc """
-  Returns the path to the WASM binary, downloading it if necessary.
-
-  Returns `{:ok, path}` if the binary is available, `{:error, reason}` otherwise.
-  """
-  def wasm_path do
-    path = wasm_file_path()
-
-    if File.exists?(path) do
-      {:ok, path}
-    else
-      case download_wasm() do
-        :ok -> {:ok, path}
-        {:error, reason} -> {:error, reason}
-      end
-    end
-  end
-
-  @doc """
-  Same as `wasm_path/0` but raises on error.
-  """
-  def wasm_path! do
-    case wasm_path() do
-      {:ok, path} -> path
-      {:error, reason} -> raise "Could not get WASM binary: #{inspect(reason)}"
-    end
-  end
-
   # --- Private ---
 
   defp ensure_precompiled do
@@ -107,29 +62,39 @@ defmodule TailwindCompiler.Native do
     end
   end
 
-  defp ensure_wasm do
-    # Always download to the default cache location first
-    case wasm_path() do
-      {:ok, cached_path} ->
-        # If a custom path was given, copy there
-        case wasm_install_path() do
-          nil ->
-            :ok
+  defp install_wasm!(wasm_path) do
+    dest = if Path.extname(wasm_path) == ".wasm" do
+      wasm_path
+    else
+      Path.join(wasm_path, "tailwind_compiler.wasm")
+    end
 
-          custom ->
-            dest = if Path.extname(custom) == ".wasm" do
-              custom
-            else
-              Path.join(custom, "tailwind_compiler.wasm")
-            end
+    dir = Path.dirname(dest)
 
-            File.mkdir_p!(Path.dirname(dest))
-            File.cp!(cached_path, dest)
-            log("Installed WASM binary to #{dest}")
+    unless File.dir?(dir) do
+      Mix.raise("TAILWIND_WASM_PATH directory does not exist: #{dir}")
+    end
+
+    # Download to a temp location, then copy to the target
+    tmp_dir = Path.join(System.tmp_dir!(), "tailwind_compiler_wasm")
+    File.mkdir_p!(tmp_dir)
+
+    case download_and_extract(wasm_download_url(), tmp_dir) do
+      :ok ->
+        tmp_file = Path.join(tmp_dir, "tailwind_compiler.wasm")
+
+        if File.exists?(tmp_file) do
+          File.cp!(tmp_file, dest)
+          File.rm_rf!(tmp_dir)
+          log("Installed WASM binary to #{dest}")
+        else
+          File.rm_rf!(tmp_dir)
+          Mix.raise("WASM archive did not contain tailwind_compiler.wasm")
         end
 
       {:error, reason} ->
-        log("Warning: could not download WASM binary: #{inspect(reason)}")
+        File.rm_rf!(tmp_dir)
+        Mix.raise("Could not download WASM binary: #{inspect(reason)}")
     end
   end
 
@@ -146,14 +111,6 @@ defmodule TailwindCompiler.Native do
 
   defp native_dir do
     Path.join(build_priv_dir(), "native")
-  end
-
-  defp wasm_dir do
-    Path.join(build_priv_dir(), "wasm")
-  end
-
-  defp wasm_file_path do
-    Path.join(wasm_dir(), "tailwind_compiler.wasm")
   end
 
   defp build_priv_dir do
@@ -188,27 +145,6 @@ defmodule TailwindCompiler.Native do
           log("Falling back to compiling from source...")
           false
       end
-    end
-  end
-
-  defp download_wasm do
-    url = wasm_download_url()
-    log("Downloading WASM binary...")
-
-    dest = wasm_dir()
-    File.mkdir_p!(dest)
-
-    case download_and_extract(url, dest) do
-      :ok ->
-        if File.exists?(wasm_file_path()) do
-          log("Successfully installed WASM binary")
-          :ok
-        else
-          {:error, "Archive did not contain tailwind_compiler.wasm"}
-        end
-
-      {:error, reason} ->
-        {:error, reason}
     end
   end
 
