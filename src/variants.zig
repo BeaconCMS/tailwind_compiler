@@ -814,12 +814,13 @@ fn applyArbitraryVariant(
 /// Apply an arbitrary selector template (e.g. "&>h3") to a style rule.
 fn applyArbitrarySelectorToStyle(alloc: Allocator, inner: Rule, sel_template: []const u8) !Rule {
     // Selector variant: replace & with the inner selector
+    const inner_sel: []const u8 = inner.selector orelse "";
     if (std.mem.indexOf(u8, sel_template, "&")) |_| {
         // Has & placeholder
-        var result = try std.ArrayList(u8).initCapacity(alloc, sel_template.len + (inner.selector orelse "").len);
+        var result = try std.ArrayList(u8).initCapacity(alloc, sel_template.len + inner_sel.len);
         for (sel_template) |c| {
             if (c == '&') {
-                try result.appendSlice(alloc, inner.selector orelse "");
+                try result.appendSlice(alloc, inner_sel);
             } else {
                 try result.append(alloc, c);
             }
