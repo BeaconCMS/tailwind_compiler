@@ -150,7 +150,7 @@ pub fn main() !void {
 
     const css = try tailwind.compile(gpa, &candidates, null, false, true, null, null, null);
 
-    const stdout = std.io.getStdOut().writer();
+    const stdout = std.fs.File.stdout().writer();
     try stdout.print("Generated CSS ({d} bytes, {d} candidates):\n\n", .{ css.len, candidates.len });
     try stdout.print("{s}\n", .{css});
 }
