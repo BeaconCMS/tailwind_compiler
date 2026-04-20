@@ -18,7 +18,7 @@ jobs:
 
       - uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: 0.16.0
 
       - name: Build WASM
         run: zig build -Dtarget=wasm32-freestanding -Doptimize=ReleaseSmall
@@ -48,7 +48,7 @@ jobs:
 
       - uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: 0.16.0
 
       - name: Build Zig library
         run: zig build -Doptimize=ReleaseFast
@@ -72,9 +72,9 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           mkdir -p deps/zigler/priv/erl_nif_win
-          curl -sL "https://raw.githubusercontent.com/E-xyza/zigler/0.15.2/priv/erl_nif_win/erl_nif_win.h" \
+          curl -sL "https://raw.githubusercontent.com/bcardarella/zigler/main/priv/erl_nif_win/erl_nif_win.h" \
             -o deps/zigler/priv/erl_nif_win/erl_nif_win.h
-          curl -sL "https://raw.githubusercontent.com/E-xyza/zigler/0.15.2/priv/erl_nif_win/erl_nif_api_funcs_win.h" \
+          curl -sL "https://raw.githubusercontent.com/bcardarella/zigler/main/priv/erl_nif_win/erl_nif_api_funcs_win.h" \
             -o deps/zigler/priv/erl_nif_win/erl_nif_api_funcs_win.h
 
       - name: Run Elixir tests
