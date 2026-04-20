@@ -20,7 +20,7 @@ defmodule TailwindCompiler.MixProject do
 
   defp deps do
     [
-      {:zigler, "~> 0.15.1", runtime: false, optional: true},
+      {:zigler, github: "bcardarella/zigler", runtime: false, optional: true},
       {:jason, "~> 1.4", runtime: false}
     ]
   end
