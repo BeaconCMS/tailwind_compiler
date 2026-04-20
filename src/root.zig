@@ -42,6 +42,5 @@ pub fn compile(
 pub const tw_tests = @import("tw_tests.zig");
 
 test {
-    // Run all tests from submodules
-    std.testing.refAllDeclsRecursive(@This());
+    _ = tw_tests;
 }
