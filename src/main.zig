@@ -1,8 +1,8 @@
 const std = @import("std");
 const tailwind = @import("tailwind_compiler");
 
-pub fn main() !void {
-    const gpa = std.heap.smp_allocator;
+pub fn main(init: std.process.Init) !void {
+    const gpa = init.gpa;
 
     const candidates = [_][]const u8{
         // ─── Static (core) ───
@@ -150,7 +150,6 @@ pub fn main() !void {
 
     const css = try tailwind.compile(gpa, &candidates, null, false, true, null, null, null);
 
-    const stdout = std.fs.File.stdout().writer();
-    try stdout.print("Generated CSS ({d} bytes, {d} candidates):\n\n", .{ css.len, candidates.len });
-    try stdout.print("{s}\n", .{css});
+    std.log.info("Generated CSS ({d} bytes, {d} candidates)", .{ css.len, candidates.len });
+    std.log.info("{s}", .{css});
 }
