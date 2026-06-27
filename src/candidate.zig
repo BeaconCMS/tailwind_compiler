@@ -44,6 +44,17 @@ pub const Variant = struct {
     relative: bool = false,
 };
 
+/// A user-defined variant registered via the `@custom-variant` CSS directive.
+/// The `value` is either a selector template containing `&` (e.g.
+/// `&:hover, &:focus` or `&:where(.dark, .dark *)`) that wraps the utility's
+/// own selector, or an at-rule (starting with `@`, e.g. `@media (pointer: coarse)`)
+/// that wraps the utility.
+pub const CustomVariant = struct {
+    value: []const u8,
+};
+
+pub const CustomVariantMap = std.StringHashMap(CustomVariant);
+
 pub const Candidate = struct {
     kind: CandidateKind,
     raw: []const u8,
@@ -454,6 +465,7 @@ pub fn parseCandidate(
     utility_exists_functional: *const fn ([]const u8) bool,
     variant_exists: *const fn ([]const u8) bool,
     variant_is_functional_root: ?*const fn ([]const u8) bool,
+    custom_variants: ?*const CustomVariantMap,
 ) !?Candidate {
     if (raw.len == 0) return null;
 
@@ -481,7 +493,7 @@ pub fn parseCandidate(
         var i: usize = variant_segments.len;
         while (i > 0) {
             i -= 1;
-            const v = parseVariantSegment(alloc, variant_segments[i], variant_exists, variant_is_functional_root) orelse return null;
+            const v = parseVariantSegment(alloc, variant_segments[i], variant_exists, variant_is_functional_root, custom_variants) orelse return null;
             if (variant_count >= 16) return null;
             variant_buf[variant_count] = v;
             variant_count += 1;
@@ -714,6 +726,7 @@ fn parseVariantSegment(
     input: []const u8,
     variant_exists: *const fn ([]const u8) bool,
     variant_is_functional_root: ?*const fn ([]const u8) bool,
+    custom_variants: ?*const CustomVariantMap,
 ) ?Variant {
     if (input.len == 0) return null;
 
@@ -755,6 +768,17 @@ fn parseVariantSegment(
         };
     }
 
+    // Custom variant (registered via @custom-variant). Checked before built-in
+    // statics so a redefinition (e.g. `dark`) takes precedence over the default.
+    if (custom_variants) |cv| {
+        if (cv.contains(input)) {
+            return Variant{
+                .kind = .static,
+                .root = input,
+            };
+        }
+    }
+
     // Static variant
     if (variant_exists(input)) {
         return Variant{
@@ -793,6 +817,7 @@ fn parseVariantSegment(
                 inner_variant_str,
                 variant_exists,
                 variant_is_functional_root,
+                custom_variants,
             )) |inner_variant| {
                 // Reject certain compound+arbitrary combinations:
                 // - group/peer: reject relative (>, +, ~) and at-rule (@) selectors

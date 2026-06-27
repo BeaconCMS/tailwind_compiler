@@ -35,12 +35,13 @@ pub fn applyVariants(
     variants: []const Variant,
     theme: *Theme,
     raw_candidate: []const u8,
+    custom_variants: ?*const candidate_mod.CustomVariantMap,
 ) !Rule {
     var current = base_rule;
 
     // Apply variants from innermost (first in array) to outermost (last)
     for (variants) |variant| {
-        current = try applyVariant(alloc, current, variant, theme, raw_candidate);
+        current = try applyVariant(alloc, current, variant, theme, raw_candidate, custom_variants);
     }
 
     return current;
@@ -52,7 +53,18 @@ fn applyVariant(
     variant: Variant,
     theme: *Theme,
     raw_candidate: []const u8,
+    custom_variants: ?*const candidate_mod.CustomVariantMap,
 ) !Rule {
+    // A registered custom variant (via @custom-variant) takes precedence over
+    // any built-in handling, including redefinitions of built-ins like `dark`.
+    if (custom_variants) |cv| {
+        if (variant.kind == .static) {
+            if (cv.get(variant.root)) |def| {
+                return applyCustomVariant(alloc, inner, def);
+            }
+        }
+    }
+
     switch (variant.kind) {
         .static => return applyStaticVariant(alloc, inner, variant.root, theme, raw_candidate),
         .functional => return applyFunctionalVariant(alloc, inner, variant, theme, raw_candidate),
@@ -809,6 +821,45 @@ fn applyArbitraryVariant(
         return applyArbitrarySelectorToStyle(alloc, inner, sel_template);
     }
     return inner;
+}
+
+/// Apply a user-registered `@custom-variant` to a rule. The variant's `value`
+/// is authored CSS (not arbitrary-value-encoded), so unlike arbitrary variants
+/// it is used verbatim — no underscore-to-space decoding. The value is either
+/// an at-rule (starting with `@`) that wraps the utility, or a selector
+/// template containing `&` that is substituted with the utility's selector.
+fn applyCustomVariant(alloc: Allocator, inner: Rule, def: candidate_mod.CustomVariant) !Rule {
+    const sel_template = def.value;
+
+    // At-rule form: wrap the inner rule in the at-rule (e.g. @media (...)).
+    if (sel_template.len > 0 and sel_template[0] == '@') {
+        const children = try alloc.alloc(Rule, 1);
+        children[0] = inner;
+        return Rule{
+            .kind = .media,
+            .at_rule = sel_template,
+            .children = children,
+            .variant_order = inner.variant_order,
+        };
+    }
+
+    // Selector form. If the inner rule is itself a wrapping rule (media,
+    // container, supports), apply the selector to each child and keep the
+    // wrapper intact — this is what makes stacking with at-rule variants work.
+    if (inner.kind == .media or inner.kind == .container or inner.kind == .supports) {
+        const new_children = try alloc.alloc(Rule, inner.children.len);
+        for (inner.children, 0..) |child, i| {
+            new_children[i] = try applyArbitrarySelectorToStyle(alloc, child, sel_template);
+        }
+        return Rule{
+            .kind = inner.kind,
+            .at_rule = inner.at_rule,
+            .children = new_children,
+            .variant_order = inner.variant_order,
+        };
+    }
+
+    return applyArbitrarySelectorToStyle(alloc, inner, sel_template);
 }
 
 /// Apply an arbitrary selector template (e.g. "&>h3") to a style rule.

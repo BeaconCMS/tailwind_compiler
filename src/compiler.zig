@@ -32,6 +32,7 @@ pub const Context = struct {
     at_properties: std.ArrayList(emitter_mod.AtProperty),
     keyframes: std.ArrayList(emitter_mod.Keyframes),
     plugin_css: ?[]const u8,
+    custom_variants: candidate_mod.CustomVariantMap,
 
     pub fn init(alloc: Allocator, include_preflight: bool, minify: bool, custom_css: ?[]const u8, custom_utilities_json: ?[]const u8, plugin_css: ?[]const u8) Context {
         return Context{
@@ -47,6 +48,7 @@ pub const Context = struct {
             .at_properties = .empty,
             .keyframes = .empty,
             .plugin_css = plugin_css,
+            .custom_variants = candidate_mod.CustomVariantMap.init(alloc),
         };
     }
 
@@ -196,6 +198,7 @@ pub const Context = struct {
         self.seen.deinit();
         self.at_properties.deinit(self.alloc);
         self.keyframes.deinit(self.alloc);
+        self.custom_variants.deinit();
     }
 
     pub fn registerProperty(self: *Context, prop: emitter_mod.AtProperty) !void {
@@ -223,6 +226,108 @@ pub const Context = struct {
         try self.theme.parseJson(json);
     }
 
+    /// Register a single custom variant. Later definitions of the same name win,
+    /// matching Tailwind's "override by redefinition" behavior.
+    fn registerCustomVariant(self: *Context, name: []const u8, value: []const u8) !void {
+        if (name.len == 0 or value.len == 0) return;
+        const name_owned = try self.alloc.dupe(u8, name);
+        const value_owned = try self.alloc.dupe(u8, value);
+        try self.custom_variants.put(name_owned, .{ .value = value_owned });
+    }
+
+    /// Reduce a simple block-form `@custom-variant` body to its wrapping header:
+    ///   name { <header> { @slot; } }  ->  value = <header>
+    /// where <header> is a selector template (containing `&`) or an at-rule.
+    fn registerBlockCustomVariant(self: *Context, name: []const u8, body: []const u8) !void {
+        const brace = std.mem.indexOfScalar(u8, body, '{') orelse return;
+        const header = std.mem.trim(u8, body[0..brace], " \t\r\n");
+        try self.registerCustomVariant(name, header);
+    }
+
+    /// Parse `@custom-variant` directives out of `custom_css`, register them in
+    /// `self.custom_variants`, and strip them from `custom_css` so they never
+    /// leak into the emitted output. Supports two forms:
+    ///   - body-less:  `@custom-variant name (selector-or-at-rule);`
+    ///   - block form: `@custom-variant name { <header> { @slot; } }`
+    pub fn extractCustomVariants(self: *Context) !void {
+        const css = self.custom_css orelse return;
+        const needle = "@custom-variant";
+        if (std.mem.indexOf(u8, css, needle) == null) return;
+
+        var out: std.ArrayList(u8) = .empty;
+        var pos: usize = 0;
+
+        while (pos < css.len) {
+            const at = std.mem.indexOfPos(u8, css, pos, needle) orelse {
+                try out.appendSlice(self.alloc, css[pos..]);
+                break;
+            };
+
+            // Keep everything before the directive verbatim.
+            try out.appendSlice(self.alloc, css[pos..at]);
+
+            // Read the variant name.
+            var i = at + needle.len;
+            while (i < css.len and isWhitespace(css[i])) i += 1;
+            const name_start = i;
+            while (i < css.len and css[i] != '(' and css[i] != '{' and
+                css[i] != ';' and !isWhitespace(css[i])) i += 1;
+            const name = std.mem.trim(u8, css[name_start..i], " \t\r\n");
+            while (i < css.len and isWhitespace(css[i])) i += 1;
+
+            if (i >= css.len) {
+                pos = css.len;
+                break;
+            }
+
+            if (css[i] == '(') {
+                // Body-less form: read to the matching ')'.
+                const open = i;
+                var depth: usize = 1;
+                i += 1;
+                while (i < css.len and depth > 0) {
+                    if (css[i] == '(') {
+                        depth += 1;
+                    } else if (css[i] == ')') {
+                        depth -= 1;
+                    }
+                    if (depth > 0) i += 1;
+                }
+                const inner = std.mem.trim(u8, css[open + 1 .. i], " \t\r\n");
+                if (i < css.len) i += 1; // consume ')'
+                while (i < css.len and isWhitespace(css[i])) i += 1;
+                if (i < css.len and css[i] == ';') i += 1; // consume trailing ';'
+
+                try self.registerCustomVariant(name, inner);
+                pos = i;
+            } else if (css[i] == '{') {
+                // Block form: read to the matching '}'.
+                const body_start = i + 1;
+                var depth: usize = 1;
+                i += 1;
+                while (i < css.len and depth > 0) {
+                    if (css[i] == '{') {
+                        depth += 1;
+                    } else if (css[i] == '}') {
+                        depth -= 1;
+                    }
+                    if (depth > 0) i += 1;
+                }
+                const body = css[body_start..i];
+                if (i < css.len) i += 1; // consume '}'
+
+                try self.registerBlockCustomVariant(name, body);
+                pos = i;
+            } else {
+                // Malformed (no selector and no body) — skip the keyword so we
+                // don't loop forever, leaving the rest of the CSS intact.
+                pos = i;
+            }
+        }
+
+        self.custom_css = out.items;
+    }
+
     /// Process a single candidate string.
     pub fn process(self: *Context, raw: []const u8) !void {
         // Deduplicate
@@ -237,6 +342,7 @@ pub const Context = struct {
             &isFunctionalWrapper,
             &isVariantWrapper,
             &isFunctionalVariantRootWrapper,
+            &self.custom_variants,
         ) orelse {
             // Not a known Tailwind utility — check custom utilities
             try self.processCustomUtility(raw);
@@ -443,6 +549,7 @@ pub const Context = struct {
                 parsed.variants,
                 &self.theme,
                 raw,
+                &self.custom_variants,
             );
         }
 
@@ -560,6 +667,7 @@ pub const Context = struct {
                     variants,
                     &self.theme,
                     raw,
+                    &self.custom_variants,
                 );
             }
         }
@@ -673,6 +781,7 @@ pub const Context = struct {
             &isFunctionalWrapper,
             &isVariantWrapper,
             &isFunctionalVariantRootWrapper,
+            &self.custom_variants,
         ) orelse return null;
 
         // Reject bare functional utilities without a value (unless they have defaults)
@@ -1311,6 +1420,9 @@ pub fn compile(
     try ctx.loadDefaults();
     try ctx.loadCustomUtilities();
     try ctx.loadPluginCss();
+    // Parse and strip @custom-variant directives from custom CSS (including any
+    // appended by loadPluginCss) before candidates are processed.
+    try ctx.extractCustomVariants();
 
     if (theme_json) |json| {
         try ctx.applyThemeJson(json);
@@ -1351,6 +1463,7 @@ pub fn validate(
             &isFunctionalWrapper,
             &isVariantWrapper,
             &isFunctionalVariantRootWrapper,
+            null,
         ) catch continue;
 
         if (parsed) |p| {
@@ -2593,4 +2706,158 @@ test "compile: bg-emerald-500 still adds variable to theme layer (var() path)" {
     // Standard utility should still emit var(--color-emerald-500) and put it in theme layer
     try std.testing.expect(std.mem.indexOf(u8, result, "var(--color-emerald-500)") != null);
     try std.testing.expect(std.mem.indexOf(u8, result, "--color-emerald-500:") != null);
+}
+
+// ─── @custom-variant ───────────────────────────────────────────────────────
+// These cases are derived from the real Tailwind CSS v4 test suite
+// (packages/tailwindcss/src/index.test.ts) — see @custom-variant behavior.
+
+test "compile: @custom-variant body-less selector form (single)" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"selected:underline"};
+    const cv = "@custom-variant selected (&[data-selected]);";
+    const result = try compile(alloc, &candidates, null, false, true, cv, null, null);
+    defer alloc.free(result);
+    // The `&` is replaced with the utility's own selector.
+    try std.testing.expect(std.mem.indexOf(u8, result, "selected\\:underline[data-selected]") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "text-decoration-line:underline") != null);
+    // The directive must never leak into the emitted CSS.
+    try std.testing.expect(std.mem.indexOf(u8, result, "@custom-variant") == null);
+}
+
+test "compile: @custom-variant body-less selector form (multiple, comma-joined)" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"hocus:underline"};
+    const cv = "@custom-variant hocus (&:hover, &:focus);";
+    const result = try compile(alloc, &candidates, null, false, true, cv, null, null);
+    defer alloc.free(result);
+    // Each `&` is substituted with the utility selector, producing both branches.
+    try std.testing.expect(std.mem.indexOf(u8, result, "hocus\\:underline:hover") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "hocus\\:underline:focus") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "text-decoration-line:underline") != null);
+}
+
+test "compile: @custom-variant body-less at-rule form" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"pointer-coarse:flex"};
+    const cv = "@custom-variant pointer-coarse (@media (pointer: coarse));";
+    const result = try compile(alloc, &candidates, null, false, true, cv, null, null);
+    defer alloc.free(result);
+    // At-rule custom variants wrap the utility in the given at-rule.
+    try std.testing.expect(std.mem.indexOf(u8, result, "@media") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "pointer") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "coarse") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "display:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@custom-variant") == null);
+}
+
+test "compile: @custom-variant overrides built-in dark (class-based dark mode)" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"dark:flex"};
+    const cv = "@custom-variant dark (&:where(.dark, .dark *));";
+    const result = try compile(alloc, &candidates, null, false, true, cv, null, null);
+    defer alloc.free(result);
+    // The redefinition takes precedence over the built-in prefers-color-scheme variant.
+    try std.testing.expect(std.mem.indexOf(u8, result, ":where(.dark") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "display:flex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "prefers-color-scheme") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@custom-variant") == null);
+}
+
+test "compile: @custom-variant block form with @slot (selector)" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"selected:underline"};
+    const cv =
+        \\@custom-variant selected {
+        \\  &[data-selected] {
+        \\    @slot;
+        \\  }
+        \\}
+    ;
+    const result = try compile(alloc, &candidates, null, false, true, cv, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "selected\\:underline[data-selected]") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "text-decoration-line:underline") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@slot") == null);
+}
+
+test "compile: @custom-variant block form with @slot (at-rule)" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"any-hover:underline"};
+    const cv =
+        \\@custom-variant any-hover {
+        \\  @media (any-hover: hover) {
+        \\    @slot;
+        \\  }
+        \\}
+    ;
+    const result = try compile(alloc, &candidates, null, false, true, cv, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@media") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "any-hover: hover") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "text-decoration-line:underline") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@slot") == null);
+}
+
+test "compile: @custom-variant stacks with built-in variants" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"dark:hover:flex"};
+    const cv = "@custom-variant dark (&:where(.dark, .dark *));";
+    const result = try compile(alloc, &candidates, null, false, true, cv, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, ":where(.dark") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, ":hover") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "display:flex") != null);
+}
+
+test "compile: @custom-variant registers a brand-new variant name" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{"theme-midnight:bg-black"};
+
+    // Without a definition, an unknown variant means the candidate is rejected.
+    const without = try compile(alloc, &candidates, null, false, true, null, null, null);
+    defer alloc.free(without);
+    try std.testing.expect(std.mem.indexOf(u8, without, "theme-midnight") == null);
+
+    // With a definition, the variant is recognized and emitted.
+    const cv = "@custom-variant theme-midnight (&:where([data-theme=\"midnight\"] *));";
+    const with = try compile(alloc, &candidates, null, false, true, cv, null, null);
+    defer alloc.free(with);
+    try std.testing.expect(std.mem.indexOf(u8, with, "theme-midnight\\:bg-black") != null);
+    try std.testing.expect(std.mem.indexOf(u8, with, "data-theme") != null);
+    try std.testing.expect(std.mem.indexOf(u8, with, "midnight") != null);
+}
+
+test "compile: @custom-variant strips directive but preserves surrounding custom CSS" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "dark:flex", "block" };
+    const cv =
+        \\@custom-variant dark (&:where(.dark, .dark *));
+        \\.my-custom { color: red; }
+    ;
+    const result = try compile(alloc, &candidates, null, false, true, cv, null, null);
+    defer alloc.free(result);
+    // The non-directive custom CSS survives verbatim (custom_css is not minified).
+    try std.testing.expect(std.mem.indexOf(u8, result, ".my-custom { color: red; }") != null);
+    // The directive is consumed, not emitted.
+    try std.testing.expect(std.mem.indexOf(u8, result, "@custom-variant") == null);
+    // The custom variant still applied.
+    try std.testing.expect(std.mem.indexOf(u8, result, ":where(.dark") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "prefers-color-scheme") == null);
+}
+
+test "compile: multiple @custom-variant definitions coexist" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "hocus:underline", "pointer-coarse:flex", "flex" };
+    const cv =
+        \\@custom-variant hocus (&:hover, &:focus);
+        \\@custom-variant pointer-coarse (@media (pointer: coarse));
+    ;
+    const result = try compile(alloc, &candidates, null, false, true, cv, null, null);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "hocus\\:underline:hover") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "coarse") != null);
+    // Plain utilities keep working alongside custom variants.
+    try std.testing.expect(std.mem.indexOf(u8, result, ".flex{display:flex}") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@custom-variant") == null);
 }
