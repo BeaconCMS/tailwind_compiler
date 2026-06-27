@@ -13,6 +13,66 @@ defmodule TailwindCompiler do
   """
 
   @doc """
+  Extract Tailwind candidate strings from source text.
+
+  This accepts raw HTML, templates, JavaScript/Elixir/Lua string literals, or
+  any other source-like text. It intentionally over-collects candidate-like
+  tokens; use `validate/1` or `compile/2` to let the compiler decide which
+  tokens are real utilities.
+
+  When passed a binary or iodata, this returns a list. When passed an enumerable
+  such as `IO.stream/2` or `File.stream!/3`, this returns a lazy stream of
+  unique candidate strings.
+
+  ## Examples
+
+      TailwindCompiler.candidates(~s(<div class="flex p-4"></div>))
+      #=> ["div", "flex", "p-4", "/div"]
+
+      File.stream!("index.html", [], :line)
+      |> TailwindCompiler.candidates()
+      |> Enum.to_list()
+
+  """
+  @spec candidates(iodata()) :: [String.t()]
+  @spec candidates(Enumerable.t()) :: Enumerable.t()
+  def candidates(source) when is_binary(source) or is_list(source) do
+    TailwindCompiler.Candidates.extract(source)
+  end
+
+  def candidates(source) do
+    if Enumerable.impl_for(source) do
+      TailwindCompiler.Candidates.stream(source)
+    else
+      raise ArgumentError, "expected source to be iodata or an enumerable of iodata chunks"
+    end
+  end
+
+  @doc """
+  Extract candidates from source text and compile them into CSS.
+
+  This is a convenience wrapper around `candidates/1` and `compile/2`.
+  """
+  @spec compile_source(iodata() | Enumerable.t(), keyword()) ::
+          {:ok, String.t()} | {:error, term()}
+  def compile_source(source, opts \\ []) do
+    source
+    |> candidates()
+    |> compile(opts)
+  end
+
+  @doc """
+  Same as `compile_source/2` but raises on error.
+  """
+  @spec compile_source!(iodata() | Enumerable.t(), keyword()) :: String.t()
+  def compile_source!(source, opts \\ []) do
+    case compile_source(source, opts) do
+      {:ok, css} -> css
+      {:error, reason} -> raise "TailwindCompiler.compile_source!/2 failed: #{inspect(reason)}"
+    end
+  end
+
+  @doc """
   Compile a list of Tailwind CSS candidate strings into minified CSS.
 
   ## Options
@@ -50,8 +110,11 @@ defmodule TailwindCompiler do
       #=> {:ok, "...bg-primary{background-color:var(--color-primary)}..."}
 
   """
-  @spec compile([String.t()], keyword()) :: {:ok, String.t()} | {:error, term()}
-  def compile(candidates, opts \\ []) when is_list(candidates) do
+  @spec compile([String.t()] | Enumerable.t(), keyword()) ::
+          {:ok, String.t()} | {:error, term()}
+  def compile(candidates, opts \\ [])
+
+  def compile(candidates, opts) when is_list(candidates) do
     theme_json = Keyword.get(opts, :theme)
     preflight = Keyword.get(opts, :preflight, true)
     minify = Keyword.get(opts, :minify, true)
@@ -66,12 +129,30 @@ defmodule TailwindCompiler do
         str when is_binary(str) -> str
       end
 
-    case TailwindCompiler.NIF.compile(candidates, theme_json || "", preflight, minify, custom_css || "", custom_utilities_json, plugin_css || "") do
+    case TailwindCompiler.NIF.compile(
+           candidates,
+           theme_json || "",
+           preflight,
+           minify,
+           custom_css || "",
+           custom_utilities_json,
+           plugin_css || ""
+         ) do
       result when is_binary(result) -> {:ok, result}
       error -> {:error, error}
     end
   rescue
     e -> {:error, Exception.message(e)}
+  end
+
+  def compile(candidates, opts) do
+    if Enumerable.impl_for(candidates) do
+      candidates
+      |> Enum.to_list()
+      |> compile(opts)
+    else
+      {:error, "expected candidates to be a list or enumerable of strings"}
+    end
   end
 
   @doc """
