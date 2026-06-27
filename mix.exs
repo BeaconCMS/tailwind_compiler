@@ -20,8 +20,13 @@ defmodule TailwindCompiler.MixProject do
 
   defp deps do
     [
-      {:zigler, github: "bcardarella/zigler", runtime: false, optional: true},
+      {:zigler, github: "bcardarella/zigler", runtime: false, optional: not force_build?()},
+      {:nimble_parsec, "~> 1.4"},
       {:jason, "~> 1.4", runtime: false}
     ]
+  end
+
+  defp force_build? do
+    System.get_env("TAILWIND_COMPILER_PATH") != nil
   end
 end

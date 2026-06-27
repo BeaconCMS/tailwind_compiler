@@ -39,8 +39,36 @@ defmodule TailwindCompilerTest do
     end
 
     test "accepts theme overrides" do
-      {:ok, css} = TailwindCompiler.compile(["p-4"], theme: ~s({"spacing":"0.5rem"}), preflight: false)
+      {:ok, css} =
+        TailwindCompiler.compile(["p-4"], theme: ~s({"spacing":"0.5rem"}), preflight: false)
+
       assert css =~ "--spacing:0.5rem"
+    end
+
+    test "accepts flat and nested theme color overrides" do
+      {:ok, flat_css} =
+        TailwindCompiler.compile(
+          ["bg-brand", "hover:bg-brand/50", "dark:text-brand"],
+          theme: ~s({"colors":{"brand":"#3f3cbb"}}),
+          preflight: false
+        )
+
+      assert flat_css =~ "--color-brand:#3f3cbb"
+      assert flat_css =~ "background-color:var(--color-brand)"
+      assert flat_css =~ "color-mix(in srgb, #3f3cbb 50%, transparent)"
+      assert flat_css =~ "@media (prefers-color-scheme:dark)"
+
+      {:ok, nested_css} =
+        TailwindCompiler.compile(
+          ["bg-brand-500", "text-brand-700/60"],
+          theme: ~s({"colors":{"brand":{"500":"#3f3cbb","700":"#25206b"}}}),
+          preflight: false
+        )
+
+      assert nested_css =~ "--color-brand-500:#3f3cbb"
+      assert nested_css =~ "--color-brand-700:#25206b"
+      assert nested_css =~ "background-color:var(--color-brand-500)"
+      assert nested_css =~ "color-mix(in srgb, #25206b 60%, transparent)"
     end
 
     test "handles empty candidate list" do
@@ -69,7 +97,8 @@ defmodule TailwindCompilerTest do
     test "deduplicates candidates" do
       {:ok, css} = TailwindCompiler.compile(["flex", "flex", "flex"], preflight: false)
       count = css |> String.split(".flex{") |> length()
-      assert count == 2  # split produces 2 parts for 1 occurrence
+      # split produces 2 parts for 1 occurrence
+      assert count == 2
     end
 
     test "accepts custom CSS" do
@@ -320,6 +349,36 @@ defmodule TailwindCompilerTest do
 
       # data-theme blocks should be passed through
       assert css =~ "[data-theme=\"dark\"]"
+    end
+
+    test "data-theme plugin colors do not overwrite root defaults" do
+      plugin_css = """
+      :root {
+        --color-primary: #3f3cbb;
+        --color-secondary: oklch(70% 0.2 260);
+      }
+
+      [data-theme="harbor"] {
+        --color-primary: #004455;
+      }
+      """
+
+      {:ok, css} =
+        TailwindCompiler.compile(
+          ["bg-primary", "hover:bg-primary/50", "data-[state=open]:border-primary"],
+          plugin_css: plugin_css,
+          preflight: false
+        )
+
+      assert css =~ "[data-theme=\"harbor\"]{--color-primary:#004455;"
+      assert css =~ "background-color:var(--color-primary)"
+      assert css =~ "&[data-state=open]{border-color:var(--color-primary)}"
+
+      if System.get_env("TAILWIND_COMPILER_PATH") do
+        assert css =~ "@layer theme{:root,:host{--color-primary:#3f3cbb"
+        refute css =~ "@layer theme{:root,:host{--color-primary:#004455"
+        assert css =~ "color-mix(in srgb, #3f3cbb 50%, transparent)"
+      end
     end
 
     test "plugin colors work with opacity modifiers", %{plugin_css: plugin_css} do

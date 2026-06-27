@@ -73,6 +73,23 @@ This requires [Zig 0.15.2+](https://ziglang.org/download/).
 TailwindCompiler.compile(["flex", "p-4", "hover:bg-blue-500/50", "sm:text-lg"])
 #=> {:ok, ".flex{display:flex}.p-4{padding:calc(var(--spacing)*4)}..."}
 
+# Extract candidate strings from raw HTML/template source
+TailwindCompiler.candidates(~s(<div class="flex p-4 hover:bg-blue-500/50"></div>))
+#=> ["div", "flex", "p-4", "hover:bg-blue-500/50", "/div"]
+
+# Extract candidates lazily from a file or IO stream
+File.stream!("index.html", [], :line)
+|> TailwindCompiler.candidates()
+|> Enum.to_list()
+
+# Compile raw HTML/template source by extracting candidates first
+TailwindCompiler.compile_source(~s(<div class="flex p-4"></div>))
+#=> {:ok, ".flex{display:flex}.p-4{padding:calc(var(--spacing)*4)}..."}
+
+# compile_source/2 also accepts streams
+File.stream!("index.html", [], :line)
+|> TailwindCompiler.compile_source(preflight: false)
+
 # Without preflight (base CSS reset)
 TailwindCompiler.compile(["flex", "hidden"], preflight: false)
 

@@ -134,11 +134,14 @@ pub const Context = struct {
             const body = css[body_start..body_end];
 
             // Check if this is a :root or [data-theme] block
-            if (std.mem.eql(u8, selector, ":root") or
-                std.mem.startsWith(u8, selector, "[data-theme"))
-            {
-                // Parse CSS declarations within this block for --color-* variables
-                try self.parseColorVariables(body);
+            if (std.mem.eql(u8, selector, ":root")) {
+                // Root variables define the default theme and may override
+                // existing defaults.
+                try self.parseColorVariables(body, true);
+            } else if (std.mem.startsWith(u8, selector, "[data-theme")) {
+                // Tenant/theme-scoped variables make names available to the
+                // compiler, but should not replace the default :root value.
+                try self.parseColorVariables(body, false);
             }
 
             // Move past the closing brace
@@ -148,7 +151,7 @@ pub const Context = struct {
 
     /// Parse CSS declarations within a block body to find --color-* variable definitions.
     /// E.g., "--color-primary: oklch(62.3% 0.214 259.815);" → registers as theme color.
-    fn parseColorVariables(self: *Context, body: []const u8) !void {
+    fn parseColorVariables(self: *Context, body: []const u8, allow_override: bool) !void {
         var pos: usize = 0;
 
         while (pos < body.len) {
@@ -180,9 +183,11 @@ pub const Context = struct {
 
             // If this is a --color-* variable, register it in the theme
             if (std.mem.startsWith(u8, property, "--color-")) {
-                const duped_name = try self.alloc.dupe(u8, property);
-                const duped_value = try self.alloc.dupe(u8, value);
-                try self.theme.variables.put(duped_name, duped_value);
+                if (allow_override or !self.theme.variables.contains(property)) {
+                    const duped_name = try self.alloc.dupe(u8, property);
+                    const duped_value = try self.alloc.dupe(u8, value);
+                    try self.theme.variables.put(duped_name, duped_value);
+                }
             }
 
             // Move past the semicolon
@@ -263,7 +268,10 @@ pub const Context = struct {
                         var num_has_dot = false;
                         for (val.value) |c| {
                             if (c == '.') {
-                                if (num_has_dot) { num_valid = false; break; }
+                                if (num_has_dot) {
+                                    num_valid = false;
+                                    break;
+                                }
                                 num_has_dot = true;
                             } else if (c < '0' or c > '9') {
                                 num_valid = false;
@@ -1837,6 +1845,26 @@ test "compile: plugin_css includes data-theme blocks" {
     const result = try compile(alloc, &candidates, null, false, true, null, null, plugin);
     defer alloc.free(result);
     try std.testing.expect(std.mem.indexOf(u8, result, "[data-theme=\"dark\"]") != null);
+}
+
+test "compile: data-theme plugin colors do not overwrite root defaults" {
+    const alloc = std.testing.allocator;
+    const candidates = [_][]const u8{ "bg-primary", "hover:bg-primary/50", "data-[state=open]:border-primary" };
+    const plugin =
+        \\:root {
+        \\  --color-primary: #3f3cbb;
+        \\  --color-secondary: oklch(70% 0.2 260);
+        \\}
+        \\[data-theme="harbor"] {
+        \\  --color-primary: #004455;
+        \\}
+    ;
+    const result = try compile(alloc, &candidates, null, false, true, null, null, plugin);
+    defer alloc.free(result);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@layer theme{:root,:host{--color-primary:#3f3cbb") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "@layer theme{:root,:host{--color-primary:#004455") == null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "[data-theme=\"harbor\"]{--color-primary:#004455;") != null);
+    try std.testing.expect(std.mem.indexOf(u8, result, "color-mix(in srgb, #3f3cbb 50%, transparent)") != null);
 }
 
 test "compile: plugin_css colors work with opacity modifiers" {
