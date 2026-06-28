@@ -33,6 +33,7 @@ jobs:
 
   test:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -56,9 +57,9 @@ jobs:
       - name: Run Zig tests
         run: zig build test
 
-      # GitHub's hosted ubuntu-24.04-arm runner reports ImageOS=ubuntu24-arm64,
-      # which setup-beam doesn't recognize. Override it to ubuntu24 so the action
-      # can locate the arm64 OTP/Elixir builds (architecture is detected separately).
+      # Some hosted runners report ImageOS strings that setup-beam doesn't
+      # recognize (e.g. ubuntu24-arm64, win25-vs2026). Override ImageOS to a value
+      # the action knows; the architecture is detected separately from the runner.
       - name: Set up Erlang/Elixir (ARM)
         if: matrix.os == 'ubuntu-24.04-arm'
         uses: erlef/setup-beam@v1
@@ -68,8 +69,17 @@ jobs:
           otp-version: "27"
           elixir-version: "1.17"
 
+      - name: Set up Erlang/Elixir (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: erlef/setup-beam@v1
+        env:
+          ImageOS: win25
+        with:
+          otp-version: "27"
+          elixir-version: "1.17"
+
       - name: Set up Erlang/Elixir
-        if: matrix.os != 'ubuntu-24.04-arm'
+        if: matrix.os != 'ubuntu-24.04-arm' && matrix.os != 'windows-latest'
         uses: erlef/setup-beam@v1
         with:
           otp-version: "27"
